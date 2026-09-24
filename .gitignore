@@ -1,0 +1,28 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+*.egg-info/
+
+# Node / renderer
+node_modules/
+renderer/out/
+renderer/build/
+
+# Pipeline runtime output (never committed)
+jobs/
+cache/
+artifacts/
+
+# Downloaded vendor data (pinned by data/vendor/CHECKSUMS, which IS committed)
+data/vendor/*
+!data/vendor/CHECKSUMS
+
+# Local environment
+.env
