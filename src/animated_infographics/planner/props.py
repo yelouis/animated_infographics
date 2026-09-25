@@ -1,0 +1,469 @@
+"""Props planning with fallback ladder, schema narrowing, and deterministic repairs."""
+
+from collections.abc import Sequence
+from pathlib import Path
+from typing import Any
+
+from pydantic import ValidationError
+
+from animated_infographics.contracts.models import (
+    Beat,
+    Bible,
+    CauseEffectScene,
+    CharacterIntroScene,
+    ComparisonScene,
+    DialogueScene,
+    EmotionBeatScene,
+    IconListScene,
+    KineticQuoteProps,
+    KineticQuoteScene,
+    LocationScene,
+    MapFocusScene,
+    PlanReport,
+    PlanReportScene,
+    RelationshipMapScene,
+    RevealScene,
+    RuleRepair,
+    Scene,
+    SetPieceScene,
+    StatCalloutScene,
+    Storyboard,
+    TextThreadScene,
+    TimelineSceneModel,
+    TitleCardProps,
+    TitleCardScene,
+    Transcript,
+)
+from animated_infographics.contracts.templates import REGISTRY
+from animated_infographics.planner.llm import LLMBackend
+from animated_infographics.planner.select import plan_template_selection
+from animated_infographics.planner.validate import PlanContext, validate_scene
+
+SCENE_CLASS_MAP: dict[str, type[Scene]] = {
+    "title_card": TitleCardScene,
+    "kinetic_quote": KineticQuoteScene,
+    "stat_callout": StatCalloutScene,
+    "icon_list": IconListScene,
+    "reveal": RevealScene,
+    "cause_effect": CauseEffectScene,
+    "comparison": ComparisonScene,
+    "character_intro": CharacterIntroScene,
+    "dialogue": DialogueScene,
+    "text_thread": TextThreadScene,
+    "emotion_beat": EmotionBeatScene,
+    "relationship_map": RelationshipMapScene,
+    "location": LocationScene,
+    "set_piece": SetPieceScene,
+    "map_focus": MapFocusScene,
+    "timeline": TimelineSceneModel,
+}
+
+
+def build_deterministic_kinetic_quote(scene_id: str, beat_i: int, beat: Beat) -> KineticQuoteScene:
+    """Build a deterministic kinetic_quote scene guaranteed to pass verbatim validation.
+
+    Per design_planner.md §5:
+    text = beat.text if <= 90 chars, else cut at last word boundary <= 89, followed by …
+    emphasis = []
+    attribution_cast_id = null
+    """
+    raw_text = beat.text.strip()
+    if len(raw_text) <= 90:
+        text = raw_text
+    else:
+        clipped = raw_text[:89]
+        last_space = clipped.rfind(" ")
+        if last_space != -1:
+            text = clipped[:last_space] + "…"
+        else:
+            text = clipped + "…"
+
+    return KineticQuoteScene(
+        id=scene_id,
+        beat_i=beat_i,
+        template="kinetic_quote",
+        props=KineticQuoteProps(
+            text=text,
+            emphasis=[],
+            attribution_cast_id=None,
+        ),
+        mute_sfx=False,
+        rationale="deterministic fallback",
+    )
+
+
+def build_deterministic_title_card(scene_id: str, beat_i: int, bible: Bible) -> TitleCardScene:
+    """Build deterministic title_card for scene 0.
+
+    Per design_planner.md §5:
+    title = bible.title
+    subtitle = null
+    icon = first set piece's icon, else first place's icon, else null
+    """
+    icon = None
+    if bible.set_pieces and bible.set_pieces[0].icon:
+        icon = bible.set_pieces[0].icon
+    elif bible.places and bible.places[0].icon:
+        icon = bible.places[0].icon
+
+    return TitleCardScene(
+        id=scene_id,
+        beat_i=beat_i,
+        template="title_card",
+        props=TitleCardProps(
+            title=bible.title,
+            subtitle=None,
+            icon=icon,
+        ),
+        mute_sfx=False,
+        rationale="deterministic title card",
+    )
+
+
+def narrow_schema_references(schema: dict[str, Any], template: str, bible: Bible) -> dict[str, Any]:
+    """Recursively narrow reference ID patterns in props schema to enums of IDs in this bible."""
+    if not isinstance(schema, dict):
+        return schema
+
+    res: dict[str, Any] = {}
+    for k, v in schema.items():
+        if isinstance(v, dict):
+            res[k] = narrow_schema_references(v, template, bible)
+        elif isinstance(v, list):
+            res[k] = [
+                narrow_schema_references(x, template, bible) if isinstance(x, dict) else x
+                for x in v
+            ]
+        else:
+            res[k] = v
+
+    if "pattern" in res:
+        pat = res["pattern"]
+        if pat == r"^c[1-8]$" and bible.cast:
+            del res["pattern"]
+            res["enum"] = [c.id for c in bible.cast]
+        elif pat == r"^p[1-4]$" and bible.places:
+            del res["pattern"]
+            if template == "map_focus":
+                geo_places = [p.id for p in bible.places if p.lat is not None and p.lon is not None]
+                res["enum"] = geo_places if geo_places else [p.id for p in bible.places]
+            else:
+                res["enum"] = [p.id for p in bible.places]
+        elif pat == r"^v[1-3]$" and bible.set_pieces:
+            del res["pattern"]
+            res["enum"] = [sp.id for sp in bible.set_pieces]
+
+    return res
+
+
+def _format_writing_rules_and_slots(template_name: str) -> tuple[str, str]:
+    spec = REGISTRY.get(template_name)
+    if not spec:
+        return ("", "")
+    rules = "\n".join(f"- {r}" for r in spec.writing_rules)
+    slots = "\n".join(
+        f"- {sname}: {s.font} {s.weight}, max_lines={s.max_lines}, box_width={s.box_width}"
+        for sname, s in spec.slots.items()
+    )
+    return (rules, slots)
+
+
+def plan_single_template_props(
+    template_name: str,
+    scene_id: str,
+    beat_i: int,
+    beat: Beat,
+    prev_beat: Beat | None,
+    next_beat: Beat | None,
+    transcript: Transcript,
+    bible: Bible,
+    backend: LLMBackend,
+    prompt_template: str,
+    compact_bible: str,
+) -> tuple[Scene | None, list[str], int]:
+    """Attempt up to 3 tries to generate and validate props for a single template.
+
+    Returns:
+        (scene_or_none, errors_accumulated, attempts_made)
+    """
+    spec = REGISTRY.get(template_name)
+    if not spec:
+        return (None, [f"Unknown template: {template_name}"], 0)
+
+    scene_cls = SCENE_CLASS_MAP[template_name]
+    raw_schema = spec.props_model.model_json_schema()
+    narrowed_schema = narrow_schema_references(raw_schema, template_name, bible)
+
+    writing_rules, field_limits = _format_writing_rules_and_slots(template_name)
+
+    prev_text = prev_beat.text if prev_beat else "None (start of story)"
+    next_text = next_beat.text if next_beat else "None (end of story)"
+
+    base_user_prompt = prompt_template.format(
+        compact_bible=compact_bible,
+        prev_beat_text=prev_text,
+        this_beat_text=beat.text,
+        next_beat_text=next_text,
+        template_name=template_name,
+        use_when=spec.use_when,
+        writing_rules=writing_rules,
+        field_limits=field_limits,
+    )
+
+    system = (
+        "You are an expert storyboard planner for animated educational explainer videos. "
+        "Generate concrete, grounded props for this infographic scene."
+    )
+
+    error_history: list[str] = []
+    attempts = 0
+
+    ctx = PlanContext(transcript=transcript, bible=bible, beat=beat)
+
+    for attempt in range(3):
+        attempts += 1
+        user_prompt = base_user_prompt
+        if attempt > 0 and error_history:
+            user_prompt += (
+                "\n\nYour previous JSON was rejected:\n"
+                + "\n".join(f"- {e}" for e in error_history[:20])
+                + "\nReturn corrected JSON only."
+            )
+
+        resp = backend.generate_json(
+            stage="props",
+            system=system,
+            user=user_prompt,
+            schema=narrowed_schema,
+            attempt=attempt,
+        )
+
+        try:
+            props_instance = spec.props_model.model_validate(resp)
+            scene_factory: Any = scene_cls
+            scene: Scene = scene_factory(
+                id=scene_id,
+                beat_i=beat_i,
+                template=template_name,
+                props=props_instance,
+                mute_sfx=False,
+                rationale="llm planned",
+            )
+            val_errors = validate_scene(scene, ctx)
+            if not val_errors:
+                return (scene, [], attempts)
+            else:
+                error_history = val_errors
+        except ValidationError as e:
+            error_history = [str(err) for err in e.errors()]
+        except Exception as e:
+            error_history = [f"Failed to instantiate scene: {e}"]
+
+    return (None, error_history, attempts)
+
+
+def plan_storyboard(
+    transcript: Transcript,
+    beats: Sequence[Beat],
+    bible: Bible,
+    backend: LLMBackend,
+) -> tuple[Storyboard, PlanReport]:
+    """Execute complete storyboard planning: select -> props with fallback ladder -> rule repairs.
+
+    Returns:
+        (Storyboard, PlanReport)
+    """
+    n_beats = len(beats)
+    if n_beats == 0:
+        return (
+            Storyboard(schema_version=1, aspect="9:16", scenes=[]),
+            PlanReport(
+                schema_version=1,
+                model=getattr(backend, "model", "gemma4:26b"),
+                llm_calls=0,
+                llm_cache_hits=0,
+                scenes=[],
+                rule_repairs=[],
+            ),
+        )
+
+    # 1. Template selection stage
+    choices, select_repairs, select_calls, select_hits = plan_template_selection(
+        transcript, beats, bible, backend
+    )
+
+    prompt_path = Path(__file__).resolve().parent / "prompts" / "props.md"
+    prompt_template = prompt_path.read_text(encoding="utf-8")
+
+    from animated_infographics.planner.select import _build_compact_bible
+
+    compact_bible = _build_compact_bible(bible)
+
+    total_llm_calls = select_calls
+    total_cache_hits = select_hits
+
+    scenes: list[Scene] = []
+    plan_report_scenes: list[PlanReportScene] = []
+    all_repairs: list[RuleRepair] = list(select_repairs)
+
+    # 2. Props stage per scene with fallback ladder
+    for idx, beat in enumerate(beats):
+        scene_id = f"s{idx:03d}"
+        prev_beat = beats[idx - 1] if idx > 0 else None
+        next_beat = beats[idx + 1] if idx + 1 < n_beats else None
+
+        choice = choices[idx]
+        prim_template = choice.primary
+        alt_template = choice.alternate
+
+        if idx == 0:
+            # Beat 0 is always title_card
+            t_scene = build_deterministic_title_card(scene_id, 0, bible)
+            scenes.append(t_scene)
+            plan_report_scenes.append(
+                PlanReportScene(
+                    id=scene_id,
+                    primary="title_card",
+                    alternate="title_card",
+                    final_template="title_card",
+                    fallback_level=0,
+                    attempts=0,
+                    errors=[],
+                )
+            )
+            continue
+
+        accumulated_errors: list[str] = []
+        scene_result: Scene | None = None
+        fallback_level: int = 0
+        total_scene_attempts = 0
+
+        # Attempt primary template
+        p_scene, p_errs, p_attempts = plan_single_template_props(
+            prim_template,
+            scene_id,
+            idx,
+            beat,
+            prev_beat,
+            next_beat,
+            transcript,
+            bible,
+            backend,
+            prompt_template,
+            compact_bible,
+        )
+        total_scene_attempts += p_attempts
+        total_llm_calls += p_attempts
+
+        if p_scene is not None:
+            scene_result = p_scene
+            fallback_level = 0
+        else:
+            accumulated_errors.extend(p_errs)
+            # Attempt alternate template
+            if alt_template != prim_template:
+                a_scene, a_errs, a_attempts = plan_single_template_props(
+                    alt_template,
+                    scene_id,
+                    idx,
+                    beat,
+                    prev_beat,
+                    next_beat,
+                    transcript,
+                    bible,
+                    backend,
+                    prompt_template,
+                    compact_bible,
+                )
+                total_scene_attempts += a_attempts
+                total_llm_calls += a_attempts
+                if a_scene is not None:
+                    scene_result = a_scene
+                    fallback_level = 1
+                else:
+                    accumulated_errors.extend(a_errs)
+
+        # Fallback level 2: deterministic kinetic_quote
+        if scene_result is None:
+            fallback_level = 2
+            scene_result = build_deterministic_kinetic_quote(scene_id, idx, beat)
+
+        scenes.append(scene_result)
+        plan_report_scenes.append(
+            PlanReportScene(
+                id=scene_id,
+                primary=prim_template,
+                alternate=alt_template,
+                final_template=scene_result.template,
+                fallback_level=fallback_level,  # type: ignore[arg-type]
+                attempts=total_scene_attempts,
+                errors=accumulated_errors,
+            )
+        )
+
+    # 3. Apply Rule R3 (character_intro for same cast_id at most once)
+    seen_intro_cast: set[str] = set()
+    for idx, sc in enumerate(scenes):
+        if sc.template == "character_intro":
+            cast_id = sc.props.cast_id  # type: ignore[attr-defined]
+            if cast_id in seen_intro_cast:
+                # Need repair to alternate or fallback
+                alt_template = choices[idx].alternate
+                if alt_template == "character_intro":
+                    alt_template = "kinetic_quote"
+
+                new_scene: Scene | None = None
+                if alt_template != "kinetic_quote":
+                    a_scene, _, a_attempts = plan_single_template_props(
+                        alt_template,
+                        sc.id,
+                        idx,
+                        beats[idx],
+                        beats[idx - 1] if idx > 0 else None,
+                        beats[idx + 1] if idx + 1 < n_beats else None,
+                        transcript,
+                        bible,
+                        backend,
+                        prompt_template,
+                        compact_bible,
+                    )
+                    total_llm_calls += a_attempts
+                    new_scene = a_scene
+
+                if new_scene is None:
+                    new_scene = build_deterministic_kinetic_quote(sc.id, idx, beats[idx])
+
+                all_repairs.append(
+                    RuleRepair(
+                        rule="R3",
+                        scene=sc.id,
+                        to=new_scene.template,
+                        **{"from": "character_intro"},
+                    )
+                )
+                scenes[idx] = new_scene
+                # Update report scene
+                old_rep = plan_report_scenes[idx]
+                plan_report_scenes[idx] = PlanReportScene(
+                    id=old_rep.id,
+                    primary=old_rep.primary,
+                    alternate=old_rep.alternate,
+                    final_template=new_scene.template,
+                    fallback_level=1 if new_scene.template == alt_template else 2,
+                    attempts=old_rep.attempts,
+                    errors=old_rep.errors,
+                )
+            else:
+                seen_intro_cast.add(cast_id)
+
+    storyboard = Storyboard(schema_version=1, aspect="9:16", scenes=scenes)
+    plan_report = PlanReport(
+        schema_version=1,
+        model=getattr(backend, "model", "gemma4:26b"),
+        llm_calls=total_llm_calls,
+        llm_cache_hits=total_cache_hits,
+        scenes=plan_report_scenes,
+        rule_repairs=all_repairs,
+    )
+
+    return (storyboard, plan_report)

@@ -1,0 +1,309 @@
+"""Template selection planning and deterministic rule repairs."""
+
+import math
+from collections.abc import Sequence
+from pathlib import Path
+
+from pydantic import BaseModel, ConfigDict
+
+from animated_infographics.contracts.models import (
+    Beat,
+    Bible,
+    RuleRepair,
+    Transcript,
+)
+from animated_infographics.contracts.templates import REGISTRY
+from animated_infographics.planner.llm import LLMBackend
+
+
+class Choice(BaseModel):
+    """Template choice for a single scene/beat."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    beat_i: int
+    primary: str
+    alternate: str
+
+
+def allowed_templates(bible: Bible) -> list[str]:
+    """Compute the list of allowed templates based on bible contents.
+
+    Per design_planner.md §4:
+    - character_intro, emotion_beat, dialogue: cast has >= 1 member
+    - relationship_map: cast has >= 2 members
+    - location: places non-empty
+    - set_piece: set_pieces non-empty
+    - map_focus: some place has non-null lat/lon
+    - title_card: never offered (beat 0 only)
+    - all others: always
+    """
+    templates = [
+        "kinetic_quote",
+        "stat_callout",
+        "icon_list",
+        "reveal",
+        "cause_effect",
+        "comparison",
+        "text_thread",
+        "timeline",
+    ]
+    if len(bible.cast) >= 1:
+        templates.extend(["character_intro", "emotion_beat", "dialogue"])
+    if len(bible.cast) >= 2:
+        templates.append("relationship_map")
+    if len(bible.places) >= 1:
+        templates.append("location")
+    if len(bible.set_pieces) >= 1:
+        templates.append("set_piece")
+    if any(p.lat is not None and p.lon is not None for p in bible.places):
+        templates.append("map_focus")
+
+    return sorted(templates)
+
+
+def apply_rules(choices: list[Choice], n_scenes: int) -> tuple[list[Choice], list[RuleRepair]]:
+    """Apply deterministic rules R1, R2, R4, R5 to template choices in order.
+
+    Per design_planner.md §4:
+    R1: Scene 0 is not title_card / later scene is title_card -> Force / replace with alternate
+    R2: Two consecutive scenes share template (except dialogue, text_thread) ->
+        second -> alternate; if that repeats -> kinetic_quote
+    (R3 applied after props)
+    R4: reveal > 2 times -> later ones -> alternate
+    R5: kinetic_quote > ceil(0.30 * n_scenes) times (LLM primaries) ->
+        excess (latest first) -> alternate
+    """
+    res = list(choices)
+    repairs: list[RuleRepair] = []
+
+    if not res:
+        return (res, repairs)
+
+    # R1: Scene 0 is title_card; later scenes are not
+    if res[0].primary != "title_card":
+        repairs.append(
+            RuleRepair(rule="R1", scene="s000", to="title_card", **{"from": res[0].primary})
+        )
+        res[0] = Choice(beat_i=0, primary="title_card", alternate=res[0].alternate)
+
+    for i in range(1, len(res)):
+        if res[i].primary == "title_card":
+            target = res[i].alternate if res[i].alternate != "title_card" else "kinetic_quote"
+            repairs.append(
+                RuleRepair(rule="R1", scene=f"s{i:03d}", to=target, **{"from": "title_card"})
+            )
+            res[i] = Choice(beat_i=i, primary=target, alternate="kinetic_quote")
+
+    # R2: Consecutive duplicates (except dialogue, text_thread)
+    for i in range(1, len(res)):
+        if res[i].primary == res[i - 1].primary and res[i].primary not in (
+            "dialogue",
+            "text_thread",
+        ):
+            prev = res[i - 1].primary
+            alt = res[i].alternate
+            if alt != prev and alt != "title_card":
+                new_prim = alt
+            else:
+                new_prim = "kinetic_quote"
+            repairs.append(
+                RuleRepair(rule="R2", scene=f"s{i:03d}", to=new_prim, **{"from": res[i].primary})
+            )
+            res[i] = Choice(beat_i=i, primary=new_prim, alternate=res[i].alternate)
+
+    # R4: reveal at most 2 times
+    reveal_indices = [i for i, c in enumerate(res) if c.primary == "reveal"]
+    if len(reveal_indices) > 2:
+        for idx in reveal_indices[2:]:
+            alt = res[idx].alternate
+            new_prim = alt if alt != "reveal" else "kinetic_quote"
+            repairs.append(
+                RuleRepair(rule="R4", scene=f"s{idx:03d}", to=new_prim, **{"from": "reveal"})
+            )
+            res[idx] = Choice(beat_i=idx, primary=new_prim, alternate=res[idx].alternate)
+
+    # R5: kinetic_quote at most ceil(0.30 * n_scenes)
+    max_kq = math.ceil(0.30 * n_scenes)
+    kq_indices = [i for i, c in enumerate(res) if i > 0 and c.primary == "kinetic_quote"]
+    if len(kq_indices) > max_kq:
+        excess = len(kq_indices) - max_kq
+        for idx in reversed(kq_indices):
+            if excess <= 0:
+                break
+            alt = res[idx].alternate
+            if alt != "kinetic_quote":
+                repairs.append(
+                    RuleRepair(rule="R5", scene=f"s{idx:03d}", to=alt, **{"from": "kinetic_quote"})
+                )
+                res[idx] = Choice(beat_i=idx, primary=alt, alternate=res[idx].alternate)
+                excess -= 1
+
+    return (res, repairs)
+
+
+def _build_compact_bible(bible: Bible) -> str:
+    parts = [f"Title: {bible.title} ({bible.genre})"]
+    if bible.cast:
+        cast_strs = [f"- {c.id}: {c.name} ({c.role})" for c in bible.cast]
+        parts.append("Cast:\n" + "\n".join(cast_strs))
+    if bible.places:
+        places_strs = [
+            f"- {p.id}: {p.name} ({p.country_iso3 or 'fictional'})" for p in bible.places
+        ]
+        parts.append("Places:\n" + "\n".join(places_strs))
+    if bible.set_pieces:
+        sp_strs = [f"- {sp.id}: {sp.name}" for sp in bible.set_pieces]
+        parts.append("Set Pieces:\n" + "\n".join(sp_strs))
+    return "\n\n".join(parts)
+
+
+def plan_template_selection(
+    transcript: Transcript,
+    beats: Sequence[Beat],
+    bible: Bible,
+    backend: LLMBackend,
+) -> tuple[list[Choice], list[RuleRepair], int, int]:
+    """Plan visual templates for all narration beats using LLM in 6-beat windows with rule repairs.
+
+    Returns:
+        (choices, rule_repairs, llm_calls, llm_cache_hits)
+    """
+    n_beats = len(beats)
+    if n_beats == 0:
+        return ([], [], 0, 0)
+
+    # Beat 0 is always title_card
+    all_choices: list[Choice] = [Choice(beat_i=0, primary="title_card", alternate="title_card")]
+
+    if n_beats == 1:
+        repaired, repairs = apply_rules(all_choices, 1)
+        return (repaired, repairs, 0, 0)
+
+    allowed = allowed_templates(bible)
+    template_menu = "\n".join(
+        f"- {name}: {REGISTRY[name].use_when}" for name in allowed if name in REGISTRY
+    )
+    compact_bible = _build_compact_bible(bible)
+
+    prompt_path = Path(__file__).resolve().parent / "prompts" / "select.md"
+    prompt_template = prompt_path.read_text(encoding="utf-8")
+
+    total_calls = 0
+    total_cache_hits = 0
+
+    schema = {
+        "type": "object",
+        "properties": {
+            "choices": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "beat_i": {"type": "integer"},
+                        "primary": {"type": "string", "enum": allowed},
+                        "alternate": {"type": "string", "enum": allowed},
+                    },
+                    "required": ["beat_i", "primary", "alternate"],
+                    "additionalProperties": False,
+                },
+            }
+        },
+        "required": ["choices"],
+        "additionalProperties": False,
+    }
+
+    # Process beats in windows of 6
+    window_size = 6
+    for w_start in range(1, n_beats, window_size):
+        w_end = min(w_start + window_size, n_beats)
+        window_beats = beats[w_start:w_end]
+
+        # Previous 2 beats' choices
+        prev_slice = all_choices[-2:] if len(all_choices) >= 2 else all_choices
+        prev_strs = [
+            f"Beat {c.beat_i}: primary={c.primary}, alternate={c.alternate}" for c in prev_slice
+        ]
+        prev_text = "\n".join(prev_strs) if prev_strs else "None (start of video)"
+
+        beats_text = "\n".join(f"[Beat {b.i}]: {b.text}" for b in window_beats)
+
+        user_content = prompt_template.format(
+            compact_bible=compact_bible,
+            previous_choices=prev_text,
+            template_menu=template_menu,
+            window_beats=beats_text,
+        )
+
+        system = (
+            "You are an expert storyboard planner for animated educational explainer videos. "
+            "Select the best visual infographic templates for each narration beat."
+        )
+
+        window_choices: list[Choice] | None = None
+        error_history: list[str] = []
+
+        for attempt in range(3):
+            total_calls += 1
+            call_user = user_content
+            if attempt > 0 and error_history:
+                call_user += (
+                    "\n\nYour previous JSON was rejected:\n"
+                    + "\n".join(f"- {e}" for e in error_history[:20])
+                    + "\nReturn corrected JSON only."
+                )
+
+            resp = backend.generate_json(
+                stage="select",
+                system=system,
+                user=call_user,
+                schema=schema,
+                attempt=attempt,
+            )
+
+            # Validate response
+            errs: list[str] = []
+            parsed_choices: list[Choice] = []
+            raw_choices = resp.get("choices")
+            if not isinstance(raw_choices, list):
+                errs.append("Missing or non-array 'choices' in response")
+            elif len(raw_choices) != len(window_beats):
+                errs.append(f"Expected {len(window_beats)} choices, got {len(raw_choices)}")
+            else:
+                for idx, c in enumerate(raw_choices):
+                    expected_beat_i = window_beats[idx].i
+                    beat_i = c.get("beat_i")
+                    prim = c.get("primary")
+                    alt = c.get("alternate")
+                    if beat_i != expected_beat_i:
+                        errs.append(f"Choice {idx} beat_i={beat_i}, expected {expected_beat_i}")
+                    if prim not in allowed:
+                        errs.append(f"Choice {idx} primary '{prim}' not in allowed templates")
+                    if alt not in allowed:
+                        errs.append(f"Choice {idx} alternate '{alt}' not in allowed templates")
+                    if prim == alt:
+                        errs.append(
+                            f"Choice {idx} has primary == alternate ('{prim}'). They must differ."
+                        )
+                    if not errs:
+                        parsed_choices.append(
+                            Choice(beat_i=expected_beat_i, primary=prim, alternate=alt)
+                        )
+
+            if not errs and len(parsed_choices) == len(window_beats):
+                window_choices = parsed_choices
+                break
+            else:
+                error_history = errs
+
+        # Fallback if all 3 attempts failed
+        if window_choices is None:
+            window_choices = [
+                Choice(beat_i=b.i, primary="kinetic_quote", alternate="kinetic_quote")
+                for b in window_beats
+            ]
+
+        all_choices.extend(window_choices)
+
+    repaired_choices, rule_repairs = apply_rules(all_choices, n_beats)
+    return (repaired_choices, rule_repairs, total_calls, total_cache_hits)

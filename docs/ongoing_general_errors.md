@@ -59,6 +59,7 @@ A10 — Transcription (Whisper) — 715d670 — G1–G8, G11, G14 green; 98 fast
 A11 — Renderer foundation (+ kinetic_quote) — 731ad9e — G1–G9, G11, G14 green; G9 active (pure); 100 fast pytest passed; smoke media render 1080x1920@30fps verified with ffprobe; sync probe flips verified at frames 29/31 (0 vs 255) and 59/61 (255 vs 0); gallery kinetic_quote min/typical/max 0 overflows; both falsifications verified (red then green)
 A12 — Bible and geo resolution — 208d445 — G1–G9, G11, G14 green; 118 fast pytest + 13 slow tests passed; Boston, Duluth, Thunder Bay, Amarillo resolved via GeoNames gazetteer; antimeridian-aware country bbox checking; female narrator facial hair repaired to none; both falsifications verified (red then green)
 A13 — Segmentation — 1d47dd8 — G1–G9, G11, G14 green; 125 fast pytest + 15 slow tests passed; 4 fixtures segmented with continuous narration tiling and duration bounds [1500, 8000]ms; beat counts: molasses_flood 8, emu_war 20, story_recipe_box 26, story_room_12 24; falsification verified (red then green)
+A14 — Storyboard planning and the planner eval — 2b7dc04 — G1–G9, G11, G14 green; 149 fast pytest passed; planner eval passed 4/4 fixtures with 0 violations, fallback L2 0.0% (bar ≤ 15%), distinct templates 6/11/16/13 (bars ≥ 5/7), story_recipe_box wall time 49.0s (bar ≤ 240s), voice match 4/4; falsification verified (red then green)
 
 ---
 
