@@ -21,13 +21,41 @@ def fake_stages() -> dict[str, Any]:
     def fake_voice(j: Job, ctx: RunContext) -> None:
         (j.dir / "voice.json").write_text('{"voice":"am_michael"}', encoding="utf-8")
 
+    def _make_fake_transcript(src: str) -> dict[str, Any]:
+        return {
+            "schema_version": 1,
+            "source": src,
+            "audio_path": "audio/narration.wav",
+            "duration_ms": 1000,
+            "words": [
+                {"i": 0, "sentence_i": 0, "text": "Scene", "start_ms": 0, "end_ms": 500},
+                {"i": 1, "sentence_i": 0, "text": "one", "start_ms": 500, "end_ms": 1000},
+            ],
+            "sentences": [
+                {
+                    "i": 0,
+                    "paragraph_i": 0,
+                    "text": "Scene one",
+                    "start_ms": 0,
+                    "end_ms": 1000,
+                    "word_start": 0,
+                    "word_end": 2,
+                    "is_title": True,
+                }
+            ],
+        }
+
     def fake_narrate(j: Job, ctx: RunContext) -> None:
         (j.dir / "narration.json").write_text("{}", encoding="utf-8")
         (j.dir / "audio" / "narration.wav").write_bytes(b"RIFFdummywav")
-        (j.dir / "transcript.json").write_text('{"source":"tts"}', encoding="utf-8")
+        (j.dir / "transcript.json").write_text(
+            json.dumps(_make_fake_transcript("tts")), encoding="utf-8"
+        )
 
     def fake_transcribe(j: Job, ctx: RunContext) -> None:
-        (j.dir / "transcript.json").write_text('{"source":"whisper"}', encoding="utf-8")
+        (j.dir / "transcript.json").write_text(
+            json.dumps(_make_fake_transcript("asr")), encoding="utf-8"
+        )
 
     def fake_bible(j: Job, ctx: RunContext) -> None:
         data = {
@@ -42,7 +70,19 @@ def fake_stages() -> dict[str, Any]:
         (j.dir / "bible.json").write_text(json.dumps(data), encoding="utf-8")
 
     def fake_segment(j: Job, ctx: RunContext) -> None:
-        data = {"schema_version": 1, "beats": []}
+        data = {
+            "schema_version": 1,
+            "beats": [
+                {
+                    "i": 0,
+                    "word_start": 0,
+                    "word_end": 2,
+                    "start_ms": 0,
+                    "end_ms": 1000,
+                    "text": "Scene one",
+                }
+            ],
+        }
         (j.dir / "beats.json").write_text(json.dumps(data), encoding="utf-8")
 
     def fake_storyboard(j: Job, ctx: RunContext) -> None:

@@ -68,6 +68,7 @@ class RunContext:
     sfx_dir: Path | None = None
     no_llm_cache: bool = False
     preview_video: bool = False
+    sync_probe: bool = False
     now: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 

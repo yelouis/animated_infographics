@@ -1,5 +1,6 @@
 """CLI entry point for Animated Infographics."""
 
+import json
 import os
 import shutil
 import sys
@@ -14,7 +15,7 @@ import typer
 # Runtime environment settings
 os.environ["HF_HUB_OFFLINE"] = "1"
 
-from animated_infographics.contracts.models import Bible, Storyboard
+from animated_infographics.contracts.models import Beats, Bible, Storyboard, Transcript
 from animated_infographics.doctor import run_doctor
 from animated_infographics.errors import (
     DependencyMissing,
@@ -28,9 +29,13 @@ from animated_infographics.jobs import (
     RunContext,
     StageFn,
 )
+from animated_infographics.planner.validate import PlanContext, validate_plan
+from animated_infographics.stages.assets import run_assets_stage
 from animated_infographics.stages.bible import run_bible_stage
+from animated_infographics.stages.compile import run_compile_stage
 from animated_infographics.stages.ingest import run_ingest_stage
 from animated_infographics.stages.narrate import run_narrate_stage
+from animated_infographics.stages.preview import run_preview_stage
 from animated_infographics.stages.segment import run_segment_stage
 from animated_infographics.stages.storyboard import run_storyboard_stage
 from animated_infographics.stages.transcribe import run_transcribe_stage
@@ -59,6 +64,9 @@ STAGE_REGISTRY["transcribe"] = run_transcribe_stage
 STAGE_REGISTRY["bible"] = run_bible_stage
 STAGE_REGISTRY["segment"] = run_segment_stage
 STAGE_REGISTRY["storyboard"] = run_storyboard_stage
+STAGE_REGISTRY["assets"] = run_assets_stage
+STAGE_REGISTRY["compile"] = run_compile_stage
+STAGE_REGISTRY["preview"] = run_preview_stage
 
 
 def set_stage_registry(custom: Mapping[str, StageFn]) -> None:
@@ -238,14 +246,35 @@ def preview(
             raise ValidationFailed(f"storyboard.json missing in job {job.job_id}")
 
         try:
-            Bible.model_validate_json(bible_path.read_text(encoding="utf-8"))
+            bible = Bible.model_validate_json(bible_path.read_text(encoding="utf-8"))
         except Exception as e:
             raise ValidationFailed(f"bible.json validation failed: {e}") from e
 
         try:
-            Storyboard.model_validate_json(sb_path.read_text(encoding="utf-8"))
+            storyboard = Storyboard.model_validate_json(sb_path.read_text(encoding="utf-8"))
         except Exception as e:
             raise ValidationFailed(f"storyboard.json validation failed: {e}") from e
+
+        # Validate storyboard plan against transcript and bible
+        transcript_path = job.dir / "transcript.json"
+        beats_path = job.dir / "beats.json"
+        if transcript_path.is_file() and beats_path.is_file():
+            try:
+                transcript = Transcript.model_validate_json(
+                    transcript_path.read_text(encoding="utf-8")
+                )
+                beats = Beats.model_validate_json(beats_path.read_text(encoding="utf-8")).beats
+                plan_ctx = PlanContext(transcript=transcript, bible=bible, beats=beats)
+                val_errors = validate_plan(bible, storyboard, plan_ctx)
+                if val_errors:
+                    err_msg = "storyboard validation failed:\n" + "\n".join(
+                        f"- {e}" for e in val_errors
+                    )
+                    raise ValidationFailed(err_msg)
+            except ValidationFailed:
+                raise
+            except Exception as e:
+                raise ValidationFailed(f"transcript or beats validation failed: {e}") from e
 
         # Invalidate approval
         job.state["approval"] = None
@@ -278,6 +307,31 @@ def approve(
         if job.state.get("state") != "awaiting_review":
             st = job.state.get("state")
             raise GateRefused(f"Cannot approve job in state '{st}' (expected 'awaiting_review')")
+
+        # Refuse approval if preview/report.json has text overflows
+        report_path = job.dir / "preview" / "report.json"
+        if report_path.is_file():
+            try:
+                rep_data = json.loads(report_path.read_text(encoding="utf-8"))
+                overflow_entries = rep_data.get("overflow", [])
+                if overflow_entries:
+                    overflow_ids = sorted(
+                        set(
+                            e.get("scene_id", "unknown")
+                            for e in overflow_entries
+                            if isinstance(e, dict)
+                        )
+                    )
+                    ids_str = ", ".join(overflow_ids)
+                    msg = (
+                        f"text overflows in {ids_str} — "
+                        "shorten it in storyboard.json and run preview"
+                    )
+                    raise GateRefused(msg)
+            except GateRefused:
+                raise
+            except Exception:
+                pass
 
         current_plan = job.plan_sha256()
         if not current_plan:
