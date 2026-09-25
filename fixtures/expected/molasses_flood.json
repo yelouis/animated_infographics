@@ -1,0 +1,19 @@
+{
+  "numbers": [1919, 15, 2300000, 25, 35, 21, 150],
+  "cast_names": [],
+  "narrator": false,
+  "places": [
+    {
+      "name": "Boston",
+      "country_iso3": "USA",
+      "lat": 42.36,
+      "lon": -71.06,
+      "tol_deg": 0.1,
+      "geo_source": "gazetteer"
+    }
+  ],
+  "voice": "am_michael",
+  "voice_reason": "third_person",
+  "evidence_contains": null,
+  "narrator_facial_hair": null
+}

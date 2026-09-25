@@ -1,0 +1,14 @@
+{
+  "numbers": [1932, 20000, 2, 10000, 50, 1000, 12, 10, 9860, 986, 57034, 1934],
+  "cast_names": ["Meredith"],
+  "narrator": false,
+  "places": [
+    {
+      "country_iso3": "AUS"
+    }
+  ],
+  "voice": "am_michael",
+  "voice_reason": "third_person",
+  "evidence_contains": null,
+  "narrator_facial_hair": null
+}

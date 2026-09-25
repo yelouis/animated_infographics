@@ -1,0 +1,19 @@
+{
+  "numbers": [6, 40, 66, 3, 70, 12, 38, 1990, 1974, 2016, 1, 4],
+  "cast_names": ["Alvarez", "Deb", "Sofia"],
+  "narrator": true,
+  "places": [
+    {
+      "name": "Amarillo",
+      "country_iso3": "USA",
+      "lat": 35.22,
+      "lon": -101.83,
+      "tol_deg": 0.1,
+      "geo_source": "gazetteer"
+    }
+  ],
+  "voice": "am_michael",
+  "voice_reason": "no_evidence",
+  "evidence_contains": null,
+  "narrator_facial_hair": null
+}

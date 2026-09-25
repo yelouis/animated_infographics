@@ -1,0 +1,27 @@
+{
+  "numbers": [2013, 312, 40, 11, 60, 190, 91, 1961, 50],
+  "cast_names": ["Rose", "Danny", "Walt"],
+  "narrator": true,
+  "places": [
+    {
+      "name": "Duluth",
+      "country_iso3": "USA",
+      "lat": 46.78,
+      "lon": -92.11,
+      "tol_deg": 0.1,
+      "geo_source": "gazetteer"
+    },
+    {
+      "name": "Thunder Bay",
+      "country_iso3": "CAN",
+      "lat": 48.38,
+      "lon": -89.25,
+      "tol_deg": 0.1,
+      "geo_source": "gazetteer"
+    }
+  ],
+  "voice": "af_heart",
+  "voice_reason": "llm",
+  "evidence_contains": "granddaughter",
+  "narrator_facial_hair": "none"
+}
