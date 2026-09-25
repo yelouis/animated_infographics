@@ -36,6 +36,7 @@ from animated_infographics.stages.compile import run_compile_stage
 from animated_infographics.stages.ingest import run_ingest_stage
 from animated_infographics.stages.narrate import run_narrate_stage
 from animated_infographics.stages.preview import run_preview_stage
+from animated_infographics.stages.render import run_render_stage
 from animated_infographics.stages.segment import run_segment_stage
 from animated_infographics.stages.storyboard import run_storyboard_stage
 from animated_infographics.stages.transcribe import run_transcribe_stage
@@ -67,6 +68,7 @@ STAGE_REGISTRY["storyboard"] = run_storyboard_stage
 STAGE_REGISTRY["assets"] = run_assets_stage
 STAGE_REGISTRY["compile"] = run_compile_stage
 STAGE_REGISTRY["preview"] = run_preview_stage
+STAGE_REGISTRY["render"] = run_render_stage
 
 
 def set_stage_registry(custom: Mapping[str, StageFn]) -> None:

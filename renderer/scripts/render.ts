@@ -221,6 +221,15 @@ async function main() {
         scale,
         onBrowserLog,
         overwrite: true,
+        ffmpegOverride: ({ type, args }) => {
+          if (type === "stitcher") {
+            const newArgs = [...args];
+            const outIndex = newArgs.length - 1;
+            newArgs.splice(outIndex, 0, "-shortest");
+            return newArgs;
+          }
+          return args;
+        },
         onStart: (data) => {
           console.log(`Render started with concurrency=${data.resolvedConcurrency}`);
         },
