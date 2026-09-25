@@ -320,6 +320,15 @@ def generate_preview_report(
         fallback_scenes = [s.id for s in plan_report.scenes if s.fallback_level == 2]
 
     failed_images: list[str] = []
+    manifest_path = job_dir / "assets" / "manifest.json"
+    if manifest_path.is_file():
+        try:
+            m_data = json.loads(manifest_path.read_text(encoding="utf-8"))
+            for ent in m_data.get("entities", []):
+                if ent.get("status") == "failed":
+                    failed_images.append(ent.get("id", ""))
+        except Exception:
+            pass
 
     report_data = {
         "overflow": overflow_entries,

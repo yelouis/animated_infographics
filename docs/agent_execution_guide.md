@@ -58,16 +58,16 @@ Each gate is created by the item named. **Replace "NOT BUILT" with the measured 
 | # | Gate | Result |
 |---|---|---|
 | G1 | `uv run ruff check .` | exit 0 (All checks passed) |
-| G2 | `uv run ruff format --check .` | exit 0 (95 files already formatted) |
-| G3 | `uv run mypy src` | exit 0 (Success: no issues found in 51 source files) |
-| G4 | `uv run pytest -q -m "not slow"` | exit 0 (161 passed) |
+| G2 | `uv run ruff format --check .` | exit 0 (99 files already formatted) |
+| G3 | `uv run mypy src` | exit 0 (Success: no issues found in 53 source files) |
+| G4 | `uv run pytest -q -m "not slow"` | exit 0 (169 passed) |
 | G5 | `npm --prefix renderer run typecheck` | exit 0 (0 errors) |
 | G6 | `npm --prefix renderer run lint` | exit 0 (0 errors) |
 | G7 | `npm --prefix renderer test` | exit 0 (15 passed) |
 | G8 | `./scripts/check_schema_sync.sh` | exit 0 (11 files in sync) |
 | G9 | `./scripts/check_renderer_purity.sh` | exit 0 (pure) |
 | G10 | `./scripts/check_gallery.sh` | exit 0 (0 overflows across 51 fixtures, 17 entries matched goldens, hold motion verified) |
-| G11 | `uv run pytest -q -m slow` | exit 0 (15 passed) |
+| G11 | `uv run pytest -q -m slow` | exit 0 (18 passed) |
 | G12 | `./scripts/e2e.sh` | exit 0 (passed, steps 1–6 verified) |
 | G13 | `./scripts/check_offline.sh` | NOT BUILT (A22) |
 | G14 | `uv run infographics doctor` | exit 0 (21 checks OK) |

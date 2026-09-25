@@ -12,21 +12,7 @@
 
 **Selected, specced, not yet delivered.** When an item lands, its implementing commit collapses the issue below into one line in §3.
 
----
-
-### Issue 2: Local illustration model → specced as **A21** (illustrations)
-
-**Status**: ✅ Selected September 24, 2026. FLUX.2 [klein] 4B is the only image model (`design_visual_direction.md` §7). The side-by-side benchmark against Z-Image-Turbo previously planned for this issue is dropped.
-
-**Option A (recommended)**: **FLUX.2 [klein] 4B** via mflux, 4 steps.
-  - *Pros*: Apache-2.0; the fastest option, which protects the 10-minute budget; supports reference-image editing, a future route to richer set-piece consistency.
-  - *Cons*: Smaller model; may follow the flat-vector style prompt less tightly.
-
-**Option B**: **Z-Image-Turbo** (6B) via mflux, 9 steps.
-  - *Pros*: Apache-2.0; strong prompt adherence and detail.
-  - *Cons*: More steps and parameters, so slower per image; tuned toward realism, so it may resist the flat style.
-
-Your selection: Proceed with Option A.
+None awaiting a selection. All Wave A issues resolved.
 
 ---
 
@@ -65,7 +51,8 @@ A16 — Final render and output verification — 8203be5 — G1–G9, G11, G12, 
 A17 — Visual primitives and the gallery gate — 18c097b — G1–G12, G14 green; G10 active (0 overflows, goldens matched, hold motion passed); 161 fast pytest passed, 11 vitest passed; 6 visual primitives implemented; WCAG 2.x contrast verified; all 3 falsifications verified (red then green)
 A18 — Templates: statement set — 5b88db1 — G1–G12, G14 green; G10 active (0 overflows across 24 fixtures, 8 templates matched goldens, hold motion verified); 6 statement templates implemented; molasses_flood contact sheet validated; both falsifications verified (red then green)
 A19 — Templates: people set — cedcd5a — G1–G12, G14 green; G10 active (0 overflows across 39 fixtures, 13 templates matched goldens, hold motion verified); 5 people templates implemented; story_recipe_box and story_room_12 preview validated; both falsifications verified (red then green)
-A20 — Templates: place & time set + delete placeholder — 4c99548 — G1–G12, G14 green; G10 active (0 overflows across 51 fixtures, 17 entries matched goldens, hold motion verified); 4 place & time templates implemented; Placeholder.tsx deleted (0 NOT YET IMPLEMENTED matches); containment test verified and falsified (red then green); golden diff falsified (red then green); overflow falsified (red then green)
+A20 — Templates: place & time set + delete placeholder — 9cddf93 — G1–G12, G14 green; G10 active (0 overflows across 51 fixtures, 17 entries matched goldens, hold motion verified); 4 place & time templates implemented; Placeholder.tsx deleted (0 NOT YET IMPLEMENTED matches); containment test verified and falsified (red then green); golden diff falsified (red then green); overflow falsified (red then green)
+A21 — Illustrations (FLUX.2 klein 4B) — aee4a02 — G1–G12, G14 green; 169 fast pytest + 18 slow tests passed; mflux flux2-klein-4b editorial vector generation (1024x1024, 4 steps, quantize 8) verified; cache hit < 1s; story_recipe_box assets budget: 3 images (p1, p2, v1); timeout fallback verified and falsified (red then green)
 
 ---
 

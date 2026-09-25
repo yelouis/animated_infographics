@@ -80,6 +80,7 @@ def compile_timeline(
     music_rel_path: str | None = None,
     sfx_files_by_role: dict[str, list[Path]] | None = None,
     sync_probe: bool = False,
+    available_images: set[str] | None = None,
 ) -> Timeline:
     """Compile storyboard into fully-resolved Timeline object adhering to design contracts."""
     total_frames = duration_frames(transcript)
@@ -212,7 +213,9 @@ def compile_timeline(
     places_map = {
         p.id: TimelinePlace(
             name=p.name,
-            image=None,
+            image=f"job/assets/images/{p.id}.png"
+            if (available_images and p.id in available_images)
+            else None,
             icon=p.icon,
             lat=p.lat,
             lon=p.lon,
@@ -221,7 +224,14 @@ def compile_timeline(
         for p in bible.places
     }
     set_pieces_map = {
-        s.id: TimelineSetPiece(name=s.name, image=None, icon=s.icon) for s in bible.set_pieces
+        s.id: TimelineSetPiece(
+            name=s.name,
+            image=f"job/assets/images/{s.id}.png"
+            if (available_images and s.id in available_images)
+            else None,
+            icon=s.icon,
+        )
+        for s in bible.set_pieces
     }
 
     # 5. Captions

@@ -55,6 +55,13 @@ def run_compile_stage(job: Job, ctx: RunContext) -> None:
 
     plan_sha = job.plan_sha256()
 
+    available_images: set[str] = set()
+    images_dir = job.dir / "assets" / "images"
+    if images_dir.is_dir():
+        for f in images_dir.iterdir():
+            if f.is_file() and f.suffix.lower() == ".png":
+                available_images.add(f.stem)
+
     timeline = compile_timeline(
         transcript,
         beats,
@@ -64,6 +71,7 @@ def run_compile_stage(job: Job, ctx: RunContext) -> None:
         music_rel_path=music_rel_path,
         sfx_files_by_role=sfx_files_by_role,
         sync_probe=ctx.sync_probe,
+        available_images=available_images,
     )
 
     timeline_path = job.dir / "timeline.json"

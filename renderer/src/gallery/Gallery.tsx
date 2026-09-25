@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useMemo } from "react";
+import { staticFile } from "remotion";
 import { RemotionGlobalClock } from "../clock/remotion/RemotionGlobalClock";
 import { RemotionSceneClock } from "../clock/remotion/RemotionSceneClock";
 import type {
@@ -185,12 +186,38 @@ export const Gallery: React.FC<GalleryProps> = ({ template, variant }) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const Component = template === "avatar_sheet" ? (AvatarSheet as unknown as React.FC<any>) : getTemplateComponent(template);
 
+  const places = useMemo(() => {
+    if (variant === "typical") {
+      return {
+        ...GALLERY_PLACES,
+        p1: {
+          ...GALLERY_PLACES.p1,
+          image: staticFile("gallery/duluth.png"),
+        },
+      };
+    }
+    return GALLERY_PLACES;
+  }, [variant]);
+
+  const setPieces = useMemo(() => {
+    if (variant === "typical") {
+      return {
+        ...GALLERY_SET_PIECES,
+        sp1: {
+          ...GALLERY_SET_PIECES.sp1,
+          image: staticFile("gallery/recipe_box.png"),
+        },
+      };
+    }
+    return GALLERY_SET_PIECES;
+  }, [variant]);
+
   return (
     <EntitiesProvider
       value={{
         cast: GALLERY_CAST,
-        places: GALLERY_PLACES,
-        setPieces: GALLERY_SET_PIECES,
+        places,
+        setPieces,
       }}
     >
       <RemotionGlobalClock>
