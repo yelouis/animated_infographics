@@ -85,9 +85,9 @@ export function createMapProjection({
       coordinates: [
         [
           [bbox.minLon, bbox.minLat],
-          [bbox.maxLon, bbox.minLat],
-          [bbox.maxLon, bbox.maxLat],
           [bbox.minLon, bbox.maxLat],
+          [bbox.maxLon, bbox.maxLat],
+          [bbox.maxLon, bbox.minLat],
           [bbox.minLon, bbox.minLat],
         ],
       ],

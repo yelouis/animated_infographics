@@ -1,7 +1,11 @@
 import React from "react";
 import { RemotionGlobalClock } from "../clock/remotion/RemotionGlobalClock";
 import { RemotionSceneClock } from "../clock/remotion/RemotionSceneClock";
-import type { TimelineCastMember } from "../generated/contracts";
+import type {
+  TimelineCastMember,
+  TimelinePlace,
+  TimelineSetPiece,
+} from "../generated/contracts";
 import { Background } from "../story/Background";
 import { EntitiesProvider } from "../story/entities";
 import { getTemplateComponent } from "../templates";
@@ -15,10 +19,14 @@ import { dialogueFixtures } from "./fixtures/dialogue";
 import { emotionBeatFixtures } from "./fixtures/emotion_beat";
 import { iconListFixtures } from "./fixtures/icon_list";
 import { kineticQuoteFixtures } from "./fixtures/kinetic_quote";
+import { locationFixtures } from "./fixtures/location";
+import { mapFocusFixtures } from "./fixtures/map_focus";
 import { relationshipMapFixtures } from "./fixtures/relationship_map";
 import { revealFixtures } from "./fixtures/reveal";
+import { setPieceFixtures } from "./fixtures/set_piece";
 import { statCalloutFixtures } from "./fixtures/stat_callout";
 import { textThreadFixtures } from "./fixtures/text_thread";
+import { timelineFixtures } from "./fixtures/timeline";
 import { titleCardFixtures } from "./fixtures/title_card";
 
 export interface GalleryProps {
@@ -94,6 +102,46 @@ const GALLERY_CAST: Record<string, TimelineCastMember> = {
   },
 };
 
+const GALLERY_PLACES: Record<string, TimelinePlace> = {
+  p1: {
+    country_iso3: "USA",
+    icon: "House",
+    lat: 46.78,
+    lon: -92.11,
+    name: "Duluth",
+    image: null,
+  },
+  p2: {
+    country_iso3: "CAN",
+    icon: "MapPin",
+    lat: 48.38,
+    lon: -89.25,
+    name: "Thunder Bay",
+    image: null,
+  },
+  p3: {
+    country_iso3: "USA",
+    icon: "Buildings",
+    lat: 42.36,
+    lon: -71.06,
+    name: "Boston",
+    image: null,
+  },
+};
+
+const GALLERY_SET_PIECES: Record<string, TimelineSetPiece> = {
+  sp1: {
+    icon: "Package",
+    name: "Grandma Rose's Recipe Box",
+    image: null,
+  },
+  sp2: {
+    icon: "Drop",
+    name: "Purity Distilling Tank",
+    image: null,
+  },
+};
+
 export const Gallery: React.FC<GalleryProps> = ({ template, variant }) => {
   let props: unknown = {};
   if (template === "kinetic_quote") {
@@ -122,6 +170,14 @@ export const Gallery: React.FC<GalleryProps> = ({ template, variant }) => {
     props = emotionBeatFixtures[variant] || emotionBeatFixtures.typical;
   } else if (template === "relationship_map") {
     props = relationshipMapFixtures[variant] || relationshipMapFixtures.typical;
+  } else if (template === "location") {
+    props = locationFixtures[variant] || locationFixtures.typical;
+  } else if (template === "set_piece") {
+    props = setPieceFixtures[variant] || setPieceFixtures.typical;
+  } else if (template === "map_focus") {
+    props = mapFocusFixtures[variant] || mapFocusFixtures.typical;
+  } else if (template === "timeline") {
+    props = timelineFixtures[variant] || timelineFixtures.typical;
   }
 
   const timing = getDefaultTiming(template, props, 150);
@@ -133,8 +189,8 @@ export const Gallery: React.FC<GalleryProps> = ({ template, variant }) => {
     <EntitiesProvider
       value={{
         cast: GALLERY_CAST,
-        places: {},
-        setPieces: {},
+        places: GALLERY_PLACES,
+        setPieces: GALLERY_SET_PIECES,
       }}
     >
       <RemotionGlobalClock>

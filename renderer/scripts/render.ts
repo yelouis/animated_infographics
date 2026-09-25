@@ -297,6 +297,10 @@ async function main() {
             "text_thread",
             "emotion_beat",
             "relationship_map",
+            "location",
+            "set_piece",
+            "map_focus",
+            "timeline",
           ];
       const variants: ("min" | "typical" | "max")[] = options.variant
         ? [options.variant as "min" | "typical" | "max"]

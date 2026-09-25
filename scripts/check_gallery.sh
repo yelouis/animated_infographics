@@ -16,7 +16,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT" || fail "Cannot cd to repo root"
 
 UPDATE_GOLDENS=false
-TEMPLATES="kinetic_quote,avatar_sheet,title_card,stat_callout,icon_list,reveal,cause_effect,comparison,character_intro,dialogue,text_thread,emotion_beat,relationship_map"
+TEMPLATES="kinetic_quote,avatar_sheet,title_card,stat_callout,icon_list,reveal,cause_effect,comparison,character_intro,dialogue,text_thread,emotion_beat,relationship_map,location,set_piece,map_focus,timeline"
 
 for arg in "$@"; do
   case "$arg" in

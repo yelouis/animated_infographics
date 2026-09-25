@@ -65,6 +65,7 @@ A16 — Final render and output verification — 8203be5 — G1–G9, G11, G12, 
 A17 — Visual primitives and the gallery gate — 18c097b — G1–G12, G14 green; G10 active (0 overflows, goldens matched, hold motion passed); 161 fast pytest passed, 11 vitest passed; 6 visual primitives implemented; WCAG 2.x contrast verified; all 3 falsifications verified (red then green)
 A18 — Templates: statement set — 5b88db1 — G1–G12, G14 green; G10 active (0 overflows across 24 fixtures, 8 templates matched goldens, hold motion verified); 6 statement templates implemented; molasses_flood contact sheet validated; both falsifications verified (red then green)
 A19 — Templates: people set — cedcd5a — G1–G12, G14 green; G10 active (0 overflows across 39 fixtures, 13 templates matched goldens, hold motion verified); 5 people templates implemented; story_recipe_box and story_room_12 preview validated; both falsifications verified (red then green)
+A20 — Templates: place & time set + delete placeholder — 4c99548 — G1–G12, G14 green; G10 active (0 overflows across 51 fixtures, 17 entries matched goldens, hold motion verified); 4 place & time templates implemented; Placeholder.tsx deleted (0 NOT YET IMPLEMENTED matches); containment test verified and falsified (red then green); golden diff falsified (red then green); overflow falsified (red then green)
 
 ---
 

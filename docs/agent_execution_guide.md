@@ -63,10 +63,10 @@ Each gate is created by the item named. **Replace "NOT BUILT" with the measured 
 | G4 | `uv run pytest -q -m "not slow"` | exit 0 (161 passed) |
 | G5 | `npm --prefix renderer run typecheck` | exit 0 (0 errors) |
 | G6 | `npm --prefix renderer run lint` | exit 0 (0 errors) |
-| G7 | `npm --prefix renderer test` | exit 0 (11 passed) |
+| G7 | `npm --prefix renderer test` | exit 0 (15 passed) |
 | G8 | `./scripts/check_schema_sync.sh` | exit 0 (11 files in sync) |
 | G9 | `./scripts/check_renderer_purity.sh` | exit 0 (pure) |
-| G10 | `./scripts/check_gallery.sh` | exit 0 (0 overflows across 39 fixtures, 13 templates matched goldens, hold motion verified) |
+| G10 | `./scripts/check_gallery.sh` | exit 0 (0 overflows across 51 fixtures, 17 entries matched goldens, hold motion verified) |
 | G11 | `uv run pytest -q -m slow` | exit 0 (15 passed) |
 | G12 | `./scripts/e2e.sh` | exit 0 (passed, steps 1–6 verified) |
 | G13 | `./scripts/check_offline.sh` | NOT BUILT (A22) |

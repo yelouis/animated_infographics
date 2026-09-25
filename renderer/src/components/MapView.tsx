@@ -23,6 +23,10 @@ export interface MapViewProps {
   radius?: number; // default 32
   style?: React.CSSProperties;
   frame?: number; // current scene frame for pulse and path animation
+  renderMarkerLabel?: (
+    marker: MapMarker & { x: number; y: number },
+    index: number
+  ) => React.ReactNode;
 }
 
 interface CountryFeature extends GeoJSON.Feature<GeoJSON.Geometry> {
@@ -38,6 +42,7 @@ export const MapView: React.FC<MapViewProps> = ({
   radius = 32,
   style,
   frame = 60,
+  renderMarkerLabel,
 }) => {
   const points: GeoPoint[] = useMemo(
     () => markers.map((m) => ({ lat: m.lat, lon: m.lon })),
@@ -175,6 +180,7 @@ export const MapView: React.FC<MapViewProps> = ({
                 stroke={palette.highlight}
                 strokeWidth={6}
                 strokeDasharray="14 10"
+                strokeDashoffset={-frame * 1.5}
                 strokeLinecap="round"
               />
               {/* Arrowhead */}
@@ -189,7 +195,7 @@ export const MapView: React.FC<MapViewProps> = ({
         {/* Marker Dots & Pulse Rings */}
         {projectedMarkers.map((m, idx) => (
           <g key={idx}>
-            {/* Pulse ring */}
+            {/* Primary Pulse ring */}
             <circle
               cx={m.x}
               cy={m.y}
@@ -210,6 +216,23 @@ export const MapView: React.FC<MapViewProps> = ({
         // Above marker unless within 120px of top
         const isNearTop = m.y < 120;
         const chipTop = isNearTop ? m.y + 16 : m.y - 48;
+
+        if (renderMarkerLabel) {
+          return (
+            <div
+              key={idx}
+              style={{
+                position: "absolute",
+                left: m.x,
+                top: chipTop,
+                transform: "translateX(-50%)",
+                pointerEvents: "none",
+              }}
+            >
+              {renderMarkerLabel(m, idx)}
+            </div>
+          );
+        }
 
         return (
           <div

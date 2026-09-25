@@ -66,6 +66,7 @@ describe("mapFraming", () => {
       height,
     });
 
+    expect(projection.scale()).toBeGreaterThan(500);
     for (const p of points) {
       const projected = projection([p.lon, p.lat]);
       expect(projected).not.toBeNull();

@@ -7,11 +7,14 @@ import { Dialogue } from "./dialogue";
 import { EmotionBeat } from "./emotion_beat";
 import { IconList } from "./icon_list";
 import { KineticQuote } from "./kinetic_quote";
-import { Placeholder } from "./Placeholder";
+import { Location } from "./location";
+import { MapFocus } from "./map_focus";
 import { RelationshipMap } from "./relationship_map";
 import { Reveal } from "./reveal";
+import { SetPiece } from "./set_piece";
 import { StatCallout } from "./stat_callout";
 import { TextThread } from "./text_thread";
+import { Timeline } from "./timeline";
 import { TitleCard } from "./title_card";
 
 export interface TemplateComponentProps {
@@ -36,16 +39,20 @@ export const TEMPLATES: Record<string, React.FC<TemplateComponentProps>> = {
   text_thread: TextThread as unknown as React.FC<TemplateComponentProps>,
   emotion_beat: EmotionBeat as unknown as React.FC<TemplateComponentProps>,
   relationship_map: RelationshipMap as unknown as React.FC<TemplateComponentProps>,
-  location: () => <Placeholder templateName="location" />,
-  set_piece: () => <Placeholder templateName="set_piece" />,
-  map_focus: () => <Placeholder templateName="map_focus" />,
-  timeline: () => <Placeholder templateName="timeline" />,
+  location: Location as unknown as React.FC<TemplateComponentProps>,
+  set_piece: SetPiece as unknown as React.FC<TemplateComponentProps>,
+  map_focus: MapFocus as unknown as React.FC<TemplateComponentProps>,
+  timeline: Timeline as unknown as React.FC<TemplateComponentProps>,
 };
 
 export const getTemplateComponent = (
   name: string
 ): React.FC<TemplateComponentProps> => {
-  return TEMPLATES[name] || (() => <Placeholder templateName={name} />);
+  const component = TEMPLATES[name];
+  if (!component) {
+    throw new Error(`Unknown template: ${name}`);
+  }
+  return component;
 };
 
 export * from "./cause_effect";
@@ -55,9 +62,12 @@ export * from "./dialogue";
 export * from "./emotion_beat";
 export * from "./icon_list";
 export * from "./kinetic_quote";
-export * from "./Placeholder";
+export * from "./location";
+export * from "./map_focus";
 export * from "./relationship_map";
 export * from "./reveal";
+export * from "./set_piece";
 export * from "./stat_callout";
 export * from "./text_thread";
+export * from "./timeline";
 export * from "./title_card";
