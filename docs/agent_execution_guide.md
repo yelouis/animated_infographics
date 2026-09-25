@@ -58,14 +58,14 @@ Each gate is created by the item named. **Replace "NOT BUILT" with the measured 
 | # | Gate | Result |
 |---|---|---|
 | G1 | `uv run ruff check .` | exit 0 (All checks passed) |
-| G2 | `uv run ruff format --check .` | exit 0 (57 files already formatted) |
+| G2 | `uv run ruff format --check .` | exit 0 (59 files already formatted) |
 | G3 | `uv run mypy src` | exit 0 (Success: no issues found in 31 source files) |
-| G4 | `uv run pytest -q -m "not slow"` | exit 0 (98 passed) |
+| G4 | `uv run pytest -q -m "not slow"` | exit 0 (100 passed) |
 | G5 | `npm --prefix renderer run typecheck` | exit 0 (0 errors) |
 | G6 | `npm --prefix renderer run lint` | exit 0 (0 errors) |
 | G7 | `npm --prefix renderer test` | exit 0 (1 passed) |
 | G8 | `./scripts/check_schema_sync.sh` | exit 0 (11 files in sync) |
-| G9 | `./scripts/check_renderer_purity.sh` | NOT BUILT (A11) |
+| G9 | `./scripts/check_renderer_purity.sh` | exit 0 (pure) |
 | G10 | `./scripts/check_gallery.sh` | NOT BUILT (A17) |
 | G11 | `uv run pytest -q -m slow` | exit 0 (11 passed) |
 | G12 | `./scripts/e2e.sh` | NOT BUILT (A16; completed in A22) |

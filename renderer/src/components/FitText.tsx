@@ -1,0 +1,113 @@
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { continueRender, delayRender } from "remotion";
+import { palette } from "../theme/palette";
+
+export interface FitTextSlot {
+  font: "display" | "body";
+  weight: number;
+  size_max: number;
+  size_min: number;
+  max_lines: number;
+  box_width: number;
+}
+
+export interface FitTextProps {
+  slot: FitTextSlot;
+  text?: string;
+  children?: React.ReactNode;
+  sceneId: string;
+  template: string;
+  slotName: string;
+  debug?: boolean;
+  isGallery?: boolean;
+  style?: React.CSSProperties;
+  className?: string;
+}
+
+export const FitText: React.FC<FitTextProps> = ({
+  slot,
+  text,
+  children,
+  sceneId,
+  template,
+  slotName,
+  debug = false,
+  isGallery = false,
+  style,
+  className,
+}) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [currentSize, setCurrentSize] = useState<number>(slot.size_max);
+  const [overflow, setOverflow] = useState<boolean>(false);
+  const [fontsLoaded, setFontsLoaded] = useState<boolean>(false);
+
+  const [renderHandle] = useState<number | null>(() => {
+    if (typeof window !== "undefined" && typeof document !== "undefined") {
+      return delayRender(`FitText fonts loading: ${template}:${slotName}`);
+    }
+    return null;
+  });
+
+  useEffect(() => {
+    if (typeof document !== "undefined" && document.fonts) {
+      document.fonts.ready.then(() => {
+        setFontsLoaded(true);
+        if (renderHandle !== null) {
+          continueRender(renderHandle);
+        }
+      });
+    } else {
+      setFontsLoaded(true);
+      if (renderHandle !== null) {
+        continueRender(renderHandle);
+      }
+    }
+  }, [renderHandle]);
+
+  const lineHeightMultiplier = slot.font === "display" ? 1.12 : 1.25;
+  const boxHeight = Math.ceil(slot.max_lines * lineHeightMultiplier * currentSize);
+  const fontFamily = slot.font === "display" ? "Poppins, sans-serif" : "Inter, sans-serif";
+
+  useLayoutEffect(() => {
+    if (!fontsLoaded || !containerRef.current) return;
+
+    const el = containerRef.current;
+    const isOverflowing =
+      el.scrollHeight > el.clientHeight || el.scrollWidth > el.clientWidth;
+
+    if (isOverflowing) {
+      if (currentSize > slot.size_min) {
+        setCurrentSize((prev) => Math.max(slot.size_min, prev - 2));
+      } else {
+        setOverflow(true);
+        console.error(`OVERFLOW scene=${sceneId} template=${template} slot=${slotName}`);
+      }
+    }
+  }, [currentSize, fontsLoaded, text, children, sceneId, template, slotName, slot.size_min]);
+
+  const showBorder = overflow && (debug || isGallery);
+
+  return (
+    <div
+      ref={containerRef}
+      data-overflow={overflow ? "true" : undefined}
+      className={className}
+      style={{
+        width: slot.box_width,
+        height: boxHeight,
+        maxHeight: boxHeight,
+        overflow: "hidden",
+        fontFamily,
+        fontWeight: slot.weight,
+        fontSize: currentSize,
+        lineHeight: lineHeightMultiplier,
+        border: showBorder ? `6px solid ${palette.danger}` : undefined,
+        boxSizing: "border-box",
+        wordBreak: "break-word",
+        ...style,
+      }}
+    >
+      {children !== undefined ? children : text}
+    </div>
+  );
+};

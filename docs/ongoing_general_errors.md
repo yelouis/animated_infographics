@@ -56,6 +56,7 @@ A7 — LLM backend — 7186803 — G1–G8, G11, G14 green; 45 fast pytest + 1 s
 A8 — Narrator voice selection — 9590fb7 — G1–G8, G11, G14 green; 82 fast pytest + 3 slow tests passed; all 23 evidence cases verified; 4 fixtures matched expected facts; all 7 falsifications verified (red then green)
 A9 — Narration (Kokoro) — 5824005 — G1–G8, G11, G14 green; 96 fast pytest + 8 slow tests passed; 4 fixtures synthesized with exact sample accounting; loudness -16 ± 0.5 LUFS; emu_war 11.65s (bar ≤ 60s); spectral centroid verified; both falsifications verified (red then green)
 A10 — Transcription (Whisper) — 715d670 — G1–G8, G11, G14 green; 98 fast pytest + 11 slow tests passed; molasses_flood_say WER 4.17% (bar ≤ 8%); Kokoro vs Whisper timing: match 97.5% (bar ≥ 90%), median error 40.0ms (bar ≤ 80ms), p95 error 239.4ms (bar ≤ 250ms); emu_war transcribe 6.00s (bar ≤ 45s); falsification verified (red then green)
+A11 — Renderer foundation (+ kinetic_quote) — 731ad9e — G1–G9, G11, G14 green; G9 active (pure); 100 fast pytest passed; smoke media render 1080x1920@30fps verified with ffprobe; sync probe flips verified at frames 29/31 (0 vs 255) and 59/61 (255 vs 0); gallery kinetic_quote min/typical/max 0 overflows; both falsifications verified (red then green)
 
 ---
 
