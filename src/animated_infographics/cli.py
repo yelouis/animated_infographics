@@ -28,6 +28,7 @@ from animated_infographics.jobs import (
     RunContext,
     StageFn,
 )
+from animated_infographics.stages.bible import run_bible_stage
 from animated_infographics.stages.ingest import run_ingest_stage
 from animated_infographics.stages.narrate import run_narrate_stage
 from animated_infographics.stages.transcribe import run_transcribe_stage
@@ -53,6 +54,7 @@ STAGE_REGISTRY["ingest"] = run_ingest_stage
 STAGE_REGISTRY["voice"] = run_voice_stage
 STAGE_REGISTRY["narrate"] = run_narrate_stage
 STAGE_REGISTRY["transcribe"] = run_transcribe_stage
+STAGE_REGISTRY["bible"] = run_bible_stage
 
 
 def set_stage_registry(custom: Mapping[str, StageFn]) -> None:
