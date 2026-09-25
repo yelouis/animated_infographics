@@ -139,7 +139,7 @@ STYLE     = "Flat vector editorial illustration, bold simple geometric shapes, s
 
 **Failure is not fatal:** a non-zero exit, a timeout or an unreadable PNG sets `status: "failed"` and `image: null` in the timeline, and the template draws its icon fallback. `preview/report.json` lists the failures so the reviewer sees them.
 
-**Model choice is open** (`ongoing_general_errors.md` Issue 2): item A20 produces a side-by-side contact sheet of FLUX.2 klein 4B versus Z-Image-Turbo on the fixture prompts, with timings. The default stays klein 4B until the user selects.
+**Model choice is decided** (user, September 24, 2026, Issue 2 → Option A): **FLUX.2 [klein] 4B only.** Z-Image-Turbo is not installed, benchmarked or offered as a fallback.
 
 ---
 

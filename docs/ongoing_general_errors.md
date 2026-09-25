@@ -8,15 +8,13 @@
 
 ## 1. Open & in-flight
 
-**Wave A (Offline MVP, items A1–A21) was approved on September 23, 2026.** The spec is `agent_execution_guide.md` §3. **Status: not started.** The repository holds the design set and frozen fixture scripts only.
+**Wave A (Offline MVP) was approved on September 23, 2026, and revised on September 24, 2026 to incorporate the selections on Issues 1 and 2. It now has 22 items (A1–A22).** The spec is `agent_execution_guide.md` §3. **Status: not started.** The repository holds the design set and the four frozen fixture scripts only (two history pieces; two complete r/stories-style stories).
 
----
+**Selected, specced, not yet delivered.** When an item lands, its implementing commit collapses the issue below into one line in §3.
 
-## ⚠️ Unresolved Issues & Suggestions
+### Issue 1: Default narrator voice → specced as **A8** (voice selection) and **A9** (narration)
 
-### Issue 1: Default narrator voice
-
-**Status**: ⚠️ Awaiting evidence. Item A7 renders the first paragraph of `fixtures/scripts/molasses_flood.txt` in four Kokoro voices to `docs/evals/voices/`. Until the user selects, the default is `af_heart` (`design_audio_and_timing.md` §2), and `--voice` overrides it per job. Non-blocking.
+**Status**: ✅ Selected September 24, 2026. The rule and its interpretation are in `design_planner.md` §10: `af_heart` iff the story is first person **and** the narrator explicitly identifies as female; otherwise `am_michael`. That covers every history story and every first-person story without self-identification. The four-voice listening samples previously planned for this issue are dropped as unnecessary.
 
 **Option A (recommended)**: **`af_heart`** (American English, female). Kokoro's highest-graded voice.
   - *Pros*: The most natural prosody of the set; already the default, so nothing changes.
@@ -34,13 +32,13 @@
   - *Pros*: Brighter and more energetic, suited to short-form drama.
   - *Cons*: Can feel too upbeat for serious history.
 
-Your selection: _____
+Your selection: Proceed with Option A and B. If the story from reddit seems to be from a female's perspective then use af_heart, else use am_michael.
 
 ---
 
-### Issue 2: Local illustration model
+### Issue 2: Local illustration model → specced as **A21** (illustrations)
 
-**Status**: ⚠️ Awaiting evidence. Item A20 renders every place and set-piece prompt from the three fixture bibles with both models (same prompts, same seeds) into `docs/evals/image_models_<date>.png`, with per-image timings. Until the user selects, the default is **FLUX.2 [klein] 4B** (`design_visual_direction.md` §7). Non-blocking.
+**Status**: ✅ Selected September 24, 2026. FLUX.2 [klein] 4B is the only image model (`design_visual_direction.md` §7). The side-by-side benchmark against Z-Image-Turbo previously planned for this issue is dropped.
 
 **Option A (recommended)**: **FLUX.2 [klein] 4B** via mflux, 4 steps.
   - *Pros*: Apache-2.0; the fastest option, which protects the 10-minute budget; supports reference-image editing, a future route to richer set-piece consistency.
@@ -50,7 +48,13 @@ Your selection: _____
   - *Pros*: Apache-2.0; strong prompt adherence and detail.
   - *Cons*: More steps and parameters, so slower per image; tuned toward realism, so it may resist the flat style.
 
-Your selection: _____
+Your selection: Proceed with Option A.
+
+---
+
+## ⚠️ Unresolved Issues & Suggestions
+
+None awaiting a selection.
 
 ---
 
@@ -74,7 +78,7 @@ One line per delivered item, added in the item's own commit: `A<n> — <title> �
 |---|---|---|---|
 | D1 | Video input + PiP of the original speaker | Wave A complete **and** the user selects it | The 9:16 PiP placement is an open design question (`design_future_live_and_video.md` §2) |
 | D2 | 16:9 output | User selects it | Roughly doubles template work |
-| D3 | Multi-voice narration (character voices) | User selects it | Needs a dialogue-attribution step |
+| D3 | Multi-voice narration (character voices) | User selects it | Needs a dialogue-attribution step. `voice.json` already records `male` separately from `unknown` for this. |
 | D4 | **Live mode** (speak in real time, webcam in a corner) | Wave A complete **and** the user answers the three questions in `design_future_live_and_video.md` §4 | The end goal |
 | D5 | Reddit URL fetching | User selects it | Terms-of-service review first |
 | D6 | Public-domain photo sourcing (e.g. Wikimedia) | User selects it | Requires runtime network, which conflicts with the local-only policy as written |
@@ -89,3 +93,14 @@ One line per delivered item, added in the item's own commit: `A<n> — <title> �
 **September 23, 2026: design grilling (user).** Offline first; template library; history + Reddit-style stories first; MVP inputs text script + audio only; mixed imagery (vector + local illustration + open map data); Python pipeline + TypeScript/Remotion renderer; **fully local**; 9:16 first; word-by-word karaoke captions; flat editorial vector; 1–3 min videos within ~10 min; scenes + persistent cast; single narrator; **mandatory review gate**; music + SFX from a user-supplied pack; live mode later with the webcam in a corner, with some sources (Reddit, history) having no speaker video at all.
 
 **September 23, 2026: design decisions (designer; revisit only through an issue):** cast drawn only as vector avatars (a generated portrait cannot change expression and drifts between scenes); grounding of on-screen numbers, dates and quotes as a hard gate; gazetteer-first geo; Kokoro's own timestamps rather than re-transcription for the text path; scenes at absolute frames rather than `TransitionSeries`; Python as the contract source of truth; `gemma4:26b` as planner with `qwen3.6:35b` as the measured escalation candidate.
+
+**September 24, 2026: selections (user).** Issue 1 → Options A + B with an automatic rule: female-perspective Reddit story → `af_heart`, else `am_michael`. Issue 2 → Option A, FLUX.2 [klein] 4B.
+
+**September 24, 2026: consequences (designer):**
+- A new `voice` stage runs before narration, because the voice must be known before audio exists (`design_planner.md` §10).
+- "Female perspective" means **explicit self-identification** checked against the text, never a stereotype guess. The default is `am_michael`; `af_heart` needs evidence.
+- `--voice` is restricted to the two installed voices (local-only policy).
+- The LLM backend moves ahead of narration in the build order, so Wave A is renumbered to 22 items.
+- **Fixtures replaced (user request: "the scripts chosen are too short… a complete story like maybe from r/stories"):** the two short AITA fragments became two complete, original r/stories-style stories. `story_recipe_box.txt` (407 words, self-identified female narrator → `af_heart`) and `story_room_12.txt` (365 words, gender never stated, inference traps → `am_michael`). They are original rather than copied posts, for copyright and so their facts are ours to freeze. The end-to-end budget is re-anchored to the longest (~3 min).
+- The evidence rule was tightened to two self-identification forms after the new story's traps ("a woman walked in…", "Grandma Rose") passed a looser draft. 23 measured cases are in `design_planner.md` §10.
+- The narrator's avatar gets no facial hair when the narrator is female.

@@ -10,7 +10,7 @@ This document owns the **shape of every JSON file** the pipeline writes, which s
 
 | Generated file | Generator | Consumer |
 |---|---|---|
-| `schema/{transcript,bible,beats,storyboard,timeline}.schema.json` | `model_json_schema()` | Documentation, the renderer's runtime validation, the LLM `format` schemas |
+| `schema/{voice,transcript,bible,beats,storyboard,timeline}.schema.json` | `model_json_schema()` | Documentation, the renderer's runtime validation, the LLM `format` schemas |
 | `renderer/src/generated/contracts.ts` | `json-schema-to-typescript` over `schema/timeline.schema.json` | Renderer types |
 | `renderer/src/generated/templateRegistry.json` | `contracts/templates.py` registry | Renderer: text-slot typography, enter timings, SFX cues |
 | `renderer/src/generated/iconNames.json` | `contracts/icons.py` allow-list | Renderer `Icon` component; the icon gate |
@@ -219,3 +219,13 @@ TemplateSpec(
 ```
 
 The per-template values live in `design_templates.md`; the registry encodes them. **The renderer reads slot typography from `templateRegistry.json` and must not hard-code a font size that the registry declares.** Otherwise the Pillow fit check (`design_planner.md` §7) and the pixels on screen would measure different things.
+
+---
+
+## 9. `voice.json` (text input only)
+
+Written by the `voice` stage before narration; read by `narrate`, `bible` (narrator avatar repair) and `preview` (the storyboard header line). Shape, enums and the decision rule: `design_planner.md` §10.
+
+**Invariants (checked on load):** `source == "flag"` ⇔ `reason == "flag"` ⇔ `perspective`, `first_person_rate`, `narrator_gender` and `evidence` are all null. `voice ∈ INSTALLED_VOICES`. If `reason ∈ {tag, llm}`, then `evidence` is non-null and `narrator_gender ∈ {female, male}`. If `reason == "third_person"`, then `perspective == "third_person"`. `voice == "af_heart"` with `source == "auto"` ⇔ `perspective == "first_person"` and `narrator_gender == "female"`.
+
+Not human-editable. Changing the voice means a new job with `--voice` (`design_planner.md` §10).

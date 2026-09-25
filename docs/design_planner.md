@@ -1,6 +1,6 @@
 # Planner (local LLM)
 
-This document owns: the **LLM backend**, the four **planning stages** (bible → segment → select → props), the **deterministic rules** that bound the LLM, the **validators** (fit, grounding, references), and the **fallback ladder** that guarantees the planner never crashes the pipeline.
+This document owns: the **LLM backend**, the pre-narration **narrator voice selection** (§10), the four **planning stages** (bible → segment → select → props), the **deterministic rules** that bound the LLM, the **validators** (fit, grounding, references), and the **fallback ladder** that guarantees the planner never crashes the pipeline.
 
 **The governing principle: the LLM proposes; code disposes.** Every LLM output is schema-constrained at generation time, validated semantically after, repaired deterministically where a rule is mechanical, and replaced by a deterministic fallback when it cannot be trusted. **Facts shown on screen (numbers, dates, quoted words) must be traceable to the narration.** The model may choose *how* to show something, never *what is true*.
 
@@ -46,13 +46,13 @@ Return corrected JSON only.
 
 `design_system_architecture.md` §8 names `qwen3.6:35b` as the escalation candidate. **Switching models is not an agent decision.** If `gemma4:26b` fails the bars in §9, the agent re-runs the eval with `qwen3.6:35b`, records both result sets, and files the choice for the human in `ongoing_general_errors.md`.
 
-**Prompts are data.** They live as Markdown in `src/animated_infographics/planner/prompts/` (`bible.md`, `segment.md`, `select.md`, `props.md`) with `{placeholders}` filled by `str.format_map`. Prompt text changes are reviewed like code, and every prompt change re-runs the planner eval (§9).
+**Prompts are data.** They live as Markdown in `src/animated_infographics/planner/prompts/` (`voice.md`, `bible.md`, `segment.md`, `select.md`, `props.md`) with `{placeholders}` filled by `str.format_map`. Prompt text changes are reviewed like code, and every prompt change re-runs the planner eval (§9).
 
 ---
 
 ## 2. Stage 1: Bible (`bible.json`)
 
-**Input:** the full transcript as numbered sentences (`[3] Twenty-one people died…`), plus the title if known.
+**Input:** the full transcript as numbered sentences (`[3] Twenty-one people died…`), plus the title if known, plus `voice.json.narrator_gender` when it is `female` or `male` (text input only; §10). The prompt states it as a fact about the narrator, to be used for the narrator's avatar.
 
 **`bible.md` must instruct, in substance:**
 - `cast` = people, animals or **groups** that act, speak or are acted upon ("the soldiers", "the emus"). A first-person narrator is **one** cast member with `is_narrator: true` and `name: "Me"`.
@@ -72,6 +72,7 @@ Return corrected JSON only.
    - Normalise (casefold, strip diacritics via NFKD) and match against GeoNames `cities15000` `name`, `asciiname` and every comma-separated `alternatenames` entry. Candidates in the place's `country_iso3` (via `countryInfo.txt` ISO→ISO3) are preferred; among those, the highest population wins. A match sets `lat`/`lon` from GeoNames and `geo_source: "gazetteer"`.
    - No gazetteer match but the LLM gave coordinates: accept **only if** they fall inside `data/geo/country_bboxes.json[country_iso3]` expanded by **0.5°** on every side → `geo_source: "llm"`. Otherwise null them → `geo_source: "none"`.
    - `kind: "fictional"` → geo null, `geo_source: "none"`.
+5. **Narrator avatar consistency:** if `voice.json.narrator_gender == "female"` and the bible has an `is_narrator` member, set that member's `avatar.facial_hair = "none"`. A female voice over a bearded avatar would contradict itself on screen. No other avatar field is constrained, and nothing is constrained for `male` or `unknown`.
 
 **Fallback** after 3 failed attempts: `{title: <title or first 60 chars of sentence 0>, logline: <first 140 chars of the transcript>, genre: "other", cast: [], places: [], set_pieces: []}`. The pipeline continues; the eval counts it.
 
@@ -196,15 +197,120 @@ The renderer independently detects overflow in the DOM (`design_rendering.md` §
 
 ## 9. Planner eval (`evals/planner.py`)
 
-`uv run python -m animated_infographics.evals.planner` runs bible → storyboard on **all three** text fixtures (`fixtures/scripts/`) with `--no-llm-cache` and writes `docs/evals/planner_<YYYY-MM-DD>.md` (committed). The report contains, per fixture: scene count; distinct templates; `fallback_level` histogram; rule repairs by rule; validator error histogram (by validator and template); LLM calls; wall time.
+`uv run python -m animated_infographics.evals.planner` runs voice → bible → storyboard on **all four** text fixtures (`fixtures/scripts/`) with `--no-llm-cache` and writes `docs/evals/planner_<YYYY-MM-DD>.md` (committed). The report contains, per fixture: the voice decision (`voice`, `reason`, `evidence`) and whether it matches `fixtures/expected/<name>.json`; scene count; distinct templates; `fallback_level` histogram; rule repairs by rule; validator error histogram (by validator and template); LLM calls; wall time.
 
 **Bars (each fixture):**
 
 | Metric | Bar |
 |---|---|
 | Scenes at `fallback_level` 2 | ≤ **15%** |
-| Distinct templates | ≥ **5** (short fixtures), ≥ **7** (`emu_war`) |
+| Distinct templates | ≥ **5** (`molasses_flood`), ≥ **7** (`emu_war`, `story_recipe_box`, `story_room_12`) |
 | Grounding / reference / fit violations in the **final** storyboard | **0**, re-verified by running §6 over the saved `storyboard.json` as an independent pass |
-| Planner wall time for `emu_war` (cold LLM cache, model already loaded) | ≤ **180 s** |
+| Planner wall time for `story_recipe_box`, the longest fixture (cold LLM cache, model already loaded) | ≤ **240 s** |
+| Voice decision matches `fixtures/expected/<name>.json` (`voice` and `reason`) | **4 of 4** fixtures |
 
 A bar that fails is **filed, not tuned away**. Do not raise the fallback threshold, drop a validator, or loosen grounding to pass. Prompt changes are legitimate; each one re-runs the full eval and the report records the prompt files' SHA-256.
+
+---
+
+## 10. Stage 0: Narrator voice selection (`voice.json`; text input only)
+
+Runs after `ingest` and **before** `narrate`, because the voice must be known before any audio exists. Audio inputs skip this stage and have no `voice.json`.
+
+**The decision (user, September 24, 2026, Issue 1), verbatim:** *"Proceed with Option A and B. If the story from reddit seems to be from a female's perspective then use af_heart, else use am_michael."*
+
+**How it is interpreted (recorded so it can be corrected through a new issue, not by an agent):**
+- "A story from Reddit" = a **first-person personal story**, the Reddit-story form. Third-person stories (all history) fall in the "else" branch → `am_michael`.
+- "From a female's perspective" = the **narrator explicitly identifies as female in the text**. Gender is **never** inferred from occupation, interests, emotions, the gender of a partner, or how other characters are described.
+- The rule is **deliberately asymmetric.** `am_michael` is the default; `af_heart` requires positive, checkable evidence. When in doubt, the answer is `am_michael`. A wrong female voice is the more jarring error, and this is the direction the user's "else" already points.
+
+| Constant | Value |
+|---|---|
+| `VOICE_DEFAULT` | **`am_michael`** |
+| `VOICE_FEMALE_NARRATOR` | **`af_heart`** |
+| `INSTALLED_VOICES` | `{"af_heart", "am_michael"}`: the only voices `setup.sh` downloads; `--voice` accepts nothing else (exit 2), because fetching another voice at runtime would break the local-only policy |
+| `FIRST_PERSON_TOKENS` | `{i, i'm, i've, i'd, i'll, me, my, mine, myself}` (casefolded) |
+| `FIRST_PERSON_RATE_MIN` | **2.0** first-person tokens per 100 words |
+
+**Algorithm (`planner/voice.py`), in order:**
+
+1. **Flag override.** `--voice` given → `voice = <flag>`, `source: "flag"`, `reason: "flag"`; every analysis field `null`; **no LLM call.** Stop.
+2. **Perspective (deterministic).** Text = title + body with every double-quoted span (`"…"`, after curly-quote normalisation) removed, because quoted speech contains *other people's* "I". Tokens = `re.findall(r"[A-Za-z']+", text)`, casefolded. `first_person_rate = round(100 × |tokens ∈ FIRST_PERSON_TOKENS| / |tokens|, 2)`. `perspective = "first_person"` iff `first_person_rate ≥ 2.0`, else `"third_person"`. **Third person → `voice = am_michael`, `reason: "third_person"`, `narrator_gender: "unknown"`, no LLM call. Stop.**
+   *Measured at design time:* `story_recipe_box` 5.45 · `story_room_12` 3.67 · `molasses_flood` 0.00 · `emu_war` 0.00.
+3. **Reddit gender tag (deterministic).** The first match of
+
+   ```
+   \b(I|I'm|me|my|myself)\s*[\(\[]\s*(?:(\d{1,2})\s*([FfMm])|([FfMm])\s*(\d{1,2}))\s*[\)\]]
+   ```
+
+   (case-insensitive) in the **unmodified** title + body. `F` → `female`, `M` → `male`; `evidence` = the matched text; `reason: "tag"`; no LLM call. The first-person prefix is what makes the tag the *narrator's*: `My (34M) wife (33F)` → male; `My sister (22F) said` → no narrator tag. Any other tag letter → no match.
+4. **LLM (first person, no tag).** One request via §1 with schema `{"narrator_gender": "female"|"male"|"unknown", "evidence": string|null (maxLength 160)}`. `prompts/voice.md` must say, in substance: decide the first-person narrator's gender **only** from words where the narrator identifies themself ("I'm a first-time mom", "As a dad of three, I…", "Being the only daughter, I…"); `evidence` must be copied exactly from the text **and include the narrator's own "I"/"I'm"**; anything weaker → `"unknown"` with `evidence: null`; never infer from occupation, hobbies, emotions, a partner's gender, or other characters' pronouns.
+   **Validation** (a failure is a failed attempt under the §1 retry protocol; after 3 failed attempts → `narrator_gender: "unknown"`, `reason: "no_evidence"`):
+   - a. `unknown` with non-null evidence → evidence normalised to `null` (a repair, not an error).
+   - b. `female`/`male` needs non-null `evidence` that is a **verbatim span** of the text (§8's word-boundary substring test on `norm()`).
+   - c. `evidence` must contain a **self-identification** of the claimed gender, by one of two forms. Split `evidence` into clauses on `. ! ? ; :`; tokenise each clause with `[A-Za-z0-9'\-éÉ]+`, **keeping the original case**. `SUBJ = {"I", "I'm", "I've", "I'd"}` (case-sensitive).
+     - **Form A (copula):** an opener `I'm`, or `I` followed by `am`/`was`/`became`, or `I've` followed by `been`. The candidate is any of the **next 4 tokens** after the opener. Example: "I'm a first-time **mom**", "I was a young **bride**".
+     - **Form B (as/being):** a token `as`/`being` (any case). The candidate is any of the **next 4 tokens**, **and** a `SUBJ` token must occur within the 4 tokens after the candidate. Example: "As the only **granddaughter**, I…", "As a **dad** of three, I…".
+     - **A candidate counts only if all four hold:**
+       1. it is written **in lowercase** (so "Grandma Rose", "Mom said" and "the Queen" do not count; kinship words used as names are capitalised);
+       2. it, or its part before the first hyphen (`mother-in-law` → `mother`), is in the claimed gender's lexicon;
+       3. the token before it is **not** a possessive (`my our your his her their its`, any case) and does not end in `'s`;
+       4. the token after it does **not** start with an uppercase letter unless it is in `SUBJ` (so "sister Maya" is a title before a name, not a self-description).
+
+     This is deliberately narrow. Self-identification has a recognisable grammar; a gendered word that merely sits near an "I" ("a woman walked in holding a suitcase I recognized") is someone else.
+     - `FEMALE_TOKENS` = {woman, women, girl, wife, mother, mom, mum, mommy, daughter, sister, aunt, niece, girlfriend, bride, lady, fiancee, fiancée, grandmother, grandma, granddaughter, queen, princess, stepmother, stepmom, stepdaughter, female}
+     - `MALE_TOKENS` = {man, men, guy, boy, husband, father, dad, daddy, son, brother, uncle, nephew, boyfriend, groom, gentleman, fiance, fiancé, grandfather, grandpa, grandson, king, prince, stepfather, stepdad, stepson, male}
+   - *Measured at design time (23 cases, all as expected; these are the required unit cases, and the four marked † each isolate one sub-rule for falsification):*
+
+     | Evidence | Claimed | Result |
+     |---|---|---|
+     | `I'm a first-time mom` | female | ✓ `mom` |
+     | `As the only granddaughter, I got Grandma Rose's recipe box` | female | ✓ `granddaughter` |
+     | `Being the oldest daughter, I` | female | ✓ `daughter` |
+     | `I'm a 30-year-old woman` | female | ✓ `woman` |
+     | `I was a young bride` | female | ✓ `bride` |
+     | `She called me selfish, and as a sister I felt awful` | female | ✓ `sister` |
+     | `As a dad of three, I never thought` | male | ✓ `dad` |
+     | `I got Grandma Rose's recipe box` | female | ✗ (no form; capitalised) |
+     | `My sister Maya` | female | ✗ |
+     | `my mother-in-law, Linda` | female | ✗ |
+     | `Mom said family doesn't send invoices` | female | ✗ |
+     | `I'm her daughter` † | female | ✗ (possessive, rule 3: accepted false negative) |
+     | `I'm Maya's sister` | female | ✗ |
+     | `I'm the bride's cousin` | female | ✗ |
+     | `I am the Queen of this house` † | female | ✗ (capitalised, rule 1) |
+     | `I'm sister Maya's favourite` † | female | ✗ (title before a name, rule 4) |
+     | `She treated me as a sister for years` † | female | ✗ (Form B without a following `I`) |
+     | `a woman walked in holding a small suitcase I recognized` | female | ✗ (no form) |
+     | `When I met the bride at the door` | female | ✗ (no form) |
+     | `texted my wife to make sure she was still awake` | female / male | ✗ / ✗ |
+     | `I did crosswords, knitted scarves nobody asked for` | female | ✗ |
+     | `As my sister Maya said, I was wrong` | female | ✗ |
+     | `My brother Danny got her house` | male | ✗ |
+
+     Every ✗ that is actually true of a narrator (e.g. `I'm her daughter`) is an **accepted false negative**: it falls back to `am_michael`, which is the safe direction of the asymmetry.
+   - `reason`: `"llm"` if `female`/`male` was accepted, `"no_evidence"` otherwise.
+5. **Decide:** `voice = af_heart` **iff** `perspective == "first_person"` **and** `narrator_gender == "female"`; otherwise `am_michael`. That makes `male` and `unknown` behave identically today. They are recorded separately because the bible (§2 repair 5) and any future multi-voice work (D3) can use the difference.
+
+**`voice.json`:**
+
+```json
+{"schema_version": 1, "voice": "af_heart", "source": "auto", "reason": "llm",
+ "perspective": "first_person", "first_person_rate": 5.45,
+ "narrator_gender": "female", "evidence": "As the only granddaughter, I got Grandma Rose's recipe box"}
+```
+
+`source` ∈ `auto` · `flag`; `reason` ∈ `flag` · `third_person` · `tag` · `llm` · `no_evidence`; `perspective` ∈ `first_person` · `third_person` · null (flag only); `narrator_gender` ∈ `female` · `male` · `unknown` · null (flag only).
+
+**Visibility at the review gate:** `preview/storyboard.md` opens with one line: `Voice: af_heart — auto (first person, female narrator: "As the only granddaughter, I got…")`, or `Voice: am_michael — auto (third person)`, `… auto (first person, no self-identification found)`, `… set by --voice`. A reviewer who disagrees starts a new job with `--voice`. The voice cannot be changed inside a job, because every word timing, beat and scene depends on it.
+
+**Expected on the fixtures** (`fixtures/expected/*.json`, checked by the planner eval and the slow tests):
+
+| Fixture | `perspective` | `narrator_gender` | `reason` | `voice` |
+|---|---|---|---|---|
+| `molasses_flood` | third_person | unknown | third_person | am_michael |
+| `emu_war` | third_person | unknown | third_person | am_michael |
+| `story_room_12` | first_person | unknown | no_evidence | am_michael |
+| `story_recipe_box` | first_person | female | llm | af_heart |
+
+`story_room_12` is the **inference trap**: the narrator knits and texts "my wife", and "a woman walked in" is someone else. Nothing in the text is a self-identification, so any guess, female *or* male, must be rejected by rule c. `story_recipe_box` has one genuine self-identification ("As the only granddaughter, I got…") surrounded by gendered words about other people ("Grandma Rose", "My mom", "his mother").

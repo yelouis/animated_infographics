@@ -8,7 +8,7 @@ This document owns: **input ingest**, **text-to-speech**, **speech recognition**
 
 | Extension | Kind | Next stage |
 |---|---|---|
-| `.txt` | `text` | `narrate` |
+| `.txt` | `text` | `voice` (`design_planner.md` §10), then `narrate` |
 | `.mp3` `.wav` `.m4a` | `audio` | `transcribe` |
 | anything else | — | exit 2 `unsupported input type: <ext>` |
 
@@ -25,7 +25,7 @@ Empty body after normalisation → exit 2. Body longer than **1,200 words** → 
 ## 2. Narration (text path): Kokoro
 
 - **Sentence splitting:** `pysbd.Segmenter(language="en", clean=False)` per paragraph. The title (if any) is its own sentence 0 with `is_title: true`.
-- **Synthesis:** one `KPipeline(lang_code="a", repo_id="hexgrad/Kokoro-82M", device="cpu")` for the whole job; **one call per sentence**, voice `--voice` (default **`af_heart`**), `speed=1.0`. A sentence may yield several `Result`s. Concatenate them in order, each result's timestamps offset by the samples already emitted for that sentence.
+- **Synthesis:** one `KPipeline(lang_code="a", repo_id="hexgrad/Kokoro-82M", device="cpu")` for the whole job; **one call per sentence**, voice = `voice.json.voice` (`af_heart` or `am_michael`, chosen by `design_planner.md` §10 or `--voice`), `speed=1.0`. Both voices are American English, so `lang_code="a"` serves both. A sentence may yield several `Result`s. Concatenate them in order, each result's timestamps offset by the samples already emitted for that sentence.
 - **Pauses (silence inserted between sentence audio):**
 
 | Constant | Value |
@@ -36,7 +36,7 @@ Empty body after normalisation → exit 2. Body longer than **1,200 words** → 
 | `TAIL_SILENCE_MS` | **500** (appended after the last sentence) |
 
 - Kokoro outputs **24 kHz**. The concatenated waveform is written as float32 WAV to `audio/narration_24k_raw.wav` (kept; it is what the exact-offset test measures), then resampled and normalised in one ffmpeg pass (§5) to `audio/narration.wav` at **48 kHz mono s16**.
-- `narration.json`: `{"schema_version":1,"voice":"af_heart","sentences":[{"i":0,"start_ms":0,"end_ms":1420}]}`. These offsets are **exact**: computed from sample counts, not measured.
+- `narration.json`: `{"schema_version":1,"voice":"am_michael","sentences":[{"i":0,"start_ms":0,"end_ms":1420}]}`. These offsets are **exact**: computed from sample counts, not measured.
 
 **Word timings come from Kokoro itself** (`Result.tokens`: `MToken.text`, `.start_ts`, `.end_ts`, `.whitespace`, in seconds relative to that result). They are ground truth, because they are the durations the model generated. Token → word rules:
 1. A token with no letters or digits (punctuation) is **appended** to the previous word's text and does not create a word. If it is the first token of a sentence, prepend it to the next word.

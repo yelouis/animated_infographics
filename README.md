@@ -45,4 +45,4 @@ infographics render <job>                                   # → jobs/<job>/out
 
 ## Setup, usage, credits
 
-Written by the build (items A2 and A21). Planned credits: GeoNames (CC BY 4.0), Natural Earth via `world-atlas`, Phosphor Icons (MIT), Poppins and Inter (OFL), Kokoro-82M, Whisper, FLUX.2 [klein] 4B, Gemma 4 (Apache-2.0). Remotion is free for individuals and companies of up to 3 people; check remotion.dev/license before commercial use.
+Written by the build (items A2 and A22). Planned credits: GeoNames (CC BY 4.0), Natural Earth via `world-atlas`, Phosphor Icons (MIT), Poppins and Inter (OFL), Kokoro-82M, Whisper, FLUX.2 [klein] 4B, Gemma 4 (Apache-2.0). Remotion is free for individuals and companies of up to 3 people; check remotion.dev/license before commercial use.

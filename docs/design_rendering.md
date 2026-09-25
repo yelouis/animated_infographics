@@ -96,7 +96,7 @@ Font loading must complete before measuring (`delayRender` until `document.fonts
 1. **Hero frame** per scene: `start_frame + min(sceneFrames − 1, max(round(0.6 × sceneFrames), max(item_frames, default=0) + ENTER_FRAMES))`, so every list item has entered.
 2. `render.ts stills` at scale **0.5** (540×960) → `preview/scene_<id>.png`.
 3. **Contact sheet** (Pillow): 5 columns; each tile 270×480 (the still at half size again) plus a 44 px label strip reading `s004 · stat_callout · 0:12.4` (scene start as m:ss.t). The label strip is `danger` for any scene with an overflow, `fallback_level 2`, or a failed image, and `bgRaised` otherwise. → `preview/contact_sheet.png`.
-4. `preview/storyboard.md`: a Markdown table `| scene | time | template | beat text | key props | flags |`, flags from the same three conditions.
+4. `preview/storyboard.md`: first the **voice line** for text inputs (exact formats in `design_planner.md` §10; audio inputs print `Voice: (recorded audio)`), then a Markdown table `| scene | time | template | beat text | key props | flags |`, flags from the same three conditions.
 5. `preview/report.json`: `{"overflow": [...], "fallback_scenes": [...], "failed_images": [...], "plan_sha256": "…"}`.
 6. `--preview-video`: `render.ts media --scale 0.5 --crf 28` → `preview/preview.mp4`.
 

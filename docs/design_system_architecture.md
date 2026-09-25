@@ -12,7 +12,7 @@ This document owns: **what the product is**, the pipeline and its stages, the re
 
 | Input | Example | Path through the pipeline |
 |---|---|---|
-| **Text script** (`.txt`) | A history story, a Reddit-style story | Local TTS (Kokoro) generates the narration; TTS gives exact word timings |
+| **Text script** (`.txt`) | A history story, a Reddit-style story | The narrator voice is auto-selected (`af_heart` for a first-person story told by a self-identified woman, otherwise `am_michael`), then local TTS (Kokoro) generates the narration with exact word timings |
 | **Audio file** (`.mp3` `.wav` `.m4a`) | A recorded narration or podcast segment | Local ASR (Whisper) produces the word timings |
 
 **MVP output:** `jobs/<job_id>/out/final.mp4`: 1080×1920, 30 fps, H.264 + AAC.
@@ -35,8 +35,8 @@ The architecture must not *preclude* the deferred items. `design_future_live_and
  input (.txt | audio)
    │
    ▼
- ingest ──► narrate (text: Kokoro TTS)  ──┐
-        └─► transcribe (audio: Whisper) ──┴─► transcript.json
+ ingest ──► voice ──► narrate (text: Kokoro TTS) ──┐
+        └─► transcribe (audio: Whisper) ───────────┴─► transcript.json
                                               │
                                               ▼
                                   bible  (LLM: cast, places, set pieces)
@@ -130,6 +130,7 @@ jobs/<job_id>/
   state.json
   input/                       # copies of the source, music file and sfx files
   ingest.json
+  voice.json                   # text path only: narrator voice decision
   narration.json               # text path only: per-sentence audio offsets
   audio/narration.wav          # 48 kHz mono s16, loudness-normalised
   audio/music.wav              # optional
@@ -147,7 +148,7 @@ jobs/<job_id>/
   logs/<stage>.log
 ```
 
-**Stages, in order:** `ingest` → `narrate` *or* `transcribe` → `bible` → `segment` → `storyboard` → `assets` → `compile` → `preview` → *(gate)* → `render`.
+**Stages, in order:** `ingest` → (`voice` → `narrate`) *or* `transcribe` → `bible` → `segment` → `storyboard` → `assets` → `compile` → `preview` → *(gate)* → `render`.
 
 **`state.json`:**
 
@@ -156,7 +157,7 @@ jobs/<job_id>/
   "schema_version": 1,
   "job_id": "molasses-flood-20260923-201500",
   "state": "awaiting_review",
-  "completed_stages": ["ingest", "narrate", "bible", "segment", "storyboard", "assets", "compile", "preview"],
+  "completed_stages": ["ingest", "voice", "narrate", "bible", "segment", "storyboard", "assets", "compile", "preview"],
   "stage_input_sha256": {"bible": "…", "segment": "…"},
   "plan_sha256": "…",
   "preview_plan_sha256": "…",
@@ -199,7 +200,7 @@ Entry point: `infographics` (`[project.scripts] infographics = "animated_infogra
 | Command | Options |
 |---|---|
 | `doctor` | — Checks every dependency in §8 and prints one `OK`/`MISSING` line each. |
-| `new <input>` | `--title TEXT` · `--voice TEXT` (text input only; default `af_heart`) · `--music PATH` · `--sfx-dir PATH` · `--jobs-dir PATH` (default `./jobs`) · `--no-llm-cache` · `--preview-video` |
+| `new <input>` | `--title TEXT` · `--voice af_heart|am_michael` (text input only; overrides the automatic choice, `design_planner.md` §10) · `--music PATH` · `--sfx-dir PATH` · `--jobs-dir PATH` (default `./jobs`) · `--no-llm-cache` · `--preview-video` |
 | `preview <job>` | `--preview-video` |
 | `approve <job>` | — |
 | `render <job>` | — |
@@ -218,7 +219,7 @@ Entry point: `infographics` (`[project.scripts] infographics = "animated_infogra
 | 3 | Gate refusal: wrong state, or hash mismatch |
 | 4 | Missing dependency (the same checks `doctor` runs) |
 
-`--voice` with an audio input exits **2**. `--music`/`--sfx-dir` paths that do not exist exit **2**.
+`--voice` with an audio input, or with any value outside `af_heart`/`am_michael`, exits **2**. `--music`/`--sfx-dir` paths that do not exist exit **2**.
 
 **Environment variables** (the only ones; each exists for tests or gates, and none changes product behaviour silently):
 
@@ -247,9 +248,9 @@ The exact versions actually installed are recorded in the execution guide's §1 
 | Role | Choice | Licence | Notes |
 |---|---|---|---|
 | Planner LLM | **Ollama `gemma4:26b`** (MoE, 3.8 B active, 19 GB) | Apache-2.0 | Runs through Ollama structured outputs. Escalation candidate: `qwen3.6:35b` (see `design_planner.md` §2). |
-| TTS | **Kokoro-82M** via `kokoro>=0.9.4`, voice `af_heart` | Apache-2.0 | Gives word timestamps. Needs `espeak-ng` (Homebrew). |
+| TTS | **Kokoro-82M** via `kokoro>=0.9.4`, voices **`af_heart`** and **`am_michael`** (auto-selected per story, Issue 1) | Apache-2.0 | Gives word timestamps. Needs `espeak-ng` (Homebrew). |
 | ASR | **`mlx-whisper`**, model `mlx-community/whisper-large-v3-turbo` | MIT | `word_timestamps=True`. |
-| Image generation | **mflux** (`uv tool install mflux`), **FLUX.2 [klein] 4B** | Apache-2.0 (4B only; the 9B is non-commercial and must not be used) | Invoked as a subprocess. Alternative under evaluation: Z-Image-Turbo (Issue 2). |
+| Image generation | **mflux** (`uv tool install mflux`), **FLUX.2 [klein] 4B** | Apache-2.0 (4B only; the 9B is non-commercial and must not be used) | Invoked as a subprocess. **Selected September 24, 2026 (Issue 2 → Option A).** |
 | Renderer | **Remotion 4.x** (`remotion`, `@remotion/bundler`, `@remotion/renderer`, `@remotion/layout-utils`) | Remotion licence | Free for individuals and companies of ≤ 3 people; confirm at remotion.dev/license before commercial use. |
 | Icons | `@phosphor-icons/react`, weight `fill` | MIT | Curated allow-list (`design_templates.md` §4). |
 | Map geometry | `world-atlas@2` `countries-50m.json` | ISC / Natural Earth (public domain) | |
@@ -271,7 +272,7 @@ The renderer is written so that live mode can reuse every template unchanged. Te
 |---|---|
 | Every JSON file's schema, source-of-truth and sync rule | `design_data_contracts.md` |
 | Ingest, TTS, ASR, loudness, frame math, beats, captions paging, audio mix | `design_audio_and_timing.md` |
-| LLM backend, prompts, bible, segmentation, selection, props, validators, grounding, fallback | `design_planner.md` |
+| LLM backend, prompts, narrator voice selection, bible, segmentation, selection, props, validators, grounding, fallback | `design_planner.md` |
 | The 16 templates: props, limits, layout, motion, SFX cues, validators | `design_templates.md` |
 | Palette, typography, layout zones, motion tokens, avatars, illustration style | `design_visual_direction.md` |
 | Remotion project, clock, compositions, preview, final render, output verification | `design_rendering.md` |
