@@ -33,7 +33,12 @@ def _compute_bounds(
     return bounds
 
 
-def build_beats(transcript: Transcript, groups: Sequence[Sequence[int]]) -> list[Beat]:
+def build_beats(
+    transcript: Transcript,
+    groups: Sequence[Sequence[int]],
+    *,
+    skip_merge: bool = False,
+) -> list[Beat]:
     """Build beats from sentence groups with merge and split passes.
 
     1. Build initial beats from groups. Title sentence is always beat 0.
@@ -94,7 +99,7 @@ def build_beats(transcript: Transcript, groups: Sequence[Sequence[int]]) -> list
     ranges = normalized_ranges
 
     # 2. Merge pass: repeat while some beat k >= 1 has duration < BEAT_MIN_MS
-    while True:
+    while not skip_merge:
         bounds = _compute_bounds(ranges, words)
         found_k: int | None = None
         for k in range(1, len(ranges)):
