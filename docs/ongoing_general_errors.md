@@ -63,6 +63,7 @@ A14 — Storyboard planning and the planner eval — 2b7dc04 — G1–G9, G11, G
 A15 — Compile and preview — 5260ab2 — G1–G9, G11, G14 green; 158 fast pytest passed; molasses_flood compiled with 10 scenes, duration 1834 frames, 0 overflow, Ajv & Python valid; both falsifications verified (red then green)
 A16 — Final render and output verification — 8203be5 — G1–G9, G11, G12, G14 green; G12 active (e2e passed); text & audio runs verify.json all true; sync probe flipped across all 9 scene boundaries (0 to 255); both falsifications verified (red then green)
 A17 — Visual primitives and the gallery gate — 18c097b — G1–G12, G14 green; G10 active (0 overflows, goldens matched, hold motion passed); 161 fast pytest passed, 11 vitest passed; 6 visual primitives implemented; WCAG 2.x contrast verified; all 3 falsifications verified (red then green)
+A18 — Templates: statement set — 5b88db1 — G1–G12, G14 green; G10 active (0 overflows across 24 fixtures, 8 templates matched goldens, hold motion verified); 6 statement templates implemented; molasses_flood contact sheet validated; both falsifications verified (red then green)
 
 ---
 

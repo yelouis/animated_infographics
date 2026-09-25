@@ -64,26 +64,46 @@ export const FitText: React.FC<FitTextProps> = ({
     }
   }, [renderHandle]);
 
+  const isSingleLine = slot.max_lines === 1;
   const lineHeightMultiplier = slot.font === "display" ? 1.12 : 1.25;
-  const boxHeight = Math.ceil(slot.max_lines * lineHeightMultiplier * currentSize);
-  const fontFamily = slot.font === "display" ? "Poppins, sans-serif" : "Inter, sans-serif";
+  // Multi-line boxes allow 0.35 line height tolerance for font glyph metrics / ascenders
+  const boxHeight = Math.ceil(
+    (slot.max_lines + (isSingleLine ? 0 : 0.35)) *
+      lineHeightMultiplier *
+      currentSize
+  );
+  const fontFamily =
+    slot.font === "display" ? "Poppins, sans-serif" : "Inter, sans-serif";
 
   useLayoutEffect(() => {
     if (!fontsLoaded || !containerRef.current) return;
 
     const el = containerRef.current;
-    const isOverflowing =
-      el.scrollHeight > el.clientHeight || el.scrollWidth > el.clientWidth;
+    const isOverflowing = isSingleLine
+      ? el.scrollWidth > el.clientWidth
+      : el.scrollHeight > el.clientHeight || el.scrollWidth > el.clientWidth;
 
     if (isOverflowing) {
       if (currentSize > slot.size_min) {
         setCurrentSize((prev) => Math.max(slot.size_min, prev - 2));
       } else {
         setOverflow(true);
-        console.error(`OVERFLOW scene=${sceneId} template=${template} slot=${slotName}`);
+        console.error(
+          `OVERFLOW scene=${sceneId} template=${template} slot=${slotName}`
+        );
       }
     }
-  }, [currentSize, fontsLoaded, text, children, sceneId, template, slotName, slot.size_min]);
+  }, [
+    currentSize,
+    fontsLoaded,
+    text,
+    children,
+    sceneId,
+    template,
+    slotName,
+    slot.size_min,
+    isSingleLine,
+  ]);
 
   const showBorder = overflow && (debug || isGallery);
 
@@ -94,16 +114,17 @@ export const FitText: React.FC<FitTextProps> = ({
       className={className}
       style={{
         width: slot.box_width,
-        height: boxHeight,
-        maxHeight: boxHeight,
+        height: isSingleLine ? undefined : boxHeight,
+        maxHeight: isSingleLine ? undefined : boxHeight,
         overflow: "hidden",
+        whiteSpace: isSingleLine ? "nowrap" : "normal",
         fontFamily,
         fontWeight: slot.weight,
         fontSize: currentSize,
         lineHeight: lineHeightMultiplier,
         border: showBorder ? `6px solid ${palette.danger}` : undefined,
         boxSizing: "border-box",
-        wordBreak: "break-word",
+        wordBreak: isSingleLine ? "normal" : "break-word",
         ...style,
       }}
     >

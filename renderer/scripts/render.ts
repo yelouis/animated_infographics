@@ -283,7 +283,16 @@ async function main() {
 
       const templateToRender = options.template
         ? String(options.template).split(",").map((s) => s.trim())
-        : ["kinetic_quote", "avatar_sheet"];
+        : [
+            "kinetic_quote",
+            "avatar_sheet",
+            "title_card",
+            "stat_callout",
+            "icon_list",
+            "reveal",
+            "cause_effect",
+            "comparison",
+          ];
       const variants: ("min" | "typical" | "max")[] = options.variant
         ? [options.variant as "min" | "typical" | "max"]
         : ["min", "typical", "max"];

@@ -53,6 +53,7 @@ export const SceneLayer: React.FC<SceneLayerProps> = ({
               <Component
                 sceneId={scene.id}
                 props={scene.props}
+                timing={scene.timing}
                 debug={debug}
               />
               {debug && <SyncProbe sceneIndex={idx} />}
