@@ -12,28 +12,6 @@
 
 **Selected, specced, not yet delivered.** When an item lands, its implementing commit collapses the issue below into one line in §3.
 
-### Issue 1: Default narrator voice → specced as **A8** (voice selection) and **A9** (narration)
-
-**Status**: ✅ Selected September 24, 2026. A8 delivered; A9 pending. The rule and its interpretation are in `design_planner.md` §10: `af_heart` iff the story is first person **and** the narrator explicitly identifies as female; otherwise `am_michael`. That covers every history story and every first-person story without self-identification. The four-voice listening samples previously planned for this issue are dropped as unnecessary.
-
-**Option A (recommended)**: **`af_heart`** (American English, female). Kokoro's highest-graded voice.
-  - *Pros*: The most natural prosody of the set; already the default, so nothing changes.
-  - *Cons*: Some listeners associate Reddit-story narration with a male voice.
-
-**Option B**: **`am_michael`** (American English, male).
-  - *Pros*: A deeper, documentary-style read; suits history pieces.
-  - *Cons*: Graded lower than `af_heart` in Kokoro's own voice table; can sound flatter on questions.
-
-**Option C**: **`bm_george`** (British English, male).
-  - *Pros*: A distinct "history documentary" colour.
-  - *Cons*: A British reading of American stories (Reddit) may feel off; changes number and date phrasing.
-
-**Option D**: **`af_bella`** (American English, female).
-  - *Pros*: Brighter and more energetic, suited to short-form drama.
-  - *Cons*: Can feel too upbeat for serious history.
-
-Your selection: Proceed with Option A and B. If the story from reddit seems to be from a female's perspective then use af_heart, else use am_michael.
-
 ---
 
 ### Issue 2: Local illustration model → specced as **A21** (illustrations)
@@ -72,10 +50,11 @@ A1 — Bootstrap — b1ad44a — G1–G7 green, battery 7/7 built gates pass, 1 
 A2 — Setup script and doctor — 927d076 — 20/20 checks OK in doctor, setup.sh idempotent (twice 0), G14 green
 A3 — Fixtures — 7924f59 — 15 fixture files generated and checksummed, 4 scripts verified against design SHA-256, music peak -20.0 dBFS, 5 SFX generated
 A4 — Data contracts and schema sync — c7f0c4b — G8 green (11 files in sync), 10/10 pytest passed, 16 template props validated, G5 compiles iconMap.ts
-A5 — Job store, CLI and the review gate — current — G1–G8, G14 green; 19 pytest passed; all 5 exit 3 refusals verified; journey test verified and falsified (red then green)
-A6 — Timing core — current — G1–G8, G14 green; 39 pytest passed (20 new timing unit tests); 500-stream property test verified; all 3 falsifications verified (red then green)
-A7 — LLM backend — current — G1–G8, G11, G14 green; 45 fast pytest + 1 slow integration test passed; G11 active; 20/20 structured output conformance on gemma4:26b (mean latency 1.96s); both falsifications verified (red then green)
-A8 — Narrator voice selection — current — G1–G8, G11, G14 green; 82 fast pytest + 3 slow tests passed; all 23 evidence cases verified; 4 fixtures matched expected facts; all 7 falsifications verified (red then green)
+A5 — Job store, CLI and the review gate — 617e569 — G1–G8, G14 green; 19 pytest passed; all 5 exit 3 refusals verified; journey test verified and falsified (red then green)
+A6 — Timing core — 10dd3a2 — G1–G8, G14 green; 39 pytest passed (20 new timing unit tests); 500-stream property test verified; all 3 falsifications verified (red then green)
+A7 — LLM backend — 7186803 — G1–G8, G11, G14 green; 45 fast pytest + 1 slow integration test passed; G11 active; 20/20 structured output conformance on gemma4:26b (mean latency 1.96s); both falsifications verified (red then green)
+A8 — Narrator voice selection — 9590fb7 — G1–G8, G11, G14 green; 82 fast pytest + 3 slow tests passed; all 23 evidence cases verified; 4 fixtures matched expected facts; all 7 falsifications verified (red then green)
+A9 — Narration (Kokoro) — current — G1–G8, G11, G14 green; 96 fast pytest + 8 slow tests passed; 4 fixtures synthesized with exact sample accounting; loudness -16 ± 0.5 LUFS; emu_war 11.65s (bar ≤ 60s); spectral centroid verified; both falsifications verified (red then green)
 
 ---
 

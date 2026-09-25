@@ -17,6 +17,8 @@ dependencies = [
     "pillow",
     "rich",
     "huggingface-hub",
+    "kokoro>=0.9.4",
+    "transformers>=4.40.0",
 ]
 
 [project.scripts]

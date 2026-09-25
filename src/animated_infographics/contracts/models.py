@@ -117,6 +117,54 @@ class VoiceDecision(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Section 1: Ingest & Narration
+# ---------------------------------------------------------------------------
+
+
+class IngestRecord(BaseModel):
+    """Normalized input ingestion record."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    schema_version: Literal[1] = 1
+    kind: Literal["text", "audio"]
+    source: str
+    title: str | None = None
+    paragraphs: list[str] | None = None
+    word_count: int | None = None
+
+
+class SentenceOffset(BaseModel):
+    """Sentence audio offset in milliseconds."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    i: int
+    start_ms: int
+    end_ms: int
+
+
+class NarrationOffsets(BaseModel):
+    """Narration sentence timing record."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    schema_version: Literal[1] = 1
+    voice: Literal["af_heart", "am_michael"]
+    sentences: list[SentenceOffset]
+
+
+class LoudnessReport(BaseModel):
+    """EBU R128 loudness measurement report."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    integrated_lufs: float
+    true_peak_dbtp: float
+    lra: float
+
+
+# ---------------------------------------------------------------------------
 # Section 2: Transcript
 # ---------------------------------------------------------------------------
 
