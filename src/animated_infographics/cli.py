@@ -28,6 +28,7 @@ from animated_infographics.jobs import (
     RunContext,
     StageFn,
 )
+from animated_infographics.stages.voice import run_voice_stage
 
 app = typer.Typer(no_args_is_help=True, help="Animated Infographics CLI")
 
@@ -45,6 +46,7 @@ def _unimplemented_stage(stage_name: str) -> StageFn:
 
 
 STAGE_REGISTRY: dict[str, StageFn] = {stage: _unimplemented_stage(stage) for stage in ALL_STAGES}
+STAGE_REGISTRY["voice"] = run_voice_stage
 
 
 def set_stage_registry(custom: Mapping[str, StageFn]) -> None:

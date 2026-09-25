@@ -14,7 +14,7 @@
 
 ### Issue 1: Default narrator voice → specced as **A8** (voice selection) and **A9** (narration)
 
-**Status**: ✅ Selected September 24, 2026. The rule and its interpretation are in `design_planner.md` §10: `af_heart` iff the story is first person **and** the narrator explicitly identifies as female; otherwise `am_michael`. That covers every history story and every first-person story without self-identification. The four-voice listening samples previously planned for this issue are dropped as unnecessary.
+**Status**: ✅ Selected September 24, 2026. A8 delivered; A9 pending. The rule and its interpretation are in `design_planner.md` §10: `af_heart` iff the story is first person **and** the narrator explicitly identifies as female; otherwise `am_michael`. That covers every history story and every first-person story without self-identification. The four-voice listening samples previously planned for this issue are dropped as unnecessary.
 
 **Option A (recommended)**: **`af_heart`** (American English, female). Kokoro's highest-graded voice.
   - *Pros*: The most natural prosody of the set; already the default, so nothing changes.
@@ -75,6 +75,7 @@ A4 — Data contracts and schema sync — c7f0c4b — G8 green (11 files in sync
 A5 — Job store, CLI and the review gate — current — G1–G8, G14 green; 19 pytest passed; all 5 exit 3 refusals verified; journey test verified and falsified (red then green)
 A6 — Timing core — current — G1–G8, G14 green; 39 pytest passed (20 new timing unit tests); 500-stream property test verified; all 3 falsifications verified (red then green)
 A7 — LLM backend — current — G1–G8, G11, G14 green; 45 fast pytest + 1 slow integration test passed; G11 active; 20/20 structured output conformance on gemma4:26b (mean latency 1.96s); both falsifications verified (red then green)
+A8 — Narrator voice selection — current — G1–G8, G11, G14 green; 82 fast pytest + 3 slow tests passed; all 23 evidence cases verified; 4 fixtures matched expected facts; all 7 falsifications verified (red then green)
 
 ---
 
