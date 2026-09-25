@@ -1,0 +1,63 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "animated-infographics"
+version = "0.1.0"
+description = "Animated infographics video generator"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "typer",
+    "pydantic>=2.8",
+    "httpx",
+    "numpy",
+    "soundfile",
+    "pysbd",
+    "pillow",
+    "rich",
+]
+
+[project.scripts]
+infographics = "animated_infographics.cli:app"
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "ruff",
+    "mypy",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/animated_infographics"]
+
+[tool.ruff]
+line-length = 100
+exclude = ["docs"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.mypy]
+files = ["src"]
+disallow_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = [
+    "kokoro",
+    "kokoro.*",
+    "mlx_whisper",
+    "mlx_whisper.*",
+    "pysbd",
+    "pysbd.*",
+    "soundfile",
+    "soundfile.*",
+    "misaki",
+    "misaki.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]

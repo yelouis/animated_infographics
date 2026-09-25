@@ -68,7 +68,7 @@ None yet: this project has no history. Transferable lessons from the user's prev
 
 One line per delivered item, added in the item's own commit: `A<n> — <title> — <short sha> — <key measured numbers>`.
 
-*(empty)*
+A1 — Bootstrap — b1ad44a — G1–G7 green, battery 7/7 built gates pass, 1 pytest passed, 1 vitest passed
 
 ---
 

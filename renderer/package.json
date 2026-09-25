@@ -1,0 +1,40 @@
+{
+  "name": "renderer",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src scripts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
+    "@remotion/bundler": "4.0.528",
+    "@remotion/cli": "4.0.528",
+    "@remotion/fonts": "4.0.528",
+    "@remotion/layout-utils": "4.0.528",
+    "@remotion/renderer": "4.0.528",
+    "ajv": "^8.17.1",
+    "d3-geo": "^3.1.1",
+    "json-schema-to-typescript": "^16.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "4.0.528",
+    "topojson-client": "^3.1.0",
+    "world-atlas": "^2.0.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.11.1",
+    "@remotion/eslint-plugin": "4.0.528",
+    "@types/d3-geo": "^3.1.0",
+    "@types/node": "^22.7.4",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@types/topojson-client": "^3.1.4",
+    "eslint": "^9.11.1",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2",
+    "typescript-eslint": "^8.7.0",
+    "vitest": "^2.1.1"
+  }
+}
