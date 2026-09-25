@@ -5,6 +5,8 @@ import type { TimelineCastMember } from "../generated/contracts";
 import { Background } from "../story/Background";
 import { EntitiesProvider } from "../story/entities";
 import { getTemplateComponent } from "../templates";
+import { AvatarSheet } from "./AvatarSheet";
+import { avatarSheetFixtures } from "./fixtures/avatar_sheet";
 import { kineticQuoteFixtures } from "./fixtures/kinetic_quote";
 
 export interface GalleryProps {
@@ -32,9 +34,12 @@ export const Gallery: React.FC<GalleryProps> = ({ template, variant }) => {
   let props: unknown = {};
   if (template === "kinetic_quote") {
     props = kineticQuoteFixtures[variant] || kineticQuoteFixtures.typical;
+  } else if (template === "avatar_sheet") {
+    props = avatarSheetFixtures[variant] || avatarSheetFixtures.typical;
   }
 
-  const Component = getTemplateComponent(template);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const Component = template === "avatar_sheet" ? (AvatarSheet as unknown as React.FC<any>) : getTemplateComponent(template);
 
   return (
     <EntitiesProvider
@@ -45,7 +50,7 @@ export const Gallery: React.FC<GalleryProps> = ({ template, variant }) => {
       }}
     >
       <RemotionGlobalClock>
-        <Background />
+        <Background static={true} />
         <RemotionSceneClock
           startFrame={0}
           durationFrames={150}

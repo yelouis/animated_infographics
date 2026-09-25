@@ -282,11 +282,13 @@ async function main() {
       fs.mkdirSync(outDir, { recursive: true });
 
       const templateToRender = options.template
-        ? [String(options.template)]
-        : ["kinetic_quote"];
+        ? String(options.template).split(",").map((s) => s.trim())
+        : ["kinetic_quote", "avatar_sheet"];
       const variants: ("min" | "typical" | "max")[] = options.variant
         ? [options.variant as "min" | "typical" | "max"]
         : ["min", "typical", "max"];
+
+      const targetFrame = options.frame !== undefined ? Number(options.frame) : 60;
 
       for (const tmpl of templateToRender) {
         for (const variant of variants) {
@@ -298,13 +300,15 @@ async function main() {
             puppeteerInstance: browser,
           });
 
-          const outPath = path.join(outDir, `${tmpl}__${variant}.png`);
-          console.log(`Rendering gallery still: ${tmpl}__${variant} -> ${outPath}`);
+          const outPath = options["out-file"]
+            ? path.resolve(String(options["out-file"]))
+            : path.join(outDir, `${tmpl}__${variant}.png`);
+          console.log(`Rendering gallery still: ${tmpl}__${variant} (frame ${targetFrame}) -> ${outPath}`);
           await renderStill({
             composition,
             serveUrl: bundleLocation,
             output: outPath,
-            frame: 60, // Hold frame
+            frame: targetFrame,
             inputProps,
             puppeteerInstance: browser,
             scale: options.scale !== undefined ? Number(options.scale) : 1.0,

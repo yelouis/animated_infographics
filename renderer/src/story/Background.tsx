@@ -2,9 +2,15 @@ import React from "react";
 import { useGlobalClock } from "../clock/GlobalClockContext";
 import { palette } from "../theme/palette";
 
-export const Background: React.FC = () => {
+export interface BackgroundProps {
+  static?: boolean;
+}
+
+export const Background: React.FC<BackgroundProps> = ({
+  static: isStatic = false,
+}) => {
   const clock = useGlobalClock();
-  const frame = clock.frame;
+  const frame = isStatic ? 0 : clock.frame;
 
   // Circle 1: starting (260, 520), r=520, period 12s (360 frames), amp 40px
   const t1 = (frame * 2 * Math.PI) / (12 * 30);

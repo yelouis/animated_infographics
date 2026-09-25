@@ -1,0 +1,194 @@
+#!/usr/bin/env bash
+set -u
+
+# scripts/check_gallery.sh: G10 Gallery gate per design_testing_and_validation.md §3 and agent_execution_guide.md §A17.
+
+fail() {
+  echo "[-] FAILED: $1" >&2
+  exit 1
+}
+
+log() {
+  echo "[+] $1"
+}
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$REPO_ROOT" || fail "Cannot cd to repo root"
+
+UPDATE_GOLDENS=false
+TEMPLATES="kinetic_quote,avatar_sheet"
+
+for arg in "$@"; do
+  case "$arg" in
+    --update)
+      UPDATE_GOLDENS=true
+      shift
+      ;;
+    --template=*)
+      TEMPLATES="${arg#*=}"
+      shift
+      ;;
+    --template)
+      TEMPLATES="$2"
+      shift 2
+      ;;
+    *)
+      ;;
+  esac
+done
+
+OUT_DIR="$REPO_ROOT/artifacts/gallery/current"
+MOTION_DIR="$REPO_ROOT/artifacts/gallery/motion"
+GOLDENS_DIR="$REPO_ROOT/renderer/goldens"
+mkdir -p "$OUT_DIR"
+mkdir -p "$MOTION_DIR"
+
+log "Rendering gallery hold frames (frame 60) for: $TEMPLATES..."
+npx --prefix renderer tsx renderer/scripts/render.ts gallery \
+  --out-dir "$OUT_DIR" \
+  --template "$TEMPLATES"
+RENDER_CODE=$?
+[ "$RENDER_CODE" -eq 0 ] || fail "Gallery render failed with exit code $RENDER_CODE"
+
+# (a) Check overflow.json
+OVERFLOW_FILE="$REPO_ROOT/artifacts/gallery/current/overflow.json"
+if [ ! -f "$OVERFLOW_FILE" ]; then
+  # check renderer logs directory as well
+  OVERFLOW_FILE="$REPO_ROOT/renderer/logs/overflow.json"
+fi
+
+if [ -f "$OVERFLOW_FILE" ]; then
+  OVERFLOW_COUNT=$(python3 -c "
+import json, sys
+from pathlib import Path
+p = Path('$OVERFLOW_FILE')
+if not p.is_file():
+    print(0)
+    sys.exit(0)
+try:
+    data = json.loads(p.read_text())
+    print(len(data))
+except Exception:
+    print(0)
+")
+  if [ "$OVERFLOW_COUNT" -gt 0 ]; then
+    fail "Overflow detected in gallery fixtures: $OVERFLOW_COUNT overflows recorded in $OVERFLOW_FILE"
+  fi
+  log "Overflow check passed: 0 overflows."
+fi
+
+# If --update, copy to goldens directory
+if [ "$UPDATE_GOLDENS" = true ]; then
+  mkdir -p "$GOLDENS_DIR"
+  cp "$OUT_DIR"/*.png "$GOLDENS_DIR/"
+  log "Goldens updated successfully in $GOLDENS_DIR:"
+  ls -la "$GOLDENS_DIR"
+  exit 0
+fi
+
+# (b) Golden diff check
+log "Checking golden diffs against $GOLDENS_DIR..."
+if [ ! -d "$GOLDENS_DIR" ]; then
+  fail "Goldens directory missing: $GOLDENS_DIR. Run with --update first."
+fi
+
+uv run python -c "
+import sys
+from pathlib import Path
+import numpy as np
+from PIL import Image
+
+current_dir = Path('$OUT_DIR')
+goldens_dir = Path('$GOLDENS_DIR')
+
+templates = [t.strip() for t in '$TEMPLATES'.split(',') if t.strip()]
+variants = ['min', 'typical', 'max']
+
+errors = []
+for tmpl in templates:
+    for var in variants:
+        cur_file = current_dir / f'{tmpl}__{var}.png'
+        golden_file = goldens_dir / f'{tmpl}__{var}.png'
+        if not golden_file.is_file():
+            errors.append(f'Missing golden: {golden_file}')
+            continue
+        if not cur_file.is_file():
+            errors.append(f'Missing current render: {cur_file}')
+            continue
+
+        c_img = np.array(Image.open(cur_file))
+        g_img = np.array(Image.open(golden_file))
+
+        if c_img.shape != g_img.shape:
+            errors.append(f'{tmpl}__{var}: shape mismatch {c_img.shape} vs {g_img.shape}')
+            continue
+
+        # Pixel differs when any channel differs by > 16
+        diff = np.abs(c_img.astype(int) - g_img.astype(int))
+        diff_pixels = np.any(diff > 16, axis=-1)
+        pct = (np.count_nonzero(diff_pixels) / diff_pixels.size) * 100.0
+
+        if pct > 0.5:
+            errors.append(f'{tmpl}__{var}: diff {pct:.3f}% exceeds bar of 0.5%')
+        else:
+            print(f'[+] {tmpl}__{var}: golden diff {pct:.3f}% <= 0.5% (PASS)')
+
+if errors:
+    print('[-] Golden diff failures:\n' + '\n'.join(errors), file=sys.stderr)
+    sys.exit(1)
+"
+GOLDEN_CODE=$?
+[ "$GOLDEN_CODE" -eq 0 ] || fail "Golden diff check failed"
+
+# (c) Hold motion check: frames 60 and 105 of typical fixture differ in > 0.1% of pixels
+log "Rendering frame 105 for hold motion check..."
+npx --prefix renderer tsx renderer/scripts/render.ts gallery \
+  --out-dir "$MOTION_DIR" \
+  --template "$TEMPLATES" \
+  --variant typical \
+  --frame 105
+MOTION_RENDER_CODE=$?
+[ "$MOTION_RENDER_CODE" -eq 0 ] || fail "Motion frame render failed with exit $MOTION_RENDER_CODE"
+
+log "Asserting hold motion (> 0.1% pixels differ between frame 60 and 105)..."
+uv run python -c "
+import sys
+from pathlib import Path
+import numpy as np
+from PIL import Image
+
+f60_dir = Path('$OUT_DIR')
+f105_dir = Path('$MOTION_DIR')
+
+templates = [t.strip() for t in '$TEMPLATES'.split(',') if t.strip()]
+
+errors = []
+for tmpl in templates:
+    f60_file = f60_dir / f'{tmpl}__typical.png'
+    f105_file = f105_dir / f'{tmpl}__typical.png'
+
+    if not f60_file.is_file() or not f105_file.is_file():
+        errors.append(f'Missing files for motion check on {tmpl}')
+        continue
+
+    img60 = np.array(Image.open(f60_file))
+    img105 = np.array(Image.open(f105_file))
+
+    diff = np.abs(img60.astype(int) - img105.astype(int))
+    diff_pixels = np.any(diff > 16, axis=-1)
+    pct = (np.count_nonzero(diff_pixels) / diff_pixels.size) * 100.0
+
+    if pct <= 0.1:
+        errors.append(f'{tmpl} hold motion diff {pct:.3f}% is <= 0.1% (FROZEN)')
+    else:
+        print(f'[+] {tmpl} hold motion diff: {pct:.3f}% > 0.1% (PASS)')
+
+if errors:
+    print('[-] Hold motion failures:\n' + '\n'.join(errors), file=sys.stderr)
+    sys.exit(1)
+"
+MOTION_CODE=$?
+[ "$MOTION_CODE" -eq 0 ] || fail "Hold motion check failed"
+
+log "G10 Gallery gate passed: all goldens matched, 0 overflows, hold motion verified."
+exit 0

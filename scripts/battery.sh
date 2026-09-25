@@ -100,7 +100,7 @@ run_gate() {
       ;;
     G10)
       local match
-      match=$(grep -o "[0-9]\+ overflows" "$log_file" 2>/dev/null || true)
+      match=$(grep -o "[0-9]\+ overflows" "$log_file" 2>/dev/null | tail -n 1 || true)
       [ -n "$match" ] && key_num="$match"
       ;;
     G12|G13)

@@ -62,6 +62,7 @@ A13 — Segmentation — 1d47dd8 — G1–G9, G11, G14 green; 125 fast pytest + 
 A14 — Storyboard planning and the planner eval — 2b7dc04 — G1–G9, G11, G14 green; 149 fast pytest passed; planner eval passed 4/4 fixtures with 0 violations, fallback L2 0.0% (bar ≤ 15%), distinct templates 6/11/16/13 (bars ≥ 5/7), story_recipe_box wall time 49.0s (bar ≤ 240s), voice match 4/4; falsification verified (red then green)
 A15 — Compile and preview — 5260ab2 — G1–G9, G11, G14 green; 158 fast pytest passed; molasses_flood compiled with 10 scenes, duration 1834 frames, 0 overflow, Ajv & Python valid; both falsifications verified (red then green)
 A16 — Final render and output verification — 8203be5 — G1–G9, G11, G12, G14 green; G12 active (e2e passed); text & audio runs verify.json all true; sync probe flipped across all 9 scene boundaries (0 to 255); both falsifications verified (red then green)
+A17 — Visual primitives and the gallery gate — 18c097b — G1–G12, G14 green; G10 active (0 overflows, goldens matched, hold motion passed); 161 fast pytest passed, 11 vitest passed; 6 visual primitives implemented; WCAG 2.x contrast verified; all 3 falsifications verified (red then green)
 
 ---
 
