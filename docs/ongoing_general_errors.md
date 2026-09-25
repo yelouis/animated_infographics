@@ -74,6 +74,7 @@ A3 — Fixtures — 7924f59 — 15 fixture files generated and checksummed, 4 sc
 A4 — Data contracts and schema sync — c7f0c4b — G8 green (11 files in sync), 10/10 pytest passed, 16 template props validated, G5 compiles iconMap.ts
 A5 — Job store, CLI and the review gate — current — G1–G8, G14 green; 19 pytest passed; all 5 exit 3 refusals verified; journey test verified and falsified (red then green)
 A6 — Timing core — current — G1–G8, G14 green; 39 pytest passed (20 new timing unit tests); 500-stream property test verified; all 3 falsifications verified (red then green)
+A7 — LLM backend — current — G1–G8, G11, G14 green; 45 fast pytest + 1 slow integration test passed; G11 active; 20/20 structured output conformance on gemma4:26b (mean latency 1.96s); both falsifications verified (red then green)
 
 ---
 
