@@ -292,6 +292,11 @@ async function main() {
             "reveal",
             "cause_effect",
             "comparison",
+            "character_intro",
+            "dialogue",
+            "text_thread",
+            "emotion_beat",
+            "relationship_map",
           ];
       const variants: ("min" | "typical" | "max")[] = options.variant
         ? [options.variant as "min" | "typical" | "max"]

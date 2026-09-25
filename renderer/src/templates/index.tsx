@@ -1,12 +1,17 @@
 import React from "react";
 import type { TimelineSceneTiming } from "../generated/contracts";
 import { CauseEffect } from "./cause_effect";
+import { CharacterIntro } from "./character_intro";
 import { Comparison } from "./comparison";
+import { Dialogue } from "./dialogue";
+import { EmotionBeat } from "./emotion_beat";
 import { IconList } from "./icon_list";
 import { KineticQuote } from "./kinetic_quote";
 import { Placeholder } from "./Placeholder";
+import { RelationshipMap } from "./relationship_map";
 import { Reveal } from "./reveal";
 import { StatCallout } from "./stat_callout";
+import { TextThread } from "./text_thread";
 import { TitleCard } from "./title_card";
 
 export interface TemplateComponentProps {
@@ -26,11 +31,11 @@ export const TEMPLATES: Record<string, React.FC<TemplateComponentProps>> = {
   reveal: Reveal as unknown as React.FC<TemplateComponentProps>,
   cause_effect: CauseEffect as unknown as React.FC<TemplateComponentProps>,
   comparison: Comparison as unknown as React.FC<TemplateComponentProps>,
-  character_intro: () => <Placeholder templateName="character_intro" />,
-  dialogue: () => <Placeholder templateName="dialogue" />,
-  text_thread: () => <Placeholder templateName="text_thread" />,
-  emotion_beat: () => <Placeholder templateName="emotion_beat" />,
-  relationship_map: () => <Placeholder templateName="relationship_map" />,
+  character_intro: CharacterIntro as unknown as React.FC<TemplateComponentProps>,
+  dialogue: Dialogue as unknown as React.FC<TemplateComponentProps>,
+  text_thread: TextThread as unknown as React.FC<TemplateComponentProps>,
+  emotion_beat: EmotionBeat as unknown as React.FC<TemplateComponentProps>,
+  relationship_map: RelationshipMap as unknown as React.FC<TemplateComponentProps>,
   location: () => <Placeholder templateName="location" />,
   set_piece: () => <Placeholder templateName="set_piece" />,
   map_focus: () => <Placeholder templateName="map_focus" />,
@@ -44,11 +49,15 @@ export const getTemplateComponent = (
 };
 
 export * from "./cause_effect";
+export * from "./character_intro";
 export * from "./comparison";
+export * from "./dialogue";
+export * from "./emotion_beat";
 export * from "./icon_list";
 export * from "./kinetic_quote";
 export * from "./Placeholder";
+export * from "./relationship_map";
 export * from "./reveal";
 export * from "./stat_callout";
+export * from "./text_thread";
 export * from "./title_card";
-

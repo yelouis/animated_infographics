@@ -67,7 +67,9 @@ def run_compile_stage(job: Job, ctx: RunContext) -> None:
     )
 
     timeline_path = job.dir / "timeline.json"
-    timeline_path.write_text(timeline.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    timeline_path.write_text(
+        timeline.model_dump_json(indent=2, by_alias=True) + "\n", encoding="utf-8"
+    )
 
     elapsed_ms = int((time.perf_counter() - t0) * 1000)
     log_file = job.dir / "logs" / "compile.log"

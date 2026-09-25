@@ -35,11 +35,11 @@ def run_storyboard_stage(job: Job, ctx: RunContext) -> None:
 
     storyboard_path = job.dir / "storyboard.json"
     with open(storyboard_path, "w", encoding="utf-8") as f:
-        f.write(storyboard.model_dump_json(indent=2) + "\n")
+        f.write(storyboard.model_dump_json(indent=2, by_alias=True) + "\n")
 
     plan_report_path = job.dir / "plan_report.json"
     with open(plan_report_path, "w", encoding="utf-8") as f:
-        f.write(plan_report.model_dump_json(indent=2) + "\n")
+        f.write(plan_report.model_dump_json(indent=2, by_alias=True) + "\n")
 
     elapsed_ms = int((time.perf_counter() - t0) * 1000)
 

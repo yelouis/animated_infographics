@@ -17,6 +17,8 @@ export interface AvatarProps {
   colorSlot?: number;
   color?: string;
   expression?: AvatarExpression;
+  eyeScaleY?: number;
+  isMouthOpen?: boolean;
   size?: number;
   style?: React.CSSProperties;
   className?: string;
@@ -45,6 +47,8 @@ export const Avatar: React.FC<AvatarProps> = ({
   colorSlot = 0,
   color,
   expression = "neutral",
+  eyeScaleY = 1,
+  isMouthOpen = false,
   size = 200,
   style,
   className,
@@ -167,18 +171,38 @@ export const Avatar: React.FC<AvatarProps> = ({
         )}
 
         {/* Eyes (two r 5 dots at (82, 86) and (118, 86)) */}
-        <circle cx="82" cy="86" r="5" fill="#1C1C1C" />
-        <circle cx="118" cy="86" r="5" fill="#1C1C1C" />
+        <g
+          transform={
+            eyeScaleY !== 1
+              ? `translate(100, 86) scale(1, ${eyeScaleY}) translate(-100, -86)`
+              : undefined
+          }
+        >
+          <circle cx="82" cy="86" r="5" fill="#1C1C1C" />
+          <circle cx="118" cy="86" r="5" fill="#1C1C1C" />
+        </g>
 
         {/* Brows and Mouth by Expression (5px round-cap strokes) */}
         <g stroke="#1C1C1C" strokeWidth="5" strokeLinecap="round" fill="none">
+          {isMouthOpen && (
+            <ellipse
+              cx="100"
+              cy="114"
+              rx="8"
+              ry="7"
+              fill="#1C1C1C"
+              stroke="#1C1C1C"
+              strokeWidth="2"
+            />
+          )}
+
           {expression === "neutral" && (
             <>
               {/* Brows */}
               <path d="M 73 75 Q 82 72 91 75" />
               <path d="M 109 75 Q 118 72 127 75" />
               {/* Mouth */}
-              <line x1="91" y1="114" x2="109" y2="114" />
+              {!isMouthOpen && <line x1="91" y1="114" x2="109" y2="114" />}
             </>
           )}
 
@@ -188,7 +212,7 @@ export const Avatar: React.FC<AvatarProps> = ({
               <path d="M 73 73 Q 82 68 91 73" />
               <path d="M 109 73 Q 118 68 127 73" />
               {/* Big smile curve */}
-              <path d="M 88 110 Q 100 124 112 110" />
+              {!isMouthOpen && <path d="M 88 110 Q 100 124 112 110" />}
             </>
           )}
 
@@ -198,7 +222,7 @@ export const Avatar: React.FC<AvatarProps> = ({
               <path d="M 73 77 Q 82 74 91 71" />
               <path d="M 109 71 Q 118 74 127 77" />
               {/* Frown curve */}
-              <path d="M 89 118 Q 100 108 111 118" />
+              {!isMouthOpen && <path d="M 89 118 Q 100 108 111 118" />}
             </>
           )}
 
@@ -208,7 +232,7 @@ export const Avatar: React.FC<AvatarProps> = ({
               <path d="M 73 70 L 91 77" />
               <path d="M 109 77 L 127 70" />
               {/* Tight straight mouth */}
-              <line x1="91" y1="115" x2="109" y2="115" />
+              {!isMouthOpen && <line x1="91" y1="115" x2="109" y2="115" />}
             </>
           )}
 
@@ -218,7 +242,9 @@ export const Avatar: React.FC<AvatarProps> = ({
               <path d="M 73 67 Q 82 62 91 67" />
               <path d="M 109 67 Q 118 62 127 67" />
               {/* Open round O mouth */}
-              <ellipse cx="100" cy="114" rx="8" ry="10" stroke="#1C1C1C" strokeWidth="5" fill="#1C1C1C" />
+              {!isMouthOpen && (
+                <ellipse cx="100" cy="114" rx="8" ry="10" stroke="#1C1C1C" strokeWidth="5" fill="#1C1C1C" />
+              )}
             </>
           )}
 
@@ -228,7 +254,7 @@ export const Avatar: React.FC<AvatarProps> = ({
               <path d="M 73 68 Q 82 63 91 68" />
               <path d="M 109 76 L 127 73" />
               {/* Asymmetric / wavy mouth */}
-              <path d="M 90 114 Q 96 110 100 114 T 110 114" />
+              {!isMouthOpen && <path d="M 90 114 Q 96 110 100 114 T 110 114" />}
             </>
           )}
 
@@ -238,7 +264,7 @@ export const Avatar: React.FC<AvatarProps> = ({
               <path d="M 73 71 Q 82 68 91 72" />
               <path d="M 109 73 Q 118 71 127 74" />
               {/* Half-smirk tilted up on one side */}
-              <path d="M 90 115 Q 100 116 112 108" />
+              {!isMouthOpen && <path d="M 90 115 Q 100 116 112 108" />}
             </>
           )}
 
@@ -248,7 +274,9 @@ export const Avatar: React.FC<AvatarProps> = ({
               <path d="M 73 76 Q 82 73 91 72" />
               <path d="M 109 72 Q 118 73 127 76" />
               {/* Jittery zigzag / wavy mouth */}
-              <path d="M 89 114 Q 94 117 98 113 Q 102 117 106 113 Q 109 116 112 113" />
+              {!isMouthOpen && (
+                <path d="M 89 114 Q 94 117 98 113 Q 102 117 106 113 Q 109 116 112 113" />
+              )}
             </>
           )}
         </g>
