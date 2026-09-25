@@ -54,7 +54,8 @@ A5 — Job store, CLI and the review gate — 617e569 — G1–G8, G14 green; 19
 A6 — Timing core — 10dd3a2 — G1–G8, G14 green; 39 pytest passed (20 new timing unit tests); 500-stream property test verified; all 3 falsifications verified (red then green)
 A7 — LLM backend — 7186803 — G1–G8, G11, G14 green; 45 fast pytest + 1 slow integration test passed; G11 active; 20/20 structured output conformance on gemma4:26b (mean latency 1.96s); both falsifications verified (red then green)
 A8 — Narrator voice selection — 9590fb7 — G1–G8, G11, G14 green; 82 fast pytest + 3 slow tests passed; all 23 evidence cases verified; 4 fixtures matched expected facts; all 7 falsifications verified (red then green)
-A9 — Narration (Kokoro) — current — G1–G8, G11, G14 green; 96 fast pytest + 8 slow tests passed; 4 fixtures synthesized with exact sample accounting; loudness -16 ± 0.5 LUFS; emu_war 11.65s (bar ≤ 60s); spectral centroid verified; both falsifications verified (red then green)
+A9 — Narration (Kokoro) — 5824005 — G1–G8, G11, G14 green; 96 fast pytest + 8 slow tests passed; 4 fixtures synthesized with exact sample accounting; loudness -16 ± 0.5 LUFS; emu_war 11.65s (bar ≤ 60s); spectral centroid verified; both falsifications verified (red then green)
+A10 — Transcription (Whisper) — 715d670 — G1–G8, G11, G14 green; 98 fast pytest + 11 slow tests passed; molasses_flood_say WER 4.17% (bar ≤ 8%); Kokoro vs Whisper timing: match 97.5% (bar ≥ 90%), median error 40.0ms (bar ≤ 80ms), p95 error 239.4ms (bar ≤ 250ms); emu_war transcribe 6.00s (bar ≤ 45s); falsification verified (red then green)
 
 ---
 

@@ -19,6 +19,7 @@ dependencies = [
     "huggingface-hub",
     "kokoro>=0.9.4",
     "transformers>=4.40.0",
+    "mlx-whisper>=0.4.3",
 ]
 
 [project.scripts]
@@ -29,6 +30,7 @@ dev = [
     "pytest",
     "ruff",
     "mypy",
+    "jiwer>=4.0.0",
 ]
 
 [tool.hatch.build.targets.wheel]
