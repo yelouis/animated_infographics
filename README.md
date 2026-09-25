@@ -43,6 +43,21 @@ infographics render <job>                                   # → jobs/<job>/out
 | [`docs/design_future_live_and_video.md`](docs/design_future_live_and_video.md) | Live mode and video input: constraints now, sketches later |
 | [`docs/ongoing_general_errors.md`](docs/ongoing_general_errors.md) | Open issues and decisions awaiting you (`Your selection: _____`), deferred features, resolved index |
 
-## Setup, usage, credits
+## Setup
 
-Written by the build (items A2 and A22). Planned credits: GeoNames (CC BY 4.0), Natural Earth via `world-atlas`, Phosphor Icons (MIT), Poppins and Inter (OFL), Kokoro-82M, Whisper, FLUX.2 [klein] 4B, Gemma 4 (Apache-2.0). Remotion is free for individuals and companies of up to 3 people; check remotion.dev/license before commercial use.
+Requires an Apple Silicon Mac with Homebrew, Node.js, and Ollama.
+
+1. Prepare toolchains, models, fonts, and vendor datasets idempotently:
+   ```bash
+   ./scripts/setup.sh
+   ```
+
+2. Verify all dependencies and local caches:
+   ```bash
+   uv run infographics doctor
+   ```
+
+## Usage and credits
+
+Usage instructions arrive in A22. Planned credits: GeoNames (CC BY 4.0), Natural Earth via `world-atlas`, Phosphor Icons (MIT), Poppins and Inter (OFL), Kokoro-82M, Whisper, FLUX.2 [klein] 4B, Gemma 4 (Apache-2.0). Remotion is free for individuals and companies of up to 3 people; check remotion.dev/license before commercial use.
+

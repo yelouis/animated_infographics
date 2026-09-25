@@ -69,6 +69,7 @@ None yet: this project has no history. Transferable lessons from the user's prev
 One line per delivered item, added in the item's own commit: `A<n> — <title> — <short sha> — <key measured numbers>`.
 
 A1 — Bootstrap — b1ad44a — G1–G7 green, battery 7/7 built gates pass, 1 pytest passed, 1 vitest passed
+A2 — Setup script and doctor — 9afa5d6 — 20/20 checks OK in doctor, setup.sh idempotent (twice 0), G14 green
 
 ---
 

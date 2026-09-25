@@ -41,9 +41,9 @@ At the user's request, the two short Reddit-style fixtures were also **replaced 
 | Node | **v26.5.0** (see `design_rendering.md` §1 for the Node 22 fallback rule) |
 | System Python | 3.14.6. **Not used.** The project pins **3.12** through uv. |
 | uv | present (`~/.local/bin/uv`) |
-| Ollama | **0.33.0**. Installed: `glm4`, `gemma4:latest` (8B), `qwen2.5vl:7b`, `moondream`, `tinyllama`. ⚠️ **The planner model `gemma4:26b` is NOT pulled** (re-checked September 24). A2 pulls it. |
-| espeak-ng | ⚠️ **NOT installed** (re-checked September 24). A2 installs it. |
-| mflux | ⚠️ **NOT installed** (re-checked September 24). A2 installs it. |
+| Ollama | **0.33.0**. Installed: `glm4`, `gemma4:latest` (8B), `qwen2.5vl:7b`, `moondream`, `tinyllama`, **`gemma4:26b`** (digest `08ae7ec1744bd7f451c4a530afb39d2673ad9d07a8369b8a33a3613b41212a68`). |
+| espeak-ng | **1.52.0** (Homebrew). |
+| mflux | **0.20.0** (installed via uv tool). Remotion **4.0.528**. |
 | macOS `say` | present (fixture generation) |
 | gh | 2.98.0, logged in as `yelouis` |
 
@@ -70,7 +70,7 @@ Each gate is created by the item named. **Replace "NOT BUILT" with the measured 
 | G11 | `uv run pytest -q -m slow` | NOT BUILT (A7) |
 | G12 | `./scripts/e2e.sh` | NOT BUILT (A16; completed in A22) |
 | G13 | `./scripts/check_offline.sh` | NOT BUILT (A22) |
-| G14 | `uv run infographics doctor` | NOT BUILT (A2) |
+| G14 | `uv run infographics doctor` | exit 0 (20 checks OK) |
 
 ⚠️ **A gate that could not run is recorded as NOT RUN with the reason, never left blank and never marked green.**
 

@@ -16,6 +16,7 @@ dependencies = [
     "pysbd",
     "pillow",
     "rich",
+    "huggingface-hub",
 ]
 
 [project.scripts]
