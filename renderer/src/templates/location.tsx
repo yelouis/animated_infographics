@@ -190,9 +190,9 @@ export const Location: React.FC<LocationTemplateProps> = ({
         <div
           style={{
             position: "absolute",
-            left: 760,
+            left: 744,
             top: 190,
-            width: 240,
+            width: 272,
             height: 60,
             borderRadius: 30,
             backgroundColor: palette.bgDeep,

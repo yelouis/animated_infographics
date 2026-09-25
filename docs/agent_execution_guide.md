@@ -1,14 +1,10 @@
-# Agent Execution Guide — Active Build: Wave A (Offline MVP, 22 items) — revised September 24, 2026
+# Agent Execution Guide — Queue Complete: Wave A (Offline MVP, 22 items) Delivered
 
-**You are an engineering agent with no memory of this project.** Nothing has been built yet. This repository contains a complete design (`docs/design_*.md`), four frozen fixture stories, and this guide. Your job is to **build and validate** the offline MVP, one item at a time, in the order of §2.
+**You are an engineering agent.** Wave A (Offline MVP) is **complete and verified**. All 22 items (A1–A22) are delivered, validated, and passing all 14 battery gates (G1–G14). **The active queue is empty.**
 
-**What changed on September 24, 2026.** The user selected **Issue 1**: the narrator voice is chosen automatically. `af_heart` is used when a first-person (Reddit-style) story is told by a narrator who identifies as female; `am_michael` is used otherwise. That is specced as the new **A8** plus changes to A9. The user also selected **Issue 2 → Option A**: FLUX.2 [klein] 4B is the only image model, specced in A21. Because voice selection needs the LLM **before** narration, the LLM backend moved up to **A7** and every later item was renumbered. There is no earlier item numbering to reconcile, because nothing has been built.
+Do not invent work (§9). Only start new work if the user makes a selection on a deferred item (D1–D9 in `docs/ongoing_general_errors.md` §4) or files a new issue.
 
-At the user's request, the two short Reddit-style fixtures were also **replaced by two complete r/stories-style stories** (`story_recipe_box`, `story_room_12`, ~2.5–3 min each). The end-to-end performance budget is now measured on the longest of them (`design_testing_and_validation.md` §1, §5).
-
-**What is approved:** Wave A, items **A1–A22** in §3. **What NOT to touch:** everything in §5 (delivered work, accepted equivalents, user decisions, invariants, rejected options). **What must not be started:** everything in §4 (deferred).
-
-**Every number and literal string in this document and in the design docs is a decision, not a suggestion.** Implement as written; do not substitute your own values. If a value is genuinely impossible, keep the *intent*, deviate minimally, say so in the commit body, and add it to §5.2 (accepted equivalents). If the design itself cannot work, **STOP and file it in `docs/ongoing_general_errors.md` with options and a `Your selection: _____` line. Do not improvise, and never fill in a selection line yourself.**
+**What was approved and delivered:** Wave A, items **A1–A22** (delivered index in §5.1). **What NOT to touch:** everything in §5 (delivered work, accepted equivalents, user decisions, invariants, rejected options). **What must not be started:** everything in §4 (deferred).
 
 **What the product is, in one paragraph.** A local-only CLI that turns a **text story** (narrated by local TTS in an automatically chosen voice) or an **audio narration** into a **1080×1920 animated explainer video**. It uses flat editorial vector scenes chosen from a library of 16 templates, in sync with the voice, with word-by-word karaoke captions, a persistent cast of vector avatars, locally generated illustrations of places and objects, and optional music and SFX. Every video **stops for human review** before the final render. The long-term goal is live mode (speak in real time and the visuals follow), so the renderer is clock-agnostic from day one.
 
@@ -68,44 +64,50 @@ Each gate is created by the item named. **Replace "NOT BUILT" with the measured 
 | G9 | `./scripts/check_renderer_purity.sh` | exit 0 (pure) |
 | G10 | `./scripts/check_gallery.sh` | exit 0 (0 overflows across 51 fixtures, 17 entries matched goldens, hold motion verified) |
 | G11 | `uv run pytest -q -m slow` | exit 0 (18 passed) |
-| G12 | `./scripts/e2e.sh` | exit 0 (passed, steps 1–6 verified) |
-| G13 | `./scripts/check_offline.sh` | NOT BUILT (A22) |
+| G12 | `./scripts/e2e.sh` | exit 0 (passed, steps 1–8 verified across 5 fixture runs) |
+| G13 | `./scripts/check_offline.sh` | exit 0 (passed) |
 | G14 | `uv run infographics doctor` | exit 0 (21 checks OK) |
 
 ⚠️ **A gate that could not run is recorded as NOT RUN with the reason, never left blank and never marked green.**
 
 ---
 
-## 2. Execution order
+## 2. Execution order (Wave A Delivered)
 
-| # | Item | Why this position |
-|---|---|---|
-| A1 | Bootstrap | Nothing can be verified without toolchains and a battery. |
-| A2 | Setup script + `doctor` | Every later item needs models, voices, fonts and geodata on disk, and one command that says what is missing. |
-| A3 | Fixtures | Every test from A6 on runs against them, including the four voice expectations. |
-| A4 | Data contracts + schema sync | Both runtimes code against these types; changing them later is a cross-language refactor. |
-| A5 | Job store, CLI, review gate | Locks the gate's invariants **before** anything can render. A gate retrofitted after a working render gets bypassed "temporarily". |
-| A6 | Timing core (pure) | Beats, captions and frame math are the sync guarantee; pure functions, testable without models. |
-| A7 | LLM backend | **Moved up September 24:** voice selection (A8) must call the LLM before any audio exists. |
-| A8 | Narrator voice selection | Narration (A9) cannot start without a voice. |
-| A9 | Narration (Kokoro) | The primary input path; produces the ground-truth timings A10 is measured against. |
-| A10 | Transcription (Whisper) | The second input path, measured against A9's ground truth. |
-| A11 | Renderer foundation + `kinetic_quote` | The spine: clock, Story, captions, audio, sync probe, overflow detection. `kinetic_quote` first because it is the planner's universal fallback. |
-| A12 | Bible + geo | Segmentation, selection and props all need the cast and places; the narrator-avatar repair needs A8's `voice.json`. |
-| A13 | Segmentation | Needs A6's rules and A12's context. |
-| A14 | Storyboard + planner eval | Needs A4's props models, not the drawn templates. Unbuilt templates render as placeholders until A20. |
-| A15 | Compile + preview | Closes the plan → review loop. |
-| A16 | Final render + verification → **walking skeleton** | Proves text → MP4 end to end, sync verified in the encoded file, before the visual library grows. |
-| A17 | Visual primitives + gallery gate | The shared parts and the gate that holds every template. |
-| A18 | Templates: statement set (6) | |
-| A19 | Templates: people set (5) | Needs A17's Avatar. |
-| A20 | Templates: place & time set (4) + delete placeholder | Needs A17's MapView; the last template removes the placeholder. |
-| A21 | Illustrations (FLUX.2 klein 4B) | Needs A20's `location`/`set_piece` to show them. Last, because every template already has an icon fallback. |
-| A22 | E2E, offline gate, performance budget, README | Proof over the whole system; closes the wave. |
+All 22 items of Wave A (Offline MVP) delivered and validated in the order below. See §5.1 for delivered metrics and git commit references.
+
+| # | Item | Status | Reference |
+|---|---|---|---|
+| A1 | Bootstrap | **Delivered** | See §5.1 (`b1ad44a`) |
+| A2 | Setup script + `doctor` | **Delivered** | See §5.1 (`927d076`) |
+| A3 | Fixtures | **Delivered** | See §5.1 (`7924f59`) |
+| A4 | Data contracts + schema sync | **Delivered** | See §5.1 (`c7f0c4b`) |
+| A5 | Job store, CLI, review gate | **Delivered** | See §5.1 (`617e569`) |
+| A6 | Timing core (pure) | **Delivered** | See §5.1 (`10dd3a2`) |
+| A7 | LLM backend | **Delivered** | See §5.1 (`7186803`) |
+| A8 | Narrator voice selection | **Delivered** | See §5.1 (`9590fb7`) |
+| A9 | Narration (Kokoro) | **Delivered** | See §5.1 (`5824005`) |
+| A10 | Transcription (Whisper) | **Delivered** | See §5.1 (`715d670`) |
+| A11 | Renderer foundation + `kinetic_quote` | **Delivered** | See §5.1 (`731ad9e`) |
+| A12 | Bible + geo | **Delivered** | See §5.1 (`208d445`) |
+| A13 | Segmentation | **Delivered** | See §5.1 (`1d47dd8`) |
+| A14 | Storyboard + planner eval | **Delivered** | See §5.1 (`2b7dc04`) |
+| A15 | Compile + preview | **Delivered** | See §5.1 (`5260ab2`) |
+| A16 | Final render + verification → **walking skeleton** | **Delivered** | See §5.1 (`8203be5`) |
+| A17 | Visual primitives + gallery gate | **Delivered** | See §5.1 (`18c097b`) |
+| A18 | Templates: statement set (6) | **Delivered** | See §5.1 (`5b88db1`) |
+| A19 | Templates: people set (5) | **Delivered** | See §5.1 (`cedcd5a`) |
+| A20 | Templates: place & time set (4) + delete placeholder | **Delivered** | See §5.1 (`9cddf93`) |
+| A21 | Illustrations (FLUX.2 klein 4B) | **Delivered** | See §5.1 (`142b6a7`) |
+| A22 | E2E, offline gate, performance budget, README | **Delivered** | See §5.1 (`a5d3c07`) |
 
 ---
 
-## 3. The items
+## 3. The items (Queue Complete)
+
+**All 22 items (A1–A22) of Wave A are complete, verified, and delivered.**
+Detailed specifications, historical build steps, and validation gates for all delivered items are archived below and reflected in git history and §5.1.
+No active items remain in the queue.
 
 Each item has: **what it means for the user** · **Files** · **Interfaces** (where they matter) · **Build** steps · **Validate** (checks, then the falsification that proves the check can fail, then what to open and look at) · **Blast radius**. The design sections named in each item are part of its spec: read them before writing code.
 
@@ -755,7 +757,30 @@ Honouring the constraints in `design_future_live_and_video.md` (F1–F6) is in s
 
 ### 5.1 Already delivered
 
-Nothing yet. Items move here, one line each, as they land.
+All 22 items of Wave A (Offline MVP) delivered:
+
+- **A1** — Bootstrap (`b1ad44a`): G1–G7 green, battery 7/7 built gates pass, 1 pytest passed, 1 vitest passed.
+- **A2** — Setup script and doctor (`927d076`): 20/20 checks OK in doctor, setup.sh idempotent (twice 0), G14 green.
+- **A3** — Fixtures (`7924f59`): 15 fixture files generated and checksummed, 4 scripts verified against design SHA-256, music peak -20.0 dBFS, 5 SFX generated.
+- **A4** — Data contracts and schema sync (`c7f0c4b`): G8 green (11 files in sync), 10/10 pytest passed, 16 template props validated, G5 compiles iconMap.ts.
+- **A5** — Job store, CLI and the review gate (`617e569`): G1–G8, G14 green; 19 pytest passed; all 5 exit 3 refusals verified; journey test verified and falsified.
+- **A6** — Timing core (`10dd3a2`): G1–G8, G14 green; 39 pytest passed (20 new timing unit tests); 500-stream property test verified; 3 falsifications verified.
+- **A7** — LLM backend (`7186803`): G1–G8, G11, G14 green; 45 fast pytest + 1 slow integration test passed; G11 active; 20/20 structured output conformance on gemma4:26b (mean latency 1.96s); 2 falsifications verified.
+- **A8** — Narrator voice selection (`9590fb7`): G1–G8, G11, G14 green; 82 fast pytest + 3 slow tests passed; all 23 evidence cases verified; 4 fixtures matched expected facts; 7 falsifications verified.
+- **A9** — Narration (Kokoro) (`5824005`): G1–G8, G11, G14 green; 96 fast pytest + 8 slow tests passed; 4 fixtures synthesized with exact sample accounting; loudness -16 ± 0.5 LUFS; emu_war 11.65s (bar ≤ 60s); spectral centroid verified; 2 falsifications verified.
+- **A10** — Transcription (Whisper) (`715d670`): G1–G8, G11, G14 green; 98 fast pytest + 11 slow tests passed; molasses_flood_say WER 4.17% (bar ≤ 8%); Kokoro vs Whisper timing: match 97.5% (bar ≥ 90%), median error 40.0ms (bar ≤ 80ms), p95 error 239.4ms (bar ≤ 250ms); emu_war transcribe 6.00s (bar ≤ 45s); falsification verified.
+- **A11** — Renderer foundation (+ kinetic_quote) (`731ad9e`): G1–G9, G11, G14 green; G9 active (pure); 100 fast pytest passed; smoke media render 1080x1920@30fps verified with ffprobe; sync probe flips verified at frames 29/31 (0 vs 255) and 59/61 (255 vs 0); gallery kinetic_quote min/typical/max 0 overflows; 2 falsifications verified.
+- **A12** — Bible and geo resolution (`208d445`): G1–G9, G11, G14 green; 118 fast pytest + 13 slow tests passed; Boston, Duluth, Thunder Bay, Amarillo resolved via GeoNames gazetteer; antimeridian-aware country bbox checking; female narrator facial hair repaired to none; 2 falsifications verified.
+- **A13** — Segmentation (`1d47dd8`): G1–G9, G11, G14 green; 125 fast pytest + 15 slow tests passed; 4 fixtures segmented with continuous narration tiling and duration bounds [1500, 8000]ms; beat counts: molasses_flood 8, emu_war 20, story_recipe_box 26, story_room_12 24; falsification verified.
+- **A14** — Storyboard planning and the planner eval (`2b7dc04`): G1–G9, G11, G14 green; 149 fast pytest passed; planner eval passed 4/4 fixtures with 0 violations, fallback L2 0.0% (bar ≤ 15%), distinct templates 6/11/16/13 (bars ≥ 5/7), story_recipe_box wall time 49.0s (bar ≤ 240s), voice match 4/4; falsification verified.
+- **A15** — Compile and preview (`5260ab2`): G1–G9, G11, G14 green; 158 fast pytest passed; molasses_flood compiled with 10 scenes, duration 1834 frames, 0 overflow, Ajv & Python valid; 2 falsifications verified.
+- **A16** — Final render and output verification (`8203be5`): G1–G9, G11, G12, G14 green; G12 active (e2e passed); text & audio runs verify.json all true; sync probe flipped across all 9 scene boundaries (0 to 255); 2 falsifications verified.
+- **A17** — Visual primitives and the gallery gate (`18c097b`): G1–G12, G14 green; G10 active (0 overflows, goldens matched, hold motion passed); 161 fast pytest passed, 11 vitest passed; 6 visual primitives implemented; WCAG 2.x contrast verified; 3 falsifications verified.
+- **A18** — Templates: statement set (`5b88db1`): G1–G12, G14 green; G10 active (0 overflows across 24 fixtures, 8 templates matched goldens, hold motion verified); 6 statement templates implemented; molasses_flood contact sheet validated; 2 falsifications verified.
+- **A19** — Templates: people set (`cedcd5a`): G1–G12, G14 green; G10 active (0 overflows across 39 fixtures, 13 templates matched goldens, hold motion verified); 5 people templates implemented; story_recipe_box and story_room_12 preview validated; 2 falsifications verified.
+- **A20** — Templates: place & time set + delete placeholder (`9cddf93`): G1–G12, G14 green; G10 active (0 overflows across 51 fixtures, 17 entries matched goldens, hold motion verified); 4 place & time templates implemented; Placeholder.tsx deleted (0 NOT YET IMPLEMENTED matches); containment test verified and falsified; golden diff falsified; overflow falsified.
+- **A21** — Illustrations (FLUX.2 klein 4B) (`142b6a7`): G1–G12, G14 green; 169 fast pytest + 18 slow tests passed; mflux flux2-klein-4b editorial vector generation (1024x1024, 4 steps, quantize 8) verified; cache hit < 1s; story_recipe_box assets budget: 3 images (p1, p2, v1); timeout fallback verified and falsified.
+- **A22** — E2E, offline gate, performance budget, README (`a5d3c07`): G1–G14 green bare; macOS sandbox G13 network-outbound denied, localhost allowed; G12 steps 1–8 passed (all 4 fixtures verified, audio pipeline verified, 9 scene boundaries frame-accurate, warm cache byte-identical); 4/4 planner eval passed (0 violations, 0% fallback); performance budget met (story_recipe_box ~3 min video renders in 2.65 min, full pipeline < 3.5 min vs 10 min bar); README complete.
 
 ### 5.2 Accepted equivalents
 
@@ -879,12 +904,12 @@ None yet. When an implementation reaches a spec's intent by a different structur
 
 ## 9. Definition of Done: Wave A
 
-- [ ] A1–A22 each landed as one pushed commit, each with its falsifications recorded.
-- [ ] §1.3: every gate G1–G14 green, measured this session, read bare.
-- [ ] The voice stage matches all four fixture expectations in the slow suite, the planner eval and the E2E.
-- [ ] `docs/evals/planner_<date>.md` and `docs/evals/e2e_<date>.md` committed, all bars met or filed.
-- [ ] Performance budget on `story_recipe_box` (~3 min, the longest fixture) met or filed with per-stage timings.
-- [ ] Issues 1 and 2 collapsed into §3 lines of `ongoing_general_errors.md`.
-- [ ] No placeholder template remains; the 16-template containment test is green.
-- [ ] README has Setup, Usage (including voice selection) and Credits.
-- [ ] This guide rewritten to **Queue Complete** mode. **Then stop. The queue is empty; do not invent work.** The only legitimate triggers for new work are a user selection on an open issue or a deferred item, or a gate going red (investigate and **file** it).
+- [x] A1–A22 each landed as one pushed commit, each with its falsifications recorded.
+- [x] §1.3: every gate G1–G14 green, measured this session, read bare.
+- [x] The voice stage matches all four fixture expectations in the slow suite, the planner eval and the E2E.
+- [x] `docs/evals/planner_<date>.md` and `docs/evals/e2e_<date>.md` committed, all bars met or filed.
+- [x] Performance budget on `story_recipe_box` (~3 min, the longest fixture) met or filed with per-stage timings.
+- [x] Issues 1 and 2 collapsed into §3 lines of `ongoing_general_errors.md`.
+- [x] No placeholder template remains; the 16-template containment test is green.
+- [x] README has Setup, Usage (including voice selection) and Credits.
+- [x] This guide rewritten to **Queue Complete** mode. **Then stop. The queue is empty; do not invent work.** The only legitimate triggers for new work are a user selection on an open issue or a deferred item, or a gate going red (investigate and **file** it).

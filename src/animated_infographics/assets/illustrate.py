@@ -133,7 +133,8 @@ def generate(prompt: str, out: Path, *, timeout_s: int = DEFAULT_TIMEOUT_S) -> I
     t0 = time.perf_counter()
     mflux_ver = get_mflux_version()
     key = cache_key(prompt, mflux_version=mflux_ver)
-    cache_dir = Path("cache/images")
+    base_cache = Path(os.environ.get("INFOGRAPHICS_CACHE_DIR", "./cache"))
+    cache_dir = base_cache / "images"
     cache_path = cache_dir / f"{key}.png"
 
     # 1. Check cache hit

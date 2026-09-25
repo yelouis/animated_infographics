@@ -4,9 +4,9 @@ Turn narration into an **animated explainer video**: flat editorial vector scene
 
 The long-term goal is **live**: speak in real time while the visuals build behind you, like live captioning but as infographics.
 
-> **Status: designed, not yet built.** Wave A (the offline MVP) is specified and approved. Implementation is done by an engineering agent following [`docs/agent_execution_guide.md`](docs/agent_execution_guide.md).
+> **Status: Wave A (Offline MVP) Complete.** All 22 items (A1–A22) implemented, validated, and passing all 14 battery gates (G1–G14).
 
-## How it will work
+## How it works
 
 ```
 story.txt ─► local TTS ─┐
@@ -18,36 +18,11 @@ audio.m4a ─► local ASR ─┴─► word timings ─► local LLM plans scen
                                             Remotion renders final.mp4
 ```
 
-```bash
-infographics new story.txt --music bed.mp3 --sfx-dir sfx/   # stops at review
-open jobs/<job>/preview/contact_sheet.png                  # look; edit storyboard.json if needed
-infographics preview <job>                                  # after edits
-infographics approve <job>
-infographics render <job>                                   # → jobs/<job>/out/final.mp4
-```
-
-## Documentation map
-
-| Doc | What it is |
-|---|---|
-| [`docs/agent_execution_guide.md`](docs/agent_execution_guide.md) | **Start here if you are building.** The approved queue, item by item, with validation. |
-| [`docs/master_implementation_plan.md`](docs/master_implementation_plan.md) | Phase overview |
-| [`docs/design_system_architecture.md`](docs/design_system_architecture.md) | Product scope, pipeline, repo and job layout, CLI, review gate, local-only policy, pinned models |
-| [`docs/design_data_contracts.md`](docs/design_data_contracts.md) | Every JSON file's shape; Python as source of truth; the sync gate |
-| [`docs/design_audio_and_timing.md`](docs/design_audio_and_timing.md) | TTS, ASR, loudness, frame math, beats, captions, SFX scheduling |
-| [`docs/design_planner.md`](docs/design_planner.md) | Local LLM planning, validators, grounding, fallback, planner eval |
-| [`docs/design_templates.md`](docs/design_templates.md) | The 16 scene templates |
-| [`docs/design_visual_direction.md`](docs/design_visual_direction.md) | Palette, type, layout, motion, avatars, captions, illustration |
-| [`docs/design_rendering.md`](docs/design_rendering.md) | Remotion, the clock abstraction, preview, render, verification |
-| [`docs/design_testing_and_validation.md`](docs/design_testing_and_validation.md) | Fixtures, the 14 gates, E2E, offline gate, performance budget |
-| [`docs/design_future_live_and_video.md`](docs/design_future_live_and_video.md) | Live mode and video input: constraints now, sketches later |
-| [`docs/ongoing_general_errors.md`](docs/ongoing_general_errors.md) | Open issues and decisions awaiting you (`Your selection: _____`), deferred features, resolved index |
-
 ## Setup
 
 Requires an Apple Silicon Mac with Homebrew, Node.js, and Ollama.
 
-1. Prepare toolchains, models, fonts, and vendor datasets idempotently:
+1. Prepare toolchains, models, voices, fonts, and vendor datasets idempotently:
    ```bash
    ./scripts/setup.sh
    ```
@@ -57,7 +32,103 @@ Requires an Apple Silicon Mac with Homebrew, Node.js, and Ollama.
    uv run infographics doctor
    ```
 
-## Usage and credits
+3. Run the verification battery:
+   ```bash
+   ./scripts/battery.sh
+   ```
 
-Usage instructions arrive in A22. Planned credits: GeoNames (CC BY 4.0), Natural Earth via `world-atlas`, Phosphor Icons (MIT), Poppins and Inter (OFL), Kokoro-82M, Whisper, FLUX.2 [klein] 4B, Gemma 4 (Apache-2.0). Remotion is free for individuals and companies of up to 3 people; check remotion.dev/license before commercial use.
+## Usage
 
+The pipeline enforces a mandatory review gate between automated planning and rendering.
+
+### 1. Ingest and Plan (`new`)
+Create a new job from a text story or audio file:
+```bash
+uv run infographics new path/to/story.txt --music path/to/bed.wav --sfx-dir path/to/sfx/
+```
+
+Options:
+- `--voice af_heart|am_michael`: Override automatic narrator voice selection.
+- `--music <path>`: Background music track (auto-ducked during speech to −20 dBFS).
+- `--sfx-dir <dir>`: Directory containing SFX audio files.
+- `--jobs-dir <dir>`: Destination directory for jobs (defaults to `./jobs`).
+
+### 2. Review Storyboard and Contact Sheet
+Inspect the planned voice and visuals:
+1. Open the contact sheet: `jobs/<job_id>/preview/contact_sheet.png`.
+2. Inspect the voice line at the top of `jobs/<job_id>/preview/storyboard.md` or in `jobs/<job_id>/voice.json`.
+3. Check template assignments across all scenes.
+
+### 3. Optional Editing and Preview (`preview`)
+If you wish to adjust scenes, edit `jobs/<job_id>/storyboard.json` directly. Then regenerate the contact sheet:
+```bash
+uv run infographics preview <job_id>
+```
+
+### 4. Approve (`approve`)
+Approve the job once you are satisfied with the plan. **Unapproved jobs cannot be rendered (exit code 3):**
+```bash
+uv run infographics approve <job_id>
+```
+*Note: Any edit made to `storyboard.json` after approval invalidates the approval token; you must re-preview and re-approve.*
+
+### 5. Render (`render`)
+Render the final 1080×1920 MP4 at 30 fps:
+```bash
+uv run infographics render <job_id>
+```
+Output video is saved to `jobs/<job_id>/out/final.mp4`. A verification summary with audio loudness, AV duration alignment, and frame checks is written to `jobs/<job_id>/out/verify.json`.
+
+---
+
+## Narrator Voice Selection
+
+When given a text input, the pipeline automatically chooses an installed narrator voice based on perspective:
+- **`af_heart`**: Selected when the narrator explicitly self-identifies as female (e.g. `"As the only granddaughter..."`, `"I (28F)..."`).
+- **`am_michael`**: Default voice for third-person narratives, neutral perspective, or when gender is unstated / ambiguous. The system deliberately rejects inference traps or stereotypical deductions.
+- **Manual override**: Pass `--voice af_heart` or `--voice am_michael` to bypass the LLM voice classification stage entirely with zero LLM overhead.
+
+---
+
+## Music and Sound Effects Convention
+
+- **Music**: Any standard audio format (`.wav`, `.mp3`, `.m4a`). The audio stage normalises and loops/trims the track to match speech duration, ducked to −20 dBFS.
+- **SFX**: Sound effect files in `--sfx-dir` must begin with a recognised role prefix followed by an underscore:
+  - `whoosh_*.wav`: Played on fast transitions and wipe reveals.
+  - `pop_*.wav`: Played on item entrances, chips, and list appearances.
+  - `ding_*.wav`: Played on key stat callouts and revelations.
+  - `hit_*.wav`: Played on high-impact statement punches and contrast moments.
+  - Files with unrecognised roles (e.g., `clap_*.wav`) are logged with a warning and safely ignored.
+
+---
+
+## Documentation Map
+
+| Doc | What it is |
+|---|---|
+| [`docs/agent_execution_guide.md`](docs/agent_execution_guide.md) | The item-by-item execution history and validation gates. |
+| [`docs/master_implementation_plan.md`](docs/master_implementation_plan.md) | Phase overview and milestones. |
+| [`docs/design_system_architecture.md`](docs/design_system_architecture.md) | Pipeline stages, job layout, CLI specification, review gate, and local-only policy. |
+| [`docs/design_data_contracts.md`](docs/design_data_contracts.md) | Pydantic and TypeScript contract models; schema sync verification. |
+| [`docs/design_audio_and_timing.md`](docs/design_audio_and_timing.md) | TTS synthesis, ASR transcription, loudness targets, beats, frame math, and captions paging. |
+| [`docs/design_planner.md`](docs/design_planner.md) | Local LLM planning (Gemma 4 26B), structured outputs, validators, and voice selection rules. |
+| [`docs/design_templates.md`](docs/design_templates.md) | The 16 scene templates (Statement, People, Place & Time sets). |
+| [`docs/design_visual_direction.md`](docs/design_visual_direction.md) | Color palette, typography, layout zones, avatars, kinetic motion, and illustration styles. |
+| [`docs/design_rendering.md`](docs/design_rendering.md) | Remotion rendering engine, clock abstractions, sync probe, and media verification. |
+| [`docs/design_testing_and_validation.md`](docs/design_testing_and_validation.md) | Fixtures, the 14 gates (G1–G14), E2E test specification, and offline sandbox. |
+| [`docs/design_future_live_and_video.md`](docs/design_future_live_and_video.md) | Live mode, webcam PiP, and video input design constraints. |
+| [`docs/ongoing_general_errors.md`](docs/ongoing_general_errors.md) | Working log, decision records, and resolved item index. |
+
+---
+
+## Credits & Acknowledgements
+
+- **GeoNames** ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)): Gazetteer data for geographical place and coordinate resolution.
+- **Natural Earth & world-atlas** (Public Domain): Vector map topojson data for country framing and world map rendering.
+- **Phosphor Icons** ([MIT](https://github.com/phosphor-icons/core/blob/main/LICENSE)): Iconography for entities, themes, and UI elements.
+- **Google Fonts** ([OFL](https://scripts.sil.org/OFL)): Poppins, Outfit, JetBrains Mono, Space Grotesk, and Fraunces typography.
+- **Kokoro-82M** ([Apache-2.0](https://huggingface.co/hexgrad/Kokoro-82M)): Local neural text-to-speech voice synthesis.
+- **mlx-whisper** ([MIT](https://github.com/ml-explore/mlx-examples/blob/main/whisper/LICENSE) / OpenAI): Local Apple Silicon speech-to-text alignment and transcription.
+- **FLUX.2 [klein] 4B** ([Apache-2.0](https://huggingface.co/black-forest-labs/FLUX.2-klein-4B)) via [mflux](https://github.com/filipstrand/mflux): Local 4-step quantized editorial vector illustration generation.
+- **Gemma 4 26B** ([Apache-2.0](https://ai.google.dev/gemma/terms)) via [Ollama](https://ollama.com): Local LLM planner for voice selection, bible entity extraction, beat segmentation, and template selection.
+- **Remotion** ([Remotion Company License](https://remotion.dev/license)): Programmatic React video rendering. Free for individuals and companies of up to 3 people; review terms prior to commercial use.

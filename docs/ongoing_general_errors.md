@@ -8,7 +8,7 @@
 
 ## 1. Open & in-flight
 
-**Wave A (Offline MVP) was approved on September 23, 2026, and revised on September 24, 2026 to incorporate the selections on Issues 1 and 2. It now has 22 items (A1–A22).** The spec is `agent_execution_guide.md` §3. **Status: not started.** The repository holds the design set and the four frozen fixture scripts only (two history pieces; two complete r/stories-style stories).
+**Wave A (Offline MVP, items A1–A22) is complete and delivered.** All 14 gates pass bare. The active queue is empty. See `docs/agent_execution_guide.md` §5.1 for full delivery index.
 
 **Selected, specced, not yet delivered.** When an item lands, its implementing commit collapses the issue below into one line in §3.
 
@@ -52,7 +52,8 @@ A17 — Visual primitives and the gallery gate — 18c097b — G1–G12, G14 gre
 A18 — Templates: statement set — 5b88db1 — G1–G12, G14 green; G10 active (0 overflows across 24 fixtures, 8 templates matched goldens, hold motion verified); 6 statement templates implemented; molasses_flood contact sheet validated; both falsifications verified (red then green)
 A19 — Templates: people set — cedcd5a — G1–G12, G14 green; G10 active (0 overflows across 39 fixtures, 13 templates matched goldens, hold motion verified); 5 people templates implemented; story_recipe_box and story_room_12 preview validated; both falsifications verified (red then green)
 A20 — Templates: place & time set + delete placeholder — 9cddf93 — G1–G12, G14 green; G10 active (0 overflows across 51 fixtures, 17 entries matched goldens, hold motion verified); 4 place & time templates implemented; Placeholder.tsx deleted (0 NOT YET IMPLEMENTED matches); containment test verified and falsified (red then green); golden diff falsified (red then green); overflow falsified (red then green)
-A21 — Illustrations (FLUX.2 klein 4B) — aee4a02 — G1–G12, G14 green; 169 fast pytest + 18 slow tests passed; mflux flux2-klein-4b editorial vector generation (1024x1024, 4 steps, quantize 8) verified; cache hit < 1s; story_recipe_box assets budget: 3 images (p1, p2, v1); timeout fallback verified and falsified (red then green)
+A21 — Illustrations (FLUX.2 klein 4B) — 142b6a7 — G1–G12, G14 green; 169 fast pytest + 18 slow tests passed; mflux flux2-klein-4b editorial vector generation (1024x1024, 4 steps, quantize 8) verified; cache hit < 1s; story_recipe_box assets budget: 3 images (p1, p2, v1); timeout fallback verified and falsified (red then green)
+A22 — E2E, offline gate, performance budget, README — a5d3c07 — G1–G14 green bare; macOS sandbox G13 network-outbound denied, localhost allowed; G12 steps 1–8 passed (all 4 fixtures verified, audio pipeline verified, 9 scene boundaries frame-accurate, warm cache byte-identical); 4/4 planner eval passed (0 violations, 0% fallback); performance budget met (story_recipe_box ~3 min video renders in 2.65 min, full pipeline < 3.5 min vs 10 min bar); README complete
 
 ---
 
