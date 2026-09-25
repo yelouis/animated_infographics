@@ -72,6 +72,7 @@ A1 — Bootstrap — b1ad44a — G1–G7 green, battery 7/7 built gates pass, 1 
 A2 — Setup script and doctor — 927d076 — 20/20 checks OK in doctor, setup.sh idempotent (twice 0), G14 green
 A3 — Fixtures — 7924f59 — 15 fixture files generated and checksummed, 4 scripts verified against design SHA-256, music peak -20.0 dBFS, 5 SFX generated
 A4 — Data contracts and schema sync — c7f0c4b — G8 green (11 files in sync), 10/10 pytest passed, 16 template props validated, G5 compiles iconMap.ts
+A5 — Job store, CLI and the review gate — current — G1–G8, G14 green; 19 pytest passed; all 5 exit 3 refusals verified; journey test verified and falsified (red then green)
 
 ---
 

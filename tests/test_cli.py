@@ -1,0 +1,325 @@
+"""Integration tests for the Animated Infographics CLI and review gate."""
+
+import json
+from pathlib import Path
+from typing import Any
+
+import pytest
+from typer.testing import CliRunner
+
+from animated_infographics.cli import app, set_stage_registry
+from animated_infographics.jobs import Job, RunContext
+
+runner = CliRunner()
+
+
+@pytest.fixture
+def fake_stages() -> dict[str, Any]:
+    def fake_ingest(j: Job, ctx: RunContext) -> None:
+        (j.dir / "ingest.json").write_text('{"text":"hello"}', encoding="utf-8")
+
+    def fake_voice(j: Job, ctx: RunContext) -> None:
+        (j.dir / "voice.json").write_text('{"voice":"am_michael"}', encoding="utf-8")
+
+    def fake_narrate(j: Job, ctx: RunContext) -> None:
+        (j.dir / "narration.json").write_text("{}", encoding="utf-8")
+        (j.dir / "audio" / "narration.wav").write_bytes(b"RIFFdummywav")
+        (j.dir / "transcript.json").write_text('{"source":"tts"}', encoding="utf-8")
+
+    def fake_transcribe(j: Job, ctx: RunContext) -> None:
+        (j.dir / "transcript.json").write_text('{"source":"whisper"}', encoding="utf-8")
+
+    def fake_bible(j: Job, ctx: RunContext) -> None:
+        data = {
+            "schema_version": 1,
+            "title": "Test Title",
+            "logline": "Test logline",
+            "genre": "history",
+            "cast": [],
+            "places": [],
+            "set_pieces": [],
+        }
+        (j.dir / "bible.json").write_text(json.dumps(data), encoding="utf-8")
+
+    def fake_segment(j: Job, ctx: RunContext) -> None:
+        data = {"schema_version": 1, "beats": []}
+        (j.dir / "beats.json").write_text(json.dumps(data), encoding="utf-8")
+
+    def fake_storyboard(j: Job, ctx: RunContext) -> None:
+        data = {
+            "schema_version": 1,
+            "aspect": "9:16",
+            "scenes": [
+                {
+                    "id": "s000",
+                    "beat_i": 0,
+                    "template": "title_card",
+                    "props": {"title": "Scene 1"},
+                }
+            ],
+        }
+        (j.dir / "storyboard.json").write_text(json.dumps(data), encoding="utf-8")
+        (j.dir / "plan_report.json").write_text("{}", encoding="utf-8")
+
+    def fake_assets(j: Job, ctx: RunContext) -> None:
+        (j.dir / "assets" / "manifest.json").write_text("{}", encoding="utf-8")
+        (j.dir / "assets" / "images" / "dummy.png").write_bytes(b"dummy")
+
+    def fake_compile(j: Job, ctx: RunContext) -> None:
+        (j.dir / "timeline.json").write_text("{}", encoding="utf-8")
+
+    def fake_preview(j: Job, ctx: RunContext) -> None:
+        (j.dir / "preview" / "contact_sheet.png").write_bytes(b"png")
+        (j.dir / "preview" / "storyboard.md").write_text("# Preview", encoding="utf-8")
+
+    def fake_render(j: Job, ctx: RunContext) -> None:
+        (j.dir / "out" / "final.mp4").write_bytes(b"mp4")
+
+    registry = {
+        "ingest": fake_ingest,
+        "voice": fake_voice,
+        "narrate": fake_narrate,
+        "transcribe": fake_transcribe,
+        "bible": fake_bible,
+        "segment": fake_segment,
+        "storyboard": fake_storyboard,
+        "assets": fake_assets,
+        "compile": fake_compile,
+        "preview": fake_preview,
+        "render": fake_render,
+    }
+    set_stage_registry(registry)
+    return registry
+
+
+def test_cli_prevalidation_rejections(tmp_path: Path) -> None:
+    """Verify bad inputs and invalid option combinations exit 2 with no job directory created."""
+    jobs_dir = tmp_path / "jobs"
+    jobs_dir.mkdir()
+
+    # 1. Missing input file
+    res = runner.invoke(app, ["new", str(tmp_path / "missing.txt"), "--jobs-dir", str(jobs_dir)])
+    assert res.exit_code == 2
+    assert list(jobs_dir.iterdir()) == []
+
+    # 2. Unsupported extension
+    pdf_file = tmp_path / "test.pdf"
+    pdf_file.write_text("dummy", encoding="utf-8")
+    res = runner.invoke(app, ["new", str(pdf_file), "--jobs-dir", str(jobs_dir)])
+    assert res.exit_code == 2
+    assert list(jobs_dir.iterdir()) == []
+
+    # 3. Audio input with --voice
+    wav_file = tmp_path / "test.wav"
+    wav_file.write_bytes(b"RIFF")
+    res = runner.invoke(
+        app, ["new", str(wav_file), "--voice", "af_heart", "--jobs-dir", str(jobs_dir)]
+    )
+    assert res.exit_code == 2
+    assert list(jobs_dir.iterdir()) == []
+
+    # 4. Text input with invalid voice
+    txt_file = tmp_path / "test.txt"
+    txt_file.write_text("Hello world", encoding="utf-8")
+    res = runner.invoke(
+        app, ["new", str(txt_file), "--voice", "invalid_voice", "--jobs-dir", str(jobs_dir)]
+    )
+    assert res.exit_code == 2
+    assert list(jobs_dir.iterdir()) == []
+
+    # 5. Non-existent music file
+    res = runner.invoke(
+        app,
+        [
+            "new",
+            str(txt_file),
+            "--music",
+            str(tmp_path / "nonexistent.wav"),
+            "--jobs-dir",
+            str(jobs_dir),
+        ],
+    )
+    assert res.exit_code == 2
+    assert list(jobs_dir.iterdir()) == []
+
+    # 6. Non-existent SFX dir
+    res = runner.invoke(
+        app,
+        [
+            "new",
+            str(txt_file),
+            "--sfx-dir",
+            str(tmp_path / "nonexistent_sfx"),
+            "--jobs-dir",
+            str(jobs_dir),
+        ],
+    )
+    assert res.exit_code == 2
+    assert list(jobs_dir.iterdir()) == []
+
+
+def test_cli_new_text_and_audio(tmp_path: Path, fake_stages: Any) -> None:
+    """Verify new command runs through preview and prints required paths."""
+    jobs_dir = tmp_path / "jobs"
+    txt_file = tmp_path / "test.txt"
+    txt_file.write_text("Some script text", encoding="utf-8")
+
+    res = runner.invoke(app, ["new", str(txt_file), "--jobs-dir", str(jobs_dir)])
+    assert res.exit_code == 0
+    assert "preview/contact_sheet.png" in res.stdout
+    assert "preview/storyboard.md" in res.stdout
+    assert "bible.json" in res.stdout
+    assert "storyboard.json" in res.stdout
+
+    created_jobs = list(jobs_dir.iterdir())
+    assert len(created_jobs) == 1
+    job_dir = created_jobs[0]
+    job = Job(job_dir)
+    assert job.state["state"] == "awaiting_review"
+    assert (
+        job.state["plan_sha256"]
+        == job.state["preview_plan_sha256"]
+        == job.state["timeline_plan_sha256"]
+    )
+    assert job.state["approval"] is None
+
+    # Audio input
+    wav_file = tmp_path / "audio.wav"
+    wav_file.write_bytes(b"RIFF")
+    res_audio = runner.invoke(app, ["new", str(wav_file), "--jobs-dir", str(jobs_dir)])
+    assert res_audio.exit_code == 0
+    assert len(list(jobs_dir.iterdir())) == 2
+
+
+def test_cli_refusal_cases(tmp_path: Path, fake_stages: Any) -> None:
+    """Verify all refusal conditions in architecture §5 exit with code 3."""
+    jobs_dir = tmp_path / "jobs"
+    txt_file = tmp_path / "test.txt"
+    txt_file.write_text("Sample text", encoding="utf-8")
+
+    res = runner.invoke(app, ["new", str(txt_file), "--jobs-dir", str(jobs_dir)])
+    assert res.exit_code == 0
+    job_dir = list(jobs_dir.iterdir())[0]
+
+    # 1. approve on job not awaiting_review (simulate state=planning)
+    job = Job(job_dir)
+    job.state["state"] = "planning"
+    job.save_state()
+    res = runner.invoke(app, ["approve", str(job_dir), "--jobs-dir", str(jobs_dir)])
+    assert res.exit_code == 3
+
+    # Reset state to awaiting_review
+    job.state["state"] = "awaiting_review"
+    job.save_state()
+
+    # 2. approve when preview_plan_sha256 != plan_sha256(now) (e.g. edited bible)
+    bible_path = job_dir / "bible.json"
+    bible_data = json.loads(bible_path.read_text(encoding="utf-8"))
+    bible_data["title"] = "Edited Title Before Preview"
+    bible_path.write_text(json.dumps(bible_data), encoding="utf-8")
+
+    res = runner.invoke(app, ["approve", str(job_dir), "--jobs-dir", str(jobs_dir)])
+    assert res.exit_code == 3
+    assert "plan changed since preview" in res.stderr
+
+    # 3. render on job not approved (state is awaiting_review)
+    res = runner.invoke(app, ["render", str(job_dir), "--jobs-dir", str(jobs_dir)])
+    assert res.exit_code == 3
+
+    # 4. preview on job in state planning or failed
+    job.state["state"] = "failed"
+    job.save_state()
+    res = runner.invoke(app, ["preview", str(job_dir), "--jobs-dir", str(jobs_dir)])
+    assert res.exit_code == 3
+
+    # 5. preview validation failure on invalid edited storyboard (exit 2)
+    job.state["state"] = "awaiting_review"
+    job.save_state()
+    sb_path = job_dir / "storyboard.json"
+    sb_data = json.loads(sb_path.read_text(encoding="utf-8"))
+    sb_data["scenes"][0]["id"] = "invalid_id_format"
+    sb_path.write_text(json.dumps(sb_data), encoding="utf-8")
+
+    res = runner.invoke(app, ["preview", str(job_dir), "--jobs-dir", str(jobs_dir)])
+    assert res.exit_code == 2
+    assert "storyboard.json validation failed" in res.stderr
+
+
+def test_cli_journey(tmp_path: Path, fake_stages: Any) -> None:
+    """Verify journey: new -> approve -> edit -> render (3) -> preview -> approve -> render (0)."""
+    jobs_dir = tmp_path / "jobs"
+    txt_file = tmp_path / "test.txt"
+    txt_file.write_text("Journey story script", encoding="utf-8")
+
+    # Step 1: new
+    res = runner.invoke(app, ["new", str(txt_file), "--jobs-dir", str(jobs_dir)])
+    assert res.exit_code == 0
+    job_dir = list(jobs_dir.iterdir())[0]
+    job_id = job_dir.name
+
+    # Step 2: approve
+    res = runner.invoke(app, ["approve", job_id, "--jobs-dir", str(jobs_dir)])
+    assert res.exit_code == 0
+    job = Job(job_dir)
+    assert job.state["state"] == "approved"
+    assert job.state["approval"] is not None
+
+    # Step 3: edit storyboard.json
+    sb_path = job_dir / "storyboard.json"
+    sb_data = json.loads(sb_path.read_text(encoding="utf-8"))
+    sb_data["scenes"][0]["props"]["title"] = "Modified Title"
+    sb_path.write_text(json.dumps(sb_data), encoding="utf-8")
+
+    # Step 4: render -> MUST refuse with exit code 3
+    res = runner.invoke(app, ["render", job_id, "--jobs-dir", str(jobs_dir)])
+    assert res.exit_code == 3
+    assert "plan changed since approval" in res.stderr
+
+    # Step 5: preview -> revalidates, clears approval, sets awaiting_review
+    res = runner.invoke(app, ["preview", job_id, "--jobs-dir", str(jobs_dir)])
+    assert res.exit_code == 0
+    job = Job(job_dir)
+    assert job.state["state"] == "awaiting_review"
+    assert job.state["approval"] is None
+
+    # Step 6: approve
+    res = runner.invoke(app, ["approve", job_id, "--jobs-dir", str(jobs_dir)])
+    assert res.exit_code == 0
+    job = Job(job_dir)
+    assert job.state["state"] == "approved"
+
+    # Step 7: render -> MUST succeed with exit code 0
+    res = runner.invoke(app, ["render", job_id, "--jobs-dir", str(jobs_dir)])
+    assert res.exit_code == 0
+    job = Job(job_dir)
+    assert job.state["state"] == "rendered"
+    assert (job_dir / "out" / "final.mp4").is_file()
+
+
+def test_cli_rerun_and_status(tmp_path: Path, fake_stages: Any) -> None:
+    """Verify rerun invalidates pipeline from requested stage, and status prints state."""
+    jobs_dir = tmp_path / "jobs"
+    txt_file = tmp_path / "test.txt"
+    txt_file.write_text("Rerun script", encoding="utf-8")
+
+    res = runner.invoke(app, ["new", str(txt_file), "--jobs-dir", str(jobs_dir)])
+    assert res.exit_code == 0
+    job_id = list(jobs_dir.iterdir())[0].name
+
+    # Check status
+    res = runner.invoke(app, ["status", job_id, "--jobs-dir", str(jobs_dir)])
+    assert res.exit_code == 0
+    assert f"Job: {job_id}" in res.stdout
+    assert "State: awaiting_review" in res.stdout
+
+    # Rerun with invalid stage -> exit 2
+    res = runner.invoke(
+        app, ["rerun", job_id, "--from", "invalid_stage", "--jobs-dir", str(jobs_dir)]
+    )
+    assert res.exit_code == 2
+
+    # Rerun from segment -> exit 0, stops at awaiting_review
+    res = runner.invoke(app, ["rerun", job_id, "--from", "segment", "--jobs-dir", str(jobs_dir)])
+    assert res.exit_code == 0
+    job = Job(jobs_dir / job_id)
+    assert job.state["state"] == "awaiting_review"
