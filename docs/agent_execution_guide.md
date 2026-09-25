@@ -64,7 +64,7 @@ Each gate is created by the item named. **Replace "NOT BUILT" with the measured 
 | G5 | `npm --prefix renderer run typecheck` | exit 0 (0 errors) |
 | G6 | `npm --prefix renderer run lint` | exit 0 (0 errors) |
 | G7 | `npm --prefix renderer test` | exit 0 (1 passed) |
-| G8 | `./scripts/check_schema_sync.sh` | NOT BUILT (A4) |
+| G8 | `./scripts/check_schema_sync.sh` | exit 0 (11 files in sync) |
 | G9 | `./scripts/check_renderer_purity.sh` | NOT BUILT (A11) |
 | G10 | `./scripts/check_gallery.sh` | NOT BUILT (A17) |
 | G11 | `uv run pytest -q -m slow` | NOT BUILT (A7) |
