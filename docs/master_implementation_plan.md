@@ -56,5 +56,14 @@ Wave A was delivered and independently verified: all gates green, but with defec
 
 The item-by-item spec is `agent_execution_guide.md`.
 
-## After Wave B (deferred; each needs a user selection)
+## Wave C: verification fixes (approved September 26, 2026)
+Wave B was delivered and independently verified: all gates green, all 17 items true to spec. Reviewing real output then found four problems the specs had missed:
+- the critic missing a real misattribution, because beat splitting separated a quote from its speaker;
+- a fifth of critic retries keeping the wrong scene;
+- internal ids on screen;
+- caption words colliding.
+
+Wave C (C1–C7) fixes them and re-measures. Issue 6 (invented dialogue) awaits the user.
+
+## After Wave C (deferred; each needs a user selection)
 Video input with picture-in-picture · 16:9 output · **live mode** (streaming ASR → incremental planning → the same templates on a live clock, webcam in a corner) · multi-voice narration · Reddit URL fetch · public-domain photos · historical borders · a web review editor. See `ongoing_general_errors.md` §4.

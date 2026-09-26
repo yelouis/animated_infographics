@@ -178,6 +178,7 @@ The **same functions** run on LLM output (inside the ladder) and on human edits 
 7. **Text completeness (added September 25, 2026)**, for every free-text string field (not ids, enums, `prefix`, or `date_label`/`era_label`):
    - **Repair (not an error):** runs of whitespace, including `\n`, collapse to one space; strip the ends.
    - **Errors:** the string contains no letter or digit (`"..."`, `"—"`); it ends with `-`, `(`, `[`, `,`, `:` or `/`; its `(`/`)`, `[`/`]` or `"` characters are unbalanced; its last word is a truncation fragment (a single **lowercase** letter other than `a`, e.g. "…crowds at p"; a capital like "Plan B" is legitimate). Error format: `props.caption: looks cut off ("…crowds at p")`.
+8. **No internal ids on screen (added September 26, 2026).** No free-text field (the list in item 7) may contain a whole token equal to one of **this bible's** entity ids (`c1`–`c8`, `p1`–`p4`, `v1`–`v3`), with or without surrounding parentheses or a trailing colon, casefolded. Error: `props.text: contains the internal id "v1" — use the name ("the recipe box")`. The props prompt says: "Refer to people, places and objects by their names; never write ids like c1, p2 or v1." Measured in Wave B's E2E storyboards: 4 leaks in 311 unique scenes, e.g. "One card missing from the recipe box (v1).", "c1 buys the Sundowner from c3", "Feathered adversaries (c4: The Emus)".
 
 ---
 
@@ -226,8 +227,9 @@ The renderer independently detects overflow in the DOM (`design_rendering.md` §
 | Grounding / reference / fit violations in the **final** storyboard | **0**, re-verified by running §6 over the saved `storyboard.json` as an independent pass |
 | Planner wall time for `story_recipe_box`, the longest fixture (cold LLM cache, model already loaded) | ≤ **240 s** |
 | Voice decision matches `fixtures/expected/<name>.json` (`voice` and `reason`) | **4 of 4** fixtures |
-| Critic regression set (§11) | **4 of 4** cases classified as expected |
-| Critic cost | reported per fixture: critic calls, mismatches, props changed (no bar; the cold budget run bounds the time) |
+| Critic regression set (§11) | **5 of 5** cases (A, B, B′, C, E) classified as expected |
+| Critic cost | reported per fixture: critic calls, mismatches, props changed, tone repairs, **mismatches left unchanged** (no bar; the cold budget run bounds the time) |
+| Text audit (added September 26, 2026) | **0** strings containing a newline, **0** completeness failures, **0** internal-id leaks (§6 item 8). Strings exactly at their limit are **reported, not failed**: the model never sees the limit, so they cannot be truncations. Wave B's four were complete phrases ("Major Meredith of the Royal Australian Artillery"). |
 
 A bar that fails is **filed, not tuned away**. Do not raise the fallback threshold, drop a validator, or loosen grounding to pass. Prompt changes are legitimate; each one re-runs the full eval and the report records the prompt files' SHA-256.
 
@@ -343,11 +345,19 @@ Runs after `ingest` and **before** `narrate`, because the voice must be known be
 
 **Which scenes:** `dialogue`, `text_thread`, `emotion_beat`, and `kinetic_quote` **with** a non-null `attribution_cast_id`. Never the deterministic fallback scenes.
 
-**When:** inside props planning, after a candidate scene has passed `validate_scene` (fallback level 0 or 1), before it is accepted.
+**When:** inside props planning, after a candidate scene has passed `validate_scene` (fallback level 0 or 1), before it is accepted. **This includes scenes rebuilt by a rule repair** (R3's alternate), which the first implementation skipped (revised September 26, 2026).
 
 **Call:** `run_with_retries(stage="critic", num_predict=256)`, `temperature` 0.
 - **System:** `You check who says or feels what in a story beat. Answer only from the text. Output JSON matching the schema.`
-- **User:** the cast list (`- <id>: <name> (<role>)`, plus ` [narrator]` for the narrator), the previous beat (labelled "context only"), this beat, the next beat (labelled "context only"), and the template's question.
+- **User (revised September 26, 2026):** the cast list (`- <id>: <name> (<role>)`, plus ` [narrator]` for the narrator), then **one continuous passage**: the beat before the previous one, the previous beat, this beat and the next beat, joined by single spaces, introduced by exactly this line:
+
+  ```
+  Passage (read all of it; who speaks is often named in the sentence before a quote):
+  ```
+
+  Then the template's question.
+  - **Why:** the first framing labelled the neighbouring beats "context only". In Wave B's `story_recipe_box` E2E, beat splitting had put "…he found a shoebox of letters and texted me a photo:" in the previous beat and the bare quote in this one. The critic then answered the narrator (`c1`) on seeds 7, 8 and 9, and **agreed with the wrong attribution**.
+  - With the passage framing it answered Danny on all three seeds, and the four original regression cases still scored 4/4 on every seed (measured September 26, 2026). That case is now **regression case E** below.
 - **Blind:** the question gives the scene's *texts* but **never** the proposed speaker, sender, tone or emotion.
 
 | Template | Question (the quoted texts come from the props) | Schema |
@@ -370,9 +380,15 @@ A second, independent reading of this beat disagrees:
 Fix the props if that reading fits the beat text better; otherwise keep yours.
 ```
 
-The retry result must pass `validate_scene`. If it does, it replaces the scene, **with no second critic call** (no loops). If it does not, the original validated scene stands. If the critic call fails entirely, the scene is accepted with critic status `unavailable`.
+The retry is one `run_with_retries` round with its **normal 3 attempts** (for format and validation). The first implementation allowed 1 attempt, and 30 of 149 critic mismatches across Wave B's runs ended with the known-wrong original kept. The retry result must pass `validate_scene`. If it does, it replaces the scene, **with no second critic call** (no loops).
 
-**Recorded** in `plan_report.json` per scene: `critic: {"status": "not_applicable"|"agree"|"mismatch_retried"|"unavailable", "mismatches": ["lines[0].tone: angry vs unknown"], "changed": bool}` (`design_data_contracts.md` §6).
+If all attempts fail:
+- **Deterministic tone repair:** if **every** mismatch is a dialogue tone where the critic answered `unknown`, set those lines' tone to `neutral`. The rule itself makes `neutral` the only acceptable value there. Record `repair: "tone_neutral"`, `changed: true`.
+- Otherwise the original validated scene stands. Its retry errors are recorded, never silently discarded.
+
+If the critic call itself fails entirely, the scene is accepted with critic status `unavailable`.
+
+**Recorded** in `plan_report.json` per scene: `critic: {"status": "not_applicable"|"agree"|"mismatch_retried"|"unavailable", "mismatches": ["lines[0].tone: angry vs unknown"], "changed": bool, "repair": "tone_neutral"|null, "retry_errors": [str]}` (`design_data_contracts.md` §6). `changed` is true **only if the final props differ** from the original. An identical retry is not a change.
 
 **Measured September 25, 2026** with `gemma4:26b`, seeds 7, 8 and 9, all consistent. These four cases are the **critic regression set**, run as slow tests with the cast `c1 Me (narrator)`, `c2 Danny`, `c3 Walt`, `c4 Deb`:
 
@@ -382,5 +398,6 @@ The retry result must pass `validate_scene`. If it does, it replaces the scene, 
 | B: "Rose?" as a `dialogue` line | `c1`, tone `angry` | `c1`, `unknown` | mismatch (tone) | mismatch ✓ |
 | B′: the same line with tone `neutral` | `c1`, `neutral` | `c1`, `unknown` | agree | agree ✓ |
 | C: "I've been waiting for someone to call about the pie." | attribution `c3` | `unknown` | agree | agree ✓ |
+| **E** (added September 26, 2026): the bare quote "Who is Walter Lindqvist and why did he write to Grandma 60 times?", previous beat "While clearing the attic, he found a shoebox of letters and texted me a photo:" (cast for this case: `c1 Me (narrator)`, `c2 Grandma Rose`, `c3 Danny`, `c4 Walt`; the beat before: "Last spring, Danny finally sold the house.") | attribution `c1` | `c3` (passage framing) | mismatch | mismatch ✓ |
 
-Latency was ~0.5 s per call. Case C is why "unknown" must never count as a mismatch for *who*: the critic could not resolve "he said" from the beat alone, and the props were right.
+Latency was ~0.5 s per call. Case C is why "unknown" must never count as a mismatch for *who*: the critic could not resolve "he said" from the beat alone, and the props were right. **Regression bar: all five cases (A, B, B′, C, E), on seeds 7, 8 and 9.**

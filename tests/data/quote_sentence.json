@@ -1,0 +1,150 @@
+{
+  "schema_version": 1,
+  "note": "Frozen 2026-09-26 from the Wave B E2E story_recipe_box job (Kokoro af_heart timings). Sentence 11 and the start of sentence 12. Used by the quoted-speech split test (design_audio_and_timing.md §7).",
+  "sentence_text": "While clearing the attic, he found a shoebox of letters and texted me a photo: \"Who is Walter Lindqvist and why did he write to Grandma 60 times?\"",
+  "sentence_start_ms": 55675,
+  "sentence_end_ms": 65300,
+  "next_sentence_start_ms": 65550,
+  "words": [
+    {
+      "text": "While",
+      "start_ms": 55925,
+      "end_ms": 56125
+    },
+    {
+      "text": "clearing",
+      "start_ms": 56125,
+      "end_ms": 56488
+    },
+    {
+      "text": "the",
+      "start_ms": 56488,
+      "end_ms": 56600
+    },
+    {
+      "text": "attic,",
+      "start_ms": 56600,
+      "end_ms": 57125
+    },
+    {
+      "text": "he",
+      "start_ms": 57200,
+      "end_ms": 57363
+    },
+    {
+      "text": "found",
+      "start_ms": 57363,
+      "end_ms": 57637
+    },
+    {
+      "text": "a",
+      "start_ms": 57637,
+      "end_ms": 57762
+    },
+    {
+      "text": "shoebox",
+      "start_ms": 57762,
+      "end_ms": 58287
+    },
+    {
+      "text": "of",
+      "start_ms": 58287,
+      "end_ms": 58400
+    },
+    {
+      "text": "letters",
+      "start_ms": 58400,
+      "end_ms": 58863
+    },
+    {
+      "text": "and",
+      "start_ms": 58863,
+      "end_ms": 59012
+    },
+    {
+      "text": "texted",
+      "start_ms": 59012,
+      "end_ms": 59438
+    },
+    {
+      "text": "me",
+      "start_ms": 59438,
+      "end_ms": 59575
+    },
+    {
+      "text": "a",
+      "start_ms": 59575,
+      "end_ms": 59688
+    },
+    {
+      "text": "photo:",
+      "start_ms": 59688,
+      "end_ms": 60525
+    },
+    {
+      "text": "\"Who",
+      "start_ms": 60800,
+      "end_ms": 60988
+    },
+    {
+      "text": "is",
+      "start_ms": 60988,
+      "end_ms": 61162
+    },
+    {
+      "text": "Walter",
+      "start_ms": 61162,
+      "end_ms": 61600
+    },
+    {
+      "text": "Lindqvist",
+      "start_ms": 61600,
+      "end_ms": 62475
+    },
+    {
+      "text": "and",
+      "start_ms": 62475,
+      "end_ms": 62625
+    },
+    {
+      "text": "why",
+      "start_ms": 62625,
+      "end_ms": 62813
+    },
+    {
+      "text": "did",
+      "start_ms": 62813,
+      "end_ms": 62938
+    },
+    {
+      "text": "he",
+      "start_ms": 62938,
+      "end_ms": 63050
+    },
+    {
+      "text": "write",
+      "start_ms": 63050,
+      "end_ms": 63250
+    },
+    {
+      "text": "to",
+      "start_ms": 63250,
+      "end_ms": 63350
+    },
+    {
+      "text": "Grandma",
+      "start_ms": 63350,
+      "end_ms": 63900
+    },
+    {
+      "text": "60",
+      "start_ms": 63900,
+      "end_ms": 64300
+    },
+    {
+      "text": "times?\"",
+      "start_ms": 64300,
+      "end_ms": 65025
+    }
+  ]
+}

@@ -8,19 +8,55 @@
 
 ## 1. Open & in-flight
 
-**Wave A (Offline MVP, A1–A22) and Wave B (Verification fixes + Quality issues, B1–B17) are completely delivered and verified against all 14 battery gates.** All defects found during Wave A verification have been repaired and verified, all three user selections (Issues 3–5) are implemented, and the cold-cache performance budget has been measured and verified within bars on the longest fixture (`story_recipe_box.txt`).
+**Wave B (B1–B17) was delivered as 17 commits (`cad065d`…`beb4c4f`) and independently verified on September 26, 2026.** Every gate G1–G14 was re-run bare in a separate session (numbers in `agent_execution_guide.md` §1), and the cold budget was re-measured. Each item's source was read against its spec: **all 17 do what their specs say** (per-item verdicts in §3).
 
-There are currently no open or in-flight items. Work on deferred features D1–D9 must await explicit user selection.
+**But the verification looked at real output, not just specs, and found problems no gate covers.** Three of them come from gaps in the Wave B specs themselves. They are specced as **Wave C (C1–C7)** in `agent_execution_guide.md`; each is a fix within behaviour the user already approved:
+- **The Issue 5 critic misses the error it was selected to catch.** In the real `story_recipe_box` run, Danny's text "Who is Walter Lindqvist…" was still credited to the narrator and the critic **agreed**. Cause: the beat splitter (`design_audio_and_timing.md` §7) gave colons a bonus and split "…texted me a photo:" from the quote, and the critic treated the previous beat as "context only". Both were measured and fixed in the design (C1, C2).
+- **A fifth of critic disagreements (30 of 149) kept the known-wrong scene**, because the retry had a single attempt (C3).
+- **Internal ids on screen:** 4 in 311 unique scenes, e.g. "One card missing from the recipe box (v1)." (C4).
+- **Caption words collide** when a long word is highlighted ("theengagementfell"). Present since Wave A; the spec scaled the word without reserving space (C5).
+- Hygiene: a hand-copied country-code table; a missing music file silently dropped (C6).
+
+**One question needs the user: Issue 6 below.** It does not block Wave C.
 
 ## ⚠️ Unresolved Issues & Suggestions
 
-None awaiting a selection.
+### Issue 6: Dialogue and text messages that the story never contains
+
+**Status**: ⚠️ Confirmed Unresolved — Verified September 26, 2026 over the 61 `dialogue`/`text_thread` lines in Wave B's E2E storyboards: **only 18 (30%) are words that appear in the narration.** The other 43 are invented or paraphrased. Examples:
+- `story_room_12`: the narrator and their wife text "You still awake?" / "Yeah, just resting. Why?" / "Just checking in. Love you." The story only says the narrator texted their wife to make sure she was awake.
+- `story_recipe_box`: a phone call becomes a text thread with an "Unknown Number" ("Hello? I'm looking for someone regarding Rose." / "Who is this?"), and the narrator asks Walt "Is this Walt? I'm looking for Rose."
+
+The planner's own principle (`design_planner.md`) says quoted words shown on screen must come from the narration; `kinetic_quote` enforces that, but `dialogue` and `text_thread` never did. For history this would put invented words in real people's mouths. For an anonymous Reddit-style story, dramatising may be what you want.
+
+**Option A (recommended)**: **Faithful for real people, dramatised for personal stories** — when `bible.genre == "history"`, every `dialogue`/`text_thread` line must be a verbatim span of the narration (the same check as `kinetic_quote`); for `personal_story` and `other`, lines may paraphrase, but must be a verbatim span **or** share at least 60% of their content words with the current beat (so invented exchanges like "Just checking in. Love you." are rejected).
+  - *Pros*: Never invents words for historical figures; keeps Reddit-style stories lively; both checks are deterministic.
+  - *Cons*: A word-overlap threshold is a proxy, and it was **measured** (September 26, 2026, over the 51 unique lines, with simple suffix stemming and cast names counted as present). At 60% it:
+    - rejects all 8 clear inventions scoring 0% ("Just checking in. Love you.", "Who is this?", "[Silence]"…);
+    - but **passes one** ("Is this Walt? I'm looking for Rose.", 67%);
+    - and **rejects two faithful paraphrases** ("Do you mind if I use it?", 50%; "It came with a note.", 50%).
+
+    It also means fewer dialogue scenes in history videos.
+
+**Option B**: **Always verbatim** — every line, in every genre, must be a verbatim span of the narration.
+  - *Pros*: Simplest and strictest; nothing on screen is ever invented.
+  - *Cons*: Only ~30% of today's lines would survive; many story beats (reported speech, texts described but not quoted) lose their dialogue visual and fall back to other templates.
+
+**Option C**: **Paraphrase allowed everywhere, but no new content** — the 60% content-word overlap rule for every genre, history included.
+  - *Pros*: Natural phrasing everywhere; blocks wholesale invention.
+  - *Cons*: Historical figures can still be given paraphrased "quotes" they never said.
+
+**Option D**: **Keep as is** — the reviewer judges at the gate.
+  - *Pros*: Nothing to build; maximum creative freedom.
+  - *Cons*: 70% of lines are invented today, and the gate relies on the reviewer knowing the source text.
+
+Your selection: _____
 
 ---
 
 ## 2. Lessons that still bite
 
-Each entry is a trap that is **live in this codebase**, found in the September 25, 2026 verification of Wave A. It points at the contract that now owns the detail.
+Each entry is a trap that is **live in this codebase**, found in the September 25 (Wave A) and September 26 (Wave B) verifications. It points at the contract that now owns the detail.
 
 #### 2.1 Constrained decoding truncates to satisfy `maxLength`; it does not shorten
 
@@ -41,6 +77,18 @@ The E2E's planning stages took 0.0–0.2 s because the LLM cache was warm, yet t
 #### 2.5 A commit cannot contain its own hash
 
 The resolved index cited 22 SHAs. 14 pointed at pre-amend commits no longer on `main` and one (`5b88db1`) at nothing, because each line was written and then the commit amended. **From Wave B on, every commit subject carries its item id as the Conventional-Commit scope (`fix(b3): …`), and resolved lines cite that id rather than a hash.** Contract: `agent_execution_guide.md` §0.
+
+#### 2.6 A regression set built from tidy inputs can pass while production fails
+
+The critic's regression set scored 4/4 on every seed. Every case had the speaker and the quote in the same beat, but the real pipeline's beat splitter separates them. On the real beats the critic agreed with a wrong attribution on three seeds out of three. **An upstream stage shapes a downstream check's input. Add real production cases to the set** (case E). Contracts: `design_planner.md` §11, `design_audio_and_timing.md` §7.
+
+#### 2.7 An outcome metric must compare before and after
+
+`critic.changed` was set whenever a retry *returned*, even when it returned the same props. Retries that *failed* were invisible, because their errors were not recorded. So "119 changed" overstated what the critic fixed, and "30 unchanged" had no explanation. **Count an effect by comparing the result to the original, and record why a repair did not happen.** Contract: `design_data_contracts.md` §6.
+
+#### 2.8 A visual transform that does not reflow can break layout silently
+
+`transform: scale(1.12)` on the active caption word never changes layout. On long words it swallowed the word spacing, from Wave A on, and every gate passed because nothing measured rendered gaps. **Measure the rendered result (here, empty-column runs), not the style values.** Contract: `design_visual_direction.md` §8.
 
 ---
 
@@ -79,6 +127,8 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 - **Issue 3 — Generated illustrations fake writing** — selected September 25, 2026: *"Proceed with Option A. Though, in the example provided, I think that text is fine if the description calls for text like a recipe."* — delivered by B10 git log --grep "(b10)". Verified: vision check with gemma4:26b runs on generated illustrations not marked text_expected; transcription prompt with >= 3 alphanumeric rule classifies 7/7 fixture images on seeds 7 and 8; naive prompt falsified (flags waterfronts, scoring 5/7); recipe card entity v1 in story_recipe_box skipped as expected; text detected triggers up to 2 retries on seed+1, seed+2; 3 texty images marks failed and deletes image file; unavailable check keeps image as warning. The rules' permanent home is `design_visual_direction.md` §7.1.
 - **Issue 4 — Timeline date labels** — selected September 25, 2026: *"Proceed with Option A."* — delivered by B5 git log --grep "(b5)". Verified: date_labels must contain a grounded digit run or match one of 17 relative time phrases; pairwise distinct; first four-digit years in event order non-decreasing. Wave A defects ("2013/2013/2013", "No Record", "Present") rejected; valid dates and relative phrases accepted. The rule's permanent home is `design_planner.md` §8.
 - **Issue 5 — Meaning rules + people-scene critic** — selected September 25, 2026: *"Option A"* — delivered by B6 git log --grep "(b6)". Verified: currency symbols rejected in stat_callout suffix; ungrounded 'ago' rejected in location era_label; blind local critic checks dialogue, text_thread, emotion_beat, and attributed kinetic_quote with at most 1 retry and 0 loops; regression set classifies 4/4 cases as expected with gemma4:26b. The rules' permanent home is `design_planner.md` §6 item 6 and §11.
+
+**Wave B — delivered; independently verified September 26, 2026.** Verdicts: B1 ✓ (a missing recorded input is silently dropped → C6) · B2 ✓ · B3 ✓ (7 `run_with_retries` sites; `generate_json` only in `llm.py`) · B4 ✓ · B5 ✓ (all 8 probe cases, exact error strings) · **B6** as specced, but the spec had gaps → C1, C2, C3 · B7 ✓ (the audit's 4 at-limit strings are complete phrases; the bar was corrected in `design_planner.md` §9) · B8 ✓ · B9 ✓ (symlink gone) · B10 ✓ (prompt and lists byte-identical) · B11 ✓ (the white worst case is legible) · B12 ✓ (Lake Superior drawn; country codes hand-copied → C6) · B13 ✓ · B14 ✓ · B15 ✓ · B16 ✓ (sync count parsed from JSON) · B17 ✓ (re-measured; see `agent_execution_guide.md` §1.3).
 
 **Wave B:**
 
@@ -148,3 +198,14 @@ Three questions filed for the user (Issues 3–5).
 - "Description calls for text" is a deterministic word/phrase list; bare "sign" is excluded (it matched "signs of structural weakness").
 - The critic is blind, and a speaker it reads as "unknown" never counts as a mismatch, but an unsupported strong tone does. That exact combination is what separated the real errors from correct scenes on seeds 7–9.
 - Wave B grows to 17 items, reordered so a single planner-eval re-run covers every planner change and the cold budget run measures the finished system.
+
+**September 26, 2026: verification of Wave B (designer).** All 17 items match their specs and every gate reproduces. Real-output review found the four problems above. Design contracts corrected, each measured before specifying:
+- quoted speech is not split, and the colon loses its bonus (`design_audio_and_timing.md` §7);
+- critic passage framing, a 3-attempt retry, tone repair, and regression case E (`design_planner.md` §11: five cases 5/5 on seeds 7–9 with the new framing; the old framing answered the narrator on the real case three times out of three);
+- the internal-id rule (§6 item 8);
+- the caption word-spacing contract plus a measured gap check (`design_visual_direction.md` §8: broken page 4 px, correct pages 12–17 px);
+- generated country codes;
+- a missing input fails loudly;
+- the text-audit bar clarified.
+
+Wave C (C1–C7) specced. Issue 6 filed for the user.
