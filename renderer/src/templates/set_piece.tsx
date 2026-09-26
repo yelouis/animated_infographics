@@ -3,6 +3,7 @@ import { Img, interpolate, staticFile } from "remotion";
 import { useSceneClock } from "../clock/SceneClockContext";
 import { FitText, type FitTextSlot } from "../components/FitText";
 import { Icon } from "../components/Icon";
+import { ImageScrim } from "../components/ImageScrim";
 import type { SetPieceProps, TimelineSceneTiming } from "../generated/contracts";
 import { useSetPiece } from "../story/entities";
 import { EASE_ENTER, EASE_EXIT } from "../theme/motion";
@@ -122,18 +123,7 @@ export const SetPiece: React.FC<SetPieceTemplateProps> = ({
               transformOrigin: "center center",
             }}
           />
-          {/* Bottom scrim 320 px (bg from 0% to 85% alpha) */}
-          <div
-            style={{
-              position: "absolute",
-              bottom: 0,
-              left: 0,
-              width: "100%",
-              height: 320,
-              background:
-                "linear-gradient(to bottom, rgba(10, 15, 30, 0) 0%, rgba(10, 15, 30, 0.85) 100%)",
-            }}
-          />
+          <ImageScrim />
         </div>
       ) : (
         /* Fallback: set piece icon at 360 px in a 560 px bgRaised circle centred at (540, 560) */
@@ -163,9 +153,9 @@ export const SetPiece: React.FC<SetPieceTemplateProps> = ({
         style={{
           position: "absolute",
           left: 100,
-          top: 840,
+          top: 760,
           width: 880,
-          height: 240,
+          height: 320,
           display: "flex",
           flexDirection: "column",
           justifyContent: "flex-end",

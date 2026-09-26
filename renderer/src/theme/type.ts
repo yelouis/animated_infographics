@@ -1,5 +1,14 @@
-// Typography tokens from design_visual_direction.md §3 and §8.
 import { staticFile } from "remotion";
+import type { FitTextSlot } from "../components/FitText";
+
+export const CAPTION_SLOT: FitTextSlot = {
+  font: "display",
+  weight: 800,
+  size_max: 76,
+  size_min: 60,
+  max_lines: 2,
+  box_width: 900,
+};
 
 export const typography = {
   fonts: {

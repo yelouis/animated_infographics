@@ -1,6 +1,6 @@
 import type { LocationProps } from "../../generated/contracts";
 
-export const locationFixtures: Record<"min" | "typical" | "max", LocationProps> = {
+export const locationFixtures: Record<"min" | "typical" | "max" | "worst", LocationProps> = {
   min: {
     place_id: "p1",
   },
@@ -14,4 +14,9 @@ export const locationFixtures: Record<"min" | "typical" | "max", LocationProps> 
     caption: "A rugged estate on the shore of Lake Superior",
     era_label: "Circa 1961",
   },
+  worst: {
+    place_id: "p1",
+    caption: "MMMMWWWW A rugged estate on the shore of Lake WW",
+  },
 };
+

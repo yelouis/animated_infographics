@@ -302,14 +302,19 @@ async function main() {
             "map_focus",
             "timeline",
           ];
-      const variants: ("min" | "typical" | "max")[] = options.variant
-        ? [options.variant as "min" | "typical" | "max"]
+      type GalleryVariant = "min" | "typical" | "max" | "worst";
+      const variants: GalleryVariant[] = options.variant
+        ? [options.variant as GalleryVariant]
         : ["min", "typical", "max"];
 
       const targetFrame = options.frame !== undefined ? Number(options.frame) : 60;
 
       for (const tmpl of templateToRender) {
-        for (const variant of variants) {
+        const tmplVariants = [...variants];
+        if (!options.variant && tmpl === "location") {
+          tmplVariants.push("worst");
+        }
+        for (const variant of tmplVariants) {
           const inputProps = { template: tmpl, variant };
           const composition = await selectComposition({
             serveUrl: bundleLocation,

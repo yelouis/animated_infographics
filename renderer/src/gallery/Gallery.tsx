@@ -32,7 +32,7 @@ import { titleCardFixtures } from "./fixtures/title_card";
 
 export interface GalleryProps {
   template: string;
-  variant: "min" | "typical" | "max";
+  variant: "min" | "typical" | "max" | "worst";
 }
 
 const GALLERY_CAST: Record<string, TimelineCastMember> = {
@@ -144,41 +144,42 @@ const GALLERY_SET_PIECES: Record<string, TimelineSetPiece> = {
 };
 
 export const Gallery: React.FC<GalleryProps> = ({ template, variant }) => {
+  const standardVariant = (variant === "worst" ? "typical" : variant) as "min" | "typical" | "max";
   let props: unknown = {};
   if (template === "kinetic_quote") {
-    props = kineticQuoteFixtures[variant] || kineticQuoteFixtures.typical;
+    props = kineticQuoteFixtures[standardVariant] || kineticQuoteFixtures.typical;
   } else if (template === "avatar_sheet") {
-    props = avatarSheetFixtures[variant] || avatarSheetFixtures.typical;
+    props = avatarSheetFixtures[standardVariant] || avatarSheetFixtures.typical;
   } else if (template === "title_card") {
-    props = titleCardFixtures[variant] || titleCardFixtures.typical;
+    props = titleCardFixtures[standardVariant] || titleCardFixtures.typical;
   } else if (template === "stat_callout") {
-    props = statCalloutFixtures[variant] || statCalloutFixtures.typical;
+    props = statCalloutFixtures[standardVariant] || statCalloutFixtures.typical;
   } else if (template === "icon_list") {
-    props = iconListFixtures[variant] || iconListFixtures.typical;
+    props = iconListFixtures[standardVariant] || iconListFixtures.typical;
   } else if (template === "reveal") {
-    props = revealFixtures[variant] || revealFixtures.typical;
+    props = revealFixtures[standardVariant] || revealFixtures.typical;
   } else if (template === "cause_effect") {
-    props = causeEffectFixtures[variant] || causeEffectFixtures.typical;
+    props = causeEffectFixtures[standardVariant] || causeEffectFixtures.typical;
   } else if (template === "comparison") {
-    props = comparisonFixtures[variant] || comparisonFixtures.typical;
+    props = comparisonFixtures[standardVariant] || comparisonFixtures.typical;
   } else if (template === "character_intro") {
-    props = characterIntroFixtures[variant] || characterIntroFixtures.typical;
+    props = characterIntroFixtures[standardVariant] || characterIntroFixtures.typical;
   } else if (template === "dialogue") {
-    props = dialogueFixtures[variant] || dialogueFixtures.typical;
+    props = dialogueFixtures[standardVariant] || dialogueFixtures.typical;
   } else if (template === "text_thread") {
-    props = textThreadFixtures[variant] || textThreadFixtures.typical;
+    props = textThreadFixtures[standardVariant] || textThreadFixtures.typical;
   } else if (template === "emotion_beat") {
-    props = emotionBeatFixtures[variant] || emotionBeatFixtures.typical;
+    props = emotionBeatFixtures[standardVariant] || emotionBeatFixtures.typical;
   } else if (template === "relationship_map") {
-    props = relationshipMapFixtures[variant] || relationshipMapFixtures.typical;
+    props = relationshipMapFixtures[standardVariant] || relationshipMapFixtures.typical;
   } else if (template === "location") {
     props = locationFixtures[variant] || locationFixtures.typical;
   } else if (template === "set_piece") {
-    props = setPieceFixtures[variant] || setPieceFixtures.typical;
+    props = setPieceFixtures[standardVariant] || setPieceFixtures.typical;
   } else if (template === "map_focus") {
-    props = mapFocusFixtures[variant] || mapFocusFixtures.typical;
+    props = mapFocusFixtures[standardVariant] || mapFocusFixtures.typical;
   } else if (template === "timeline") {
-    props = timelineFixtures[variant] || timelineFixtures.typical;
+    props = timelineFixtures[standardVariant] || timelineFixtures.typical;
   }
 
   const timing = getDefaultTiming(template, props, 150);
@@ -187,6 +188,16 @@ export const Gallery: React.FC<GalleryProps> = ({ template, variant }) => {
   const Component = template === "avatar_sheet" ? (AvatarSheet as unknown as React.FC<any>) : getTemplateComponent(template);
 
   const places = useMemo(() => {
+    if (variant === "worst") {
+      return {
+        ...GALLERY_PLACES,
+        p1: {
+          ...GALLERY_PLACES.p1,
+          name: "MMMMWWWW Duluth Northern Historic Estate",
+          image: staticFile("gallery/white.png"),
+        },
+      };
+    }
     if (variant === "typical") {
       return {
         ...GALLERY_PLACES,

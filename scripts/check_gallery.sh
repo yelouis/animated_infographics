@@ -106,7 +106,10 @@ variants = ['min', 'typical', 'max']
 
 errors = []
 for tmpl in templates:
-    for var in variants:
+    tmpl_variants = list(variants)
+    if tmpl == 'location':
+        tmpl_variants.append('worst')
+    for var in tmpl_variants:
         cur_file = current_dir / f'{tmpl}__{var}.png'
         golden_file = goldens_dir / f'{tmpl}__{var}.png'
         if not golden_file.is_file():

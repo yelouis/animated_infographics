@@ -2,8 +2,10 @@ import React from "react";
 import { interpolate } from "remotion";
 import { useGlobalClock } from "../clock/GlobalClockContext";
 import type { CaptionPage, Scenes } from "../generated/contracts";
+import { FitText } from "../components/FitText";
 import { ZONES } from "../theme/layout";
 import { palette } from "../theme/palette";
+import { CAPTION_SLOT } from "../theme/type";
 
 export interface CaptionsProps {
   pages: CaptionPage[];
@@ -59,12 +61,12 @@ export const Captions: React.FC<CaptionsProps> = ({ pages, scenes }) => {
         zIndex: 50,
       }}
     >
-      <div
+      <FitText
+        slot={CAPTION_SLOT}
+        sceneId="captions"
+        template="captions"
+        slotName="captions"
         style={{
-          fontFamily: "Poppins, sans-serif",
-          fontWeight: 800,
-          fontSize: 76,
-          lineHeight: 1.12,
           textAlign: "center",
           wordBreak: "break-word",
         }}
@@ -94,7 +96,7 @@ export const Captions: React.FC<CaptionsProps> = ({ pages, scenes }) => {
             </span>
           );
         })}
-      </div>
+      </FitText>
     </div>
   );
 };

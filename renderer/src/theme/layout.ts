@@ -20,3 +20,13 @@ export const ZONES = {
   },
   bottomReserve: { x0: 0, y0: 1500, x1: 1080, y1: 1920 },
 } as const;
+
+export const IMAGE_SCRIM = {
+  stops: [
+    [640, 0],
+    [800, 0.85],
+    [1120, 0.92],
+  ],
+} as const;
+
+export const IMAGE_TEXT_MIN_TOP = 807;
