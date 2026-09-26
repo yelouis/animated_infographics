@@ -3,7 +3,7 @@
 import re
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Final
+from typing import Any, Final
 
 from animated_infographics.contracts.models import (
     Beat,
@@ -57,6 +57,185 @@ RELATIVE_TIME_LABELS: Final[frozenset[str]] = frozenset(
         "later",
     }
 )
+
+
+CUT_OFF_ENDINGS: Final[tuple[str, ...]] = ("-", "(", "[", ",", ":", "/")
+
+
+def normalize_text(s: str) -> str:
+    """Collapse runs of whitespace including newlines to a single space, strip ends."""
+    return re.sub(r"\s+", " ", s).strip()
+
+
+def text_complete_errors(path: str, s: str | None) -> list[str]:
+    """Validate free-text completeness per design_planner.md §6 item 7.
+
+    Errors return [f"{path}: looks cut off (\"{s}\")"] if:
+    - Contains no letter or digit ("...", "—");
+    - Ends with -, (, [, ,, :, or /;
+    - (, [, or " characters are unbalanced;
+    - Last word is a truncation fragment (single lowercase letter other than a).
+    """
+    if not s:
+        return []
+
+    # 1. Contains no letter or digit
+    if not any(c.isalnum() for c in s):
+        return [f'{path}: looks cut off ("{s}")']
+
+    # 2. Ends with -, (, [, ,, :, or /
+    if s.rstrip().endswith(CUT_OFF_ENDINGS):
+        return [f'{path}: looks cut off ("{s}")']
+
+    # 3. (, [, or " characters are unbalanced
+    if s.count("(") != s.count(")") or s.count("[") != s.count("]") or (s.count('"') % 2 != 0):
+        return [f'{path}: looks cut off ("{s}")']
+
+    # 4. Last word is a truncation fragment (single lowercase letter other than a)
+    tokens = s.strip().split()
+    if tokens:
+        last = tokens[-1].rstrip(".,!?:;\"'…")
+        if len(last) == 1 and last.islower() and last != "a":
+            return [f'{path}: looks cut off ("{s}")']
+
+    return []
+
+
+def normalize_props_text(template_name: str, props: dict[str, Any]) -> dict[str, Any]:
+    """Normalize all free-text string fields in a props dictionary.
+
+    Collapses whitespace including newlines to a single space, and strips ends.
+    Never modifies ids, enums, prefix, date_label, or era_label.
+    """
+    p = dict(props)
+    if template_name == "title_card":
+        if "title" in p and isinstance(p["title"], str):
+            p["title"] = normalize_text(p["title"])
+        if "subtitle" in p and isinstance(p["subtitle"], str):
+            p["subtitle"] = normalize_text(p["subtitle"])
+    elif template_name == "kinetic_quote":
+        if "text" in p and isinstance(p["text"], str):
+            p["text"] = normalize_text(p["text"])
+    elif template_name == "stat_callout":
+        if "suffix" in p and isinstance(p["suffix"], str):
+            p["suffix"] = normalize_text(p["suffix"])
+        if "caption" in p and isinstance(p["caption"], str):
+            p["caption"] = normalize_text(p["caption"])
+    elif template_name == "icon_list":
+        if "heading" in p and isinstance(p["heading"], str):
+            p["heading"] = normalize_text(p["heading"])
+        if "items" in p and isinstance(p["items"], list):
+            new_items = []
+            for item in p["items"]:
+                if isinstance(item, dict):
+                    it = dict(item)
+                    if "label" in it and isinstance(it["label"], str):
+                        it["label"] = normalize_text(it["label"])
+                    new_items.append(it)
+                else:
+                    new_items.append(item)
+            p["items"] = new_items
+    elif template_name == "reveal":
+        if "kicker" in p and isinstance(p["kicker"], str):
+            p["kicker"] = normalize_text(p["kicker"])
+        if "text" in p and isinstance(p["text"], str):
+            p["text"] = normalize_text(p["text"])
+    elif template_name == "cause_effect":
+        if "nodes" in p and isinstance(p["nodes"], list):
+            new_nodes = []
+            for node in p["nodes"]:
+                if isinstance(node, dict):
+                    nd = dict(node)
+                    if "label" in nd and isinstance(nd["label"], str):
+                        nd["label"] = normalize_text(nd["label"])
+                    new_nodes.append(nd)
+                else:
+                    new_nodes.append(node)
+            p["nodes"] = new_nodes
+    elif template_name == "comparison":
+        for side in ("a", "b"):
+            if side in p and isinstance(p[side], dict):
+                panel = dict(p[side])
+                if "heading" in panel and isinstance(panel["heading"], str):
+                    panel["heading"] = normalize_text(panel["heading"])
+                if "points" in panel and isinstance(panel["points"], list):
+                    panel["points"] = [
+                        normalize_text(pt) if isinstance(pt, str) else pt for pt in panel["points"]
+                    ]
+                p[side] = panel
+    elif template_name == "character_intro":
+        if "descriptor" in p and isinstance(p["descriptor"], str):
+            p["descriptor"] = normalize_text(p["descriptor"])
+        if "traits" in p and isinstance(p["traits"], list):
+            p["traits"] = [normalize_text(tr) if isinstance(tr, str) else tr for tr in p["traits"]]
+    elif template_name == "dialogue":
+        if "lines" in p and isinstance(p["lines"], list):
+            new_lines = []
+            for line in p["lines"]:
+                if isinstance(line, dict):
+                    ln = dict(line)
+                    if "text" in ln and isinstance(ln["text"], str):
+                        ln["text"] = normalize_text(ln["text"])
+                    new_lines.append(ln)
+                else:
+                    new_lines.append(line)
+            p["lines"] = new_lines
+    elif template_name == "text_thread":
+        if "contact_name" in p and isinstance(p["contact_name"], str):
+            p["contact_name"] = normalize_text(p["contact_name"])
+        if "messages" in p and isinstance(p["messages"], list):
+            new_msgs = []
+            for msg in p["messages"]:
+                if isinstance(msg, dict):
+                    m = dict(msg)
+                    if "text" in m and isinstance(m["text"], str):
+                        m["text"] = normalize_text(m["text"])
+                    new_msgs.append(m)
+                else:
+                    new_msgs.append(msg)
+            p["messages"] = new_msgs
+    elif template_name in ("emotion_beat", "location", "set_piece"):
+        if "caption" in p and isinstance(p["caption"], str):
+            p["caption"] = normalize_text(p["caption"])
+    elif template_name == "relationship_map":
+        if "edges" in p and isinstance(p["edges"], list):
+            new_edges = []
+            for edge in p["edges"]:
+                if isinstance(edge, dict):
+                    ed = dict(edge)
+                    if "label" in ed and isinstance(ed["label"], str):
+                        ed["label"] = normalize_text(ed["label"])
+                    new_edges.append(ed)
+                else:
+                    new_edges.append(edge)
+            p["edges"] = new_edges
+    elif template_name == "map_focus":
+        if "caption" in p and isinstance(p["caption"], str):
+            p["caption"] = normalize_text(p["caption"])
+        if "markers" in p and isinstance(p["markers"], list):
+            new_markers = []
+            for marker in p["markers"]:
+                if isinstance(marker, dict):
+                    mk = dict(marker)
+                    if "label" in mk and isinstance(mk["label"], str):
+                        mk["label"] = normalize_text(mk["label"])
+                    new_markers.append(mk)
+                else:
+                    new_markers.append(marker)
+            p["markers"] = new_markers
+    elif template_name == "timeline":
+        if "events" in p and isinstance(p["events"], list):
+            new_events = []
+            for ev in p["events"]:
+                if isinstance(ev, dict):
+                    event = dict(ev)
+                    if "label" in event and isinstance(event["label"], str):
+                        event["label"] = normalize_text(event["label"])
+                    new_events.append(event)
+                else:
+                    new_events.append(ev)
+            p["events"] = new_events
+    return p
 
 
 def normalize_date_label(s: str) -> str:
@@ -179,6 +358,8 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
             errors.append(f"props: title_card is only allowed at beat 0, got beat {scene.beat_i}")
         errors.extend(_check_slot("props.title", props.title, slots["title"]))
         errors.extend(_check_slot("props.subtitle", props.subtitle, slots["subtitle"]))
+        errors.extend(text_complete_errors("props.title", props.title))
+        errors.extend(text_complete_errors("props.subtitle", props.subtitle))
 
     elif isinstance(props, KineticQuoteProps):
         if props.attribution_cast_id and props.attribution_cast_id not in cast_map:
@@ -186,6 +367,7 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
                 f"props.attribution_cast_id: cast '{props.attribution_cast_id}' not found in bible"
             )
         errors.extend(_check_slot("props.text", props.text, slots["text"]))
+        errors.extend(text_complete_errors("props.text", props.text))
         # Grounding
         _, quote_errors = is_kinetic_quote_grounded(props.text, props.emphasis, beat_text)
         errors.extend(quote_errors)
@@ -201,6 +383,9 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
         errors.extend(_check_slot("props.value", rendered_val, slots["value"]))
         errors.extend(_check_slot("props.suffix", props.suffix, slots["suffix"]))
         errors.extend(_check_slot("props.caption", props.caption, slots["caption"]))
+        if props.suffix:
+            errors.extend(text_complete_errors("props.suffix", props.suffix))
+        errors.extend(text_complete_errors("props.caption", props.caption))
         # Grounding
         if not is_stat_grounded(props.value, props.display_scale, beat_text):
             errors.append(
@@ -210,16 +395,21 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
 
     elif isinstance(props, IconListProps):
         errors.extend(_check_slot("props.heading", props.heading, slots["heading"]))
+        errors.extend(text_complete_errors("props.heading", props.heading))
         for idx, item in enumerate(props.items):
             errors.extend(_check_slot(f"props.items[{idx}].label", item.label, slots["label"]))
+            errors.extend(text_complete_errors(f"props.items[{idx}].label", item.label))
 
     elif isinstance(props, RevealProps):
         errors.extend(_check_slot("props.kicker", props.kicker, slots["kicker"]))
         errors.extend(_check_slot("props.text", props.text, slots["text"]))
+        errors.extend(text_complete_errors("props.kicker", props.kicker))
+        errors.extend(text_complete_errors("props.text", props.text))
 
     elif isinstance(props, CauseEffectProps):
         for idx, node in enumerate(props.nodes):
             errors.extend(_check_slot(f"props.nodes[{idx}].label", node.label, slots["label"]))
+            errors.extend(text_complete_errors(f"props.nodes[{idx}].label", node.label))
 
     elif isinstance(props, ComparisonProps):
         if props.a.cast_id and props.a.cast_id not in cast_map:
@@ -228,10 +418,14 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
             errors.append(f"props.b.cast_id: cast '{props.b.cast_id}' not found in bible")
         errors.extend(_check_slot("props.a.heading", props.a.heading, slots["heading"]))
         errors.extend(_check_slot("props.b.heading", props.b.heading, slots["heading"]))
+        errors.extend(text_complete_errors("props.a.heading", props.a.heading))
+        errors.extend(text_complete_errors("props.b.heading", props.b.heading))
         for idx, pt in enumerate(props.a.points):
             errors.extend(_check_slot(f"props.a.points[{idx}]", pt, slots["point"]))
+            errors.extend(text_complete_errors(f"props.a.points[{idx}]", pt))
         for idx, pt in enumerate(props.b.points):
             errors.extend(_check_slot(f"props.b.points[{idx}]", pt, slots["point"]))
+            errors.extend(text_complete_errors(f"props.b.points[{idx}]", pt))
 
     elif isinstance(props, CharacterIntroProps):
         if props.cast_id not in cast_map:
@@ -241,8 +435,10 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
                 _check_slot("bible.cast.name", cast_map[props.cast_id].name, slots["name"])
             )
         errors.extend(_check_slot("props.descriptor", props.descriptor, slots["descriptor"]))
+        errors.extend(text_complete_errors("props.descriptor", props.descriptor))
         for idx, trait in enumerate(props.traits):
             errors.extend(_check_slot(f"props.traits[{idx}]", trait, slots["trait"]))
+            errors.extend(text_complete_errors(f"props.traits[{idx}]", trait))
 
     elif isinstance(props, DialogueProps):
         for idx, line in enumerate(props.lines):
@@ -251,6 +447,7 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
                     f"props.lines[{idx}].cast_id: cast '{line.cast_id}' not found in bible"
                 )
             errors.extend(_check_slot(f"props.lines[{idx}].text", line.text, slots["line"]))
+            errors.extend(text_complete_errors(f"props.lines[{idx}].text", line.text))
 
     elif isinstance(props, TextThreadProps):
         if props.contact_cast_id and props.contact_cast_id not in cast_map:
@@ -258,13 +455,16 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
                 f"props.contact_cast_id: cast '{props.contact_cast_id}' not found in bible"
             )
         errors.extend(_check_slot("props.contact_name", props.contact_name, slots["contact"]))
+        errors.extend(text_complete_errors("props.contact_name", props.contact_name))
         for idx, msg in enumerate(props.messages):
             errors.extend(_check_slot(f"props.messages[{idx}].text", msg.text, slots["message"]))
+            errors.extend(text_complete_errors(f"props.messages[{idx}].text", msg.text))
 
     elif isinstance(props, EmotionBeatProps):
         if props.cast_id not in cast_map:
             errors.append(f"props.cast_id: cast '{props.cast_id}' not found in bible")
         errors.extend(_check_slot("props.caption", props.caption, slots["caption"]))
+        errors.extend(text_complete_errors("props.caption", props.caption))
 
     elif isinstance(props, RelationshipMapProps):
         for idx, cid in enumerate(props.cast_ids):
@@ -294,6 +494,7 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
                 )
             seen_edges.add(pair)
             errors.extend(_check_slot(f"props.edges[{idx}].label", edge.label, slots["edge_label"]))
+            errors.extend(text_complete_errors(f"props.edges[{idx}].label", edge.label))
 
     elif isinstance(props, LocationProps):
         if props.place_id not in places_map:
@@ -304,6 +505,7 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
             )
         errors.extend(_check_slot("props.caption", props.caption, slots["caption"]))
         errors.extend(_check_slot("props.era_label", props.era_label, slots["era"]))
+        errors.extend(text_complete_errors("props.caption", props.caption))
         if props.era_label:
             if re.search(r"\bago\b", props.era_label, re.IGNORECASE) and not re.search(
                 r"\bago\b", full_transcript, re.IGNORECASE
@@ -329,6 +531,7 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
                 )
             )
         errors.extend(_check_slot("props.caption", props.caption, slots["caption"]))
+        errors.extend(text_complete_errors("props.caption", props.caption))
 
     elif isinstance(props, MapFocusProps):
         marker_countries: set[str] = set()
@@ -349,12 +552,14 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
             errors.extend(
                 _check_slot(f"props.markers[{idx}].label", marker.label, slots["marker_label"])
             )
+            errors.extend(text_complete_errors(f"props.markers[{idx}].label", marker.label))
         if props.region != "world" and props.region not in marker_countries:
             errors.append(
                 f"props.region: region '{props.region}' does not match any marker place's "
                 f"country_iso3 ({marker_countries})"
             )
         errors.extend(_check_slot("props.caption", props.caption, slots["caption"]))
+        errors.extend(text_complete_errors("props.caption", props.caption))
 
     elif isinstance(props, TimelineProps):
         if not (0 <= props.highlight_index < len(props.events)):
@@ -367,6 +572,7 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
                 _check_slot(f"props.events[{idx}].date_label", event.date_label, slots["date"])
             )
             errors.extend(_check_slot(f"props.events[{idx}].label", event.label, slots["label"]))
+            errors.extend(text_complete_errors(f"props.events[{idx}].label", event.label))
 
         errors.extend(timeline_label_errors(props.events, full_transcript))
 

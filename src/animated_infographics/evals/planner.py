@@ -29,6 +29,7 @@ from animated_infographics.contracts.templates import (
     DialogueProps,
     KineticQuoteProps,
 )
+from animated_infographics.evals.text_audit import audit_storyboards
 from animated_infographics.ingest import ingest
 from animated_infographics.planner.bible import plan_bible
 from animated_infographics.planner.critic import (
@@ -401,6 +402,7 @@ def run_eval(
         prompt_shas[pf] = _sha256_file(p_path) if p_path.exists() else "missing"
 
     results: list[dict[str, Any]] = []
+    saved_storyboard_paths: list[Path] = []
     all_passed = True
 
     for fix_name in fixtures:
@@ -445,6 +447,13 @@ def run_eval(
         storyboard, report = plan_storyboard(transcript, beats, bible, backend)
         wall_time = time.perf_counter() - t0
         print(f"Storyboard: {len(storyboard.scenes)} scenes planned in {wall_time:.1f}s")
+
+        # Save storyboard.json for independent audit
+        storyboard_dir = repo_root / "artifacts" / "evals" / "planner" / fix_name
+        storyboard_dir.mkdir(parents=True, exist_ok=True)
+        sb_path = storyboard_dir / "storyboard.json"
+        sb_path.write_text(storyboard.model_dump_json(indent=2), encoding="utf-8")
+        saved_storyboard_paths.append(sb_path)
 
         # 6. Re-validation
         ctx = PlanContext(transcript=transcript, bible=bible, beats=beats)
@@ -531,7 +540,15 @@ def run_eval(
         }
         results.append(fix_res)
 
-    # 7. Run Critic Regression Set (§11)
+    # 7. Run Text Audit (§6 item 7)
+    text_audit_result = audit_storyboards(saved_storyboard_paths, dedup=False)
+    if (
+        text_audit_result["contains_newline_count"] > 0
+        or text_audit_result["completeness_failures_count"] > 0
+    ):
+        all_passed = False
+
+    # 8. Run Critic Regression Set (§11)
     eval_backend = OllamaBackend(no_cache=no_llm_cache)
     regression_results = run_critic_regression_set(eval_backend)
     if not all(cr["passed"] for cr in regression_results):
@@ -617,6 +634,59 @@ def run_eval(
             for v in r["violations"]:
                 md_lines.append(f"- `{v}`")
             md_lines.append("")
+
+    # Text Audit section in report
+    audit_passed = (
+        text_audit_result["contains_newline_count"] == 0
+        and text_audit_result["completeness_failures_count"] == 0
+    )
+    at_max_with_punct = (
+        text_audit_result["at_max_length_count"] - text_audit_result["at_max_length_no_punct_count"]
+    )
+    md_lines.extend(
+        [
+            "## Text Audit (§6 item 7)",
+            "",
+            f"- **Total Strings Audited**: {text_audit_result['total_strings']}",
+            f"- **At maxLength (Total)**: {text_audit_result['at_max_length_count']}",
+            f"- **At maxLength with Terminal Punctuation**: {at_max_with_punct}",
+            (
+                "- **At maxLength WITHOUT Terminal Punctuation**: "
+                f"{text_audit_result['at_max_length_no_punct_count']}"
+            ),
+            (
+                "- **Strings Containing Newlines**: "
+                f"{text_audit_result['contains_newline_count']} (Bar: 0)"
+            ),
+            (
+                "- **Completeness Failures**: "
+                f"{text_audit_result['completeness_failures_count']} (Bar: 0)"
+            ),
+            f"- **Text Audit Status**: {'**PASS**' if audit_passed else '**FAIL**'}",
+            "",
+        ]
+    )
+    if text_audit_result["contains_newline_count"] > 0:
+        md_lines.append("### Strings Containing Newlines")
+        for item in text_audit_result["contains_newline"]:
+            md_lines.append(f"- `{item['template']}` {item['path']}: {repr(item['value'])}")
+        md_lines.append("")
+
+    if text_audit_result["completeness_failures_count"] > 0:
+        md_lines.append("### Completeness Failures")
+        for item in text_audit_result["completeness_failures"]:
+            md_lines.append(f"- `{item['template']}` {item['path']}: {repr(item['value'])}")
+        md_lines.append("")
+
+    if text_audit_result["at_max_length_no_punct_count"] > 0:
+        md_lines.append("### At maxLength Without Terminal Punctuation")
+        for item in text_audit_result["at_max_length_no_punct"]:
+            tmpl = item["template"]
+            p = item["path"]
+            ml = item["max_length"]
+            v = repr(item["value"])
+            md_lines.append(f"- `{tmpl}` {p} (limit {ml}): {v}")
+        md_lines.append("")
 
     # Critic Regression Set section in report
     reg_passed_count = sum(1 for cr in regression_results if cr["passed"])

@@ -33,6 +33,7 @@ from animated_infographics.contracts.models import (
     Transcript,
 )
 from animated_infographics.contracts.templates import REGISTRY as TEMPLATE_REGISTRY
+from animated_infographics.planner.validate import normalize_props_text
 from animated_infographics.timing.captions import paginate
 from animated_infographics.timing.frames import duration_frames, scene_start_frames
 from animated_infographics.timing.items import count_frames, item_frames
@@ -129,6 +130,13 @@ def compile_timeline(
 
         timing = TimelineSceneTiming(item_frames=it_frames, count_frames=cnt_frames)
 
+        # Normalize free-text fields before writing to timeline
+        props_data = sc.props.model_dump() if hasattr(sc.props, "model_dump") else dict(sc.props)
+        clean_props_data = normalize_props_text(sc.template, props_data)
+        clean_props = (
+            spec.props_model.model_validate(clean_props_data) if spec else clean_props_data
+        )
+
         # Build timeline scene dictionary
         sc_dict = {
             "id": sc.id,
@@ -137,7 +145,7 @@ def compile_timeline(
             "end_frame": end_f,
             "hide_captions": hide_captions,
             "timing": timing,
-            "props": sc.props,
+            "props": clean_props,
         }
         timeline_scene = _TIMELINE_SCENE_ADAPTER.validate_python(sc_dict)
         timeline_scenes.append(timeline_scene)

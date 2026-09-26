@@ -1,6 +1,6 @@
 """Props planning with fallback ladder, schema narrowing, and deterministic repairs."""
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -45,7 +45,11 @@ from animated_infographics.planner.critic import (
 )
 from animated_infographics.planner.llm import LLMBackend, run_with_retries
 from animated_infographics.planner.select import plan_template_selection
-from animated_infographics.planner.validate import PlanContext, validate_scene
+from animated_infographics.planner.validate import (
+    PlanContext,
+    normalize_props_text,
+    validate_scene,
+)
 
 SCENE_CLASS_MAP: dict[str, type[Scene]] = {
     "title_card": TitleCardScene,
@@ -176,6 +180,33 @@ def _format_writing_rules_and_slots(template_name: str) -> tuple[str, str]:
     return (rules, slots)
 
 
+def _format_pydantic_validation_error(err: Mapping[str, Any]) -> str:
+    """Format Pydantic error into a clear retry message.
+
+    Per design_planner.md §1:
+    Limits are enforced afterwards with the retry message naming the field and its limit
+    ('props.caption: 61 characters, limit 48 — rewrite it shorter as a complete phrase').
+    """
+    loc = err.get("loc", ())
+    path = "props"
+    for part in loc:
+        if isinstance(part, int):
+            path += f"[{part}]"
+        else:
+            path += f".{part}"
+
+    if err.get("type") == "string_too_long":
+        limit = err.get("ctx", {}).get("max_length")
+        inp = err.get("input")
+        length = len(inp) if isinstance(inp, str) else "?"
+        return (
+            f"{path}: {length} characters, limit {limit} — rewrite it shorter as a complete phrase"
+        )
+
+    msg = err.get("msg", str(err))
+    return f"{path}: {msg}"
+
+
 def plan_single_template_props(
     template_name: str,
     scene_id: str,
@@ -231,7 +262,8 @@ def plan_single_template_props(
 
     def validate_props(raw: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
         try:
-            props_instance = spec.props_model.model_validate(raw)
+            clean_raw = normalize_props_text(template_name, raw)
+            props_instance = spec.props_model.model_validate(clean_raw)
             scene_factory: Any = scene_cls
             candidate_scene: Scene = scene_factory(
                 id=scene_id,
@@ -242,9 +274,10 @@ def plan_single_template_props(
                 rationale="llm planned",
             )
             val_errors = validate_scene(candidate_scene, ctx)
-            return (raw, val_errors)
+            return (clean_raw, val_errors)
         except ValidationError as e:
-            return (raw, [str(err) for err in e.errors()])
+            formatted_errs = [_format_pydantic_validation_error(err) for err in e.errors()]
+            return (raw, formatted_errs)
         except Exception as e:
             return (raw, [f"Failed to instantiate scene: {e}"])
 

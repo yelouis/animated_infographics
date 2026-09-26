@@ -52,6 +52,30 @@ class Attempt:
     errors: list[str]
 
 
+FORBIDDEN_SCHEMA_KEYS: frozenset[str] = frozenset(
+    {"maxLength", "minLength", "maxItems", "minItems", "pattern"}
+)
+
+
+def _clean_schema_node(node: Any) -> Any:
+    if isinstance(node, dict):
+        return {k: _clean_schema_node(v) for k, v in node.items() if k not in FORBIDDEN_SCHEMA_KEYS}
+    if isinstance(node, list):
+        return [_clean_schema_node(item) for item in node]
+    return node
+
+
+def llm_facing_schema(schema: dict[str, Any]) -> dict[str, Any]:
+    """Recursively remove length, count, and pattern constraints from JSON Schema.
+
+    Per design_planner.md §1:
+    Removes maxLength, minLength, maxItems, minItems, and pattern.
+    Preserves enum, type, required, and additionalProperties.
+    """
+    res = _clean_schema_node(schema)
+    return res if isinstance(res, dict) else {}
+
+
 class OllamaBackend:
     """Local Ollama LLM backend with persistent response caching."""
 
@@ -118,6 +142,8 @@ class OllamaBackend:
         # calls counter is incremented at entry, before cache lookup
         self.calls += 1
 
+        clean_schema = llm_facing_schema(schema)
+
         if messages is None:
             messages = []
             if system:
@@ -126,7 +152,7 @@ class OllamaBackend:
                 messages.append({"role": "user", "content": user})
 
         key, cache_obj = self._canonical_cache_key(
-            messages, schema, attempt, num_predict=num_predict, temperature=temperature
+            messages, clean_schema, attempt, num_predict=num_predict, temperature=temperature
         )
         cache_file = self.cache_dir / f"{key}.json"
 
@@ -146,7 +172,7 @@ class OllamaBackend:
         payload = {
             "model": self.model,
             "messages": messages,
-            "format": schema,
+            "format": clean_schema,
             "think": False,
             "stream": False,
             "keep_alive": "15m",
@@ -267,7 +293,7 @@ def run_with_retries(
 
         # Format retry prompt for the next attempt
         error_lines = "\n".join(f"- {e}" for e in errors[:20])
-        prev_json_str = json.dumps(raw_output) if raw_output is not None else "{}"
+        prev_json_str = json.dumps(raw_output, sort_keys=True) if raw_output is not None else "{}"
 
         messages.append({"role": "assistant", "content": prev_json_str})
         retry_msg = f"Your previous JSON was rejected:\n{error_lines}\nReturn corrected JSON only."
