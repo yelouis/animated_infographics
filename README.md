@@ -4,7 +4,7 @@ Turn narration into an **animated explainer video**: flat editorial vector scene
 
 The long-term goal is **live**: speak in real time while the visuals build behind you, like live captioning but as infographics.
 
-> **Status: Wave A (Offline MVP) Complete.** All 22 items (A1–A22) implemented, validated, and passing all 14 battery gates (G1–G14).
+> **Status: Wave A delivered; Wave B in progress.**
 
 ## How it works
 
@@ -49,7 +49,7 @@ uv run infographics new path/to/story.txt --music path/to/bed.wav --sfx-dir path
 
 Options:
 - `--voice af_heart|am_michael`: Override automatic narrator voice selection.
-- `--music <path>`: Background music track (auto-ducked during speech to −20 dBFS).
+- `--music <path>`: Background music track (normalised to −16 LUFS, played at −18 dB / volume 0.126 with 1 s fade-in and 2 s fade-out).
 - `--sfx-dir <dir>`: Directory containing SFX audio files.
 - `--jobs-dir <dir>`: Destination directory for jobs (defaults to `./jobs`).
 
@@ -81,6 +81,19 @@ Output video is saved to `jobs/<job_id>/out/final.mp4`. A verification summary w
 
 ---
 
+## Automatic checks
+
+Between automated planning and your review, three safety checks catch quality defects:
+- **Illustrations**: Checked locally for stray lettering and regenerated with new seeds (up to 3 attempts), except when the description calls for writing (e.g., signs, documents, screens).
+- **People scenes**: A second, blind reading evaluates dialogue and quote attributions; mismatches trigger a single prompt correction retry.
+- **Timelines**: Date labels must use real dates grounded in the narration or exactly one of 17 approved relative time phrases, and must run forward in time.
+
+The review gate flags issues on the contact sheet and storyboard table:
+- `image failed`: An illustration failed after 3 attempts or text detection failed; the video still renders with a fallback placeholder.
+- `critic changed`: The people-scene critic corrected an attribution or tone discrepancy.
+
+---
+
 ## Narrator Voice Selection
 
 When given a text input, the pipeline automatically chooses an installed narrator voice based on perspective:
@@ -92,12 +105,12 @@ When given a text input, the pipeline automatically chooses an installed narrato
 
 ## Music and Sound Effects Convention
 
-- **Music**: Any standard audio format (`.wav`, `.mp3`, `.m4a`). The audio stage normalises and loops/trims the track to match speech duration, ducked to −20 dBFS.
+- **Music**: Any standard audio format (`.wav`, `.mp3`, `.m4a`). The audio stage normalises and loops/trims the track to match speech duration, normalised to −16 LUFS and played at −18 dB (volume 0.126), 1 s fade-in, 2 s fade-out, no ducking.
 - **SFX**: Sound effect files in `--sfx-dir` must begin with a recognised role prefix followed by an underscore:
-  - `whoosh_*.wav`: Played on fast transitions and wipe reveals.
-  - `pop_*.wav`: Played on item entrances, chips, and list appearances.
-  - `ding_*.wav`: Played on key stat callouts and revelations.
-  - `hit_*.wav`: Played on high-impact statement punches and contrast moments.
+  - `whoosh_*.wav`: Played at the starts of `title_card`, `comparison`, `location`, and `set_piece`.
+  - `pop_*.wav`: Played on item entrances and the `character_intro` / `relationship_map` starts.
+  - `ding_*.wav`: Played at a stat's count end (`stat_callout`).
+  - `hit_*.wav`: Played at a `reveal`'s start.
   - Files with unrecognised roles (e.g., `clap_*.wav`) are logged with a warning and safely ignored.
 
 ---
@@ -124,9 +137,9 @@ When given a text input, the pipeline automatically chooses an installed narrato
 ## Credits & Acknowledgements
 
 - **GeoNames** ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)): Gazetteer data for geographical place and coordinate resolution.
-- **Natural Earth & world-atlas** (Public Domain): Vector map topojson data for country framing and world map rendering.
+- **Natural Earth & world-atlas** (Public Domain): Vector map topojson and Natural Earth lakes vector datasets for country framing, borders, lakes, and world map rendering.
 - **Phosphor Icons** ([MIT](https://github.com/phosphor-icons/core/blob/main/LICENSE)): Iconography for entities, themes, and UI elements.
-- **Google Fonts** ([OFL](https://scripts.sil.org/OFL)): Poppins, Outfit, JetBrains Mono, Space Grotesk, and Fraunces typography.
+- **Fonts**: [Poppins](https://fonts.google.com/specimen/Poppins) (Google Fonts, OFL) and [Inter](https://github.com/rsms/inter) (rsms/inter, OFL).
 - **Kokoro-82M** ([Apache-2.0](https://huggingface.co/hexgrad/Kokoro-82M)): Local neural text-to-speech voice synthesis.
 - **mlx-whisper** ([MIT](https://github.com/ml-explore/mlx-examples/blob/main/whisper/LICENSE) / OpenAI): Local Apple Silicon speech-to-text alignment and transcription.
 - **FLUX.2 [klein] 4B** ([Apache-2.0](https://huggingface.co/black-forest-labs/FLUX.2-klein-4B)) via [mflux](https://github.com/filipstrand/mflux): Local 4-step quantized editorial vector illustration generation.
