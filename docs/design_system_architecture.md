@@ -172,6 +172,8 @@ jobs/<job_id>/
 
 **`plan_sha256`** = `sha256(bytes(bible.json) + b"\n" + bytes(storyboard.json))`. It is the identity of the human-reviewable plan.
 
+**Job-local inputs are authoritative (added September 25, 2026).** `new` copies every input into `input/`: the story or audio file, the music file, and the SFX files (`input/sfx/`). `ingest.json` records them as job-relative paths (`design_audio_and_timing.md` §1). **Every stage derives music and SFX from those job-local copies, never from command-line options.** Options exist only for the one invocation that received them, and `preview`, `rerun` and `render` receive none. The first implementation read music/SFX from the run context. Because `compile`'s outputs (`audio/music.wav`, `audio/sfx/`) are deleted by invalidation, **every edit → `preview` → `approve` → `render` journey silently rendered without music or SFX**, and no gate noticed.
+
 **Invalidation rule.** Re-running any stage deletes the outputs of every later stage and removes them from `completed_stages`. A stage is never skipped because an output file *exists*. It is skipped only when its recorded `stage_input_sha256` matches the current inputs.
 
 ---

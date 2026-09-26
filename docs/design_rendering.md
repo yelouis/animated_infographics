@@ -29,7 +29,7 @@ Invoked as `npx tsx scripts/render.ts <mode> --job <job_dir> [options]` with `cw
 | `media` | `--out <path.mp4>` `[--scale 0.5] [--crf N] [--sync-probe]` | MP4 |
 | `gallery` | `--out-dir <dir>` | One PNG per template × variant at its hold frame |
 
-**Bundling:** one `bundle()` per invocation with `publicDir` = a freshly assembled `<job_dir>/render_public/` containing a copy of `renderer/public/*` plus a `job/` subtree (the job's `audio/` and `assets/images/`). Timeline `src` paths (`job/audio/narration.wav`) resolve with `staticFile()`. Every `stills` entry and every media frame shares one bundle and one browser instance (`openBrowser` once, pass `puppeteerInstance`).
+**Bundling:** one `bundle()` per invocation with `publicDir` = a freshly assembled `<job_dir>/render_public/` containing a copy of `renderer/public/*` plus a `job/` subtree (the job's `audio/` and `assets/images/`), **and nothing else**. The repository's `fixtures/` are never copied into a job's bundle. *(Clarified September 25, 2026: the first implementation copied all fixtures into every render, a test affordance in the production path.)* The smoke timeline's test assembles its own temporary job directory containing a copy of `fixtures/music/test_bed.wav` at `audio/narration.wav`. Timeline `src` paths (`job/audio/narration.wav`) resolve with `staticFile()`. Every `stills` entry and every media frame shares one bundle and one browser instance (`openBrowser` once, pass `puppeteerInstance`).
 
 **Browser logs:** every call passes `onBrowserLog`. Lines are appended to `<job_dir>/logs/render_browser.log`. Lines matching `^OVERFLOW ` are also collected and written to `<job_dir>/logs/overflow.json` as `[{"scene_id","template","slot"}]`, de-duplicated.
 

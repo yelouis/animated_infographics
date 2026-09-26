@@ -27,7 +27,7 @@ This document owns: the **fixtures**, every **gate** in the battery and the **fa
 | `music/test_bed.wav` | 20 s, 220 Hz + 330 Hz sines, −20 dBFS, 48 kHz stereo | Generated |
 | `sfx/whoosh_test.wav` `pop_test.wav` `ding_test.wav` `hit_test.wav` | 0.4 s pink-noise swell · 0.08 s 880 Hz · 0.6 s 1320 Hz decaying · 0.3 s 80 Hz | Generated |
 | `sfx/clap_test.wav` | An **unknown role**: must be ignored with a warning | Generated |
-| `CHECKSUMS` | SHA-256 of every file above | Written by A3 |
+| `CHECKSUMS` | SHA-256 of every file above, with paths **relative to `fixtures/`**. Verify with `(cd fixtures && shasum -a 256 -c CHECKSUMS)`. | Written by A3 |
 
 **The four scripts are frozen.** Their SHA-256 values at design time:
 
@@ -64,6 +64,10 @@ The `voice`/`reason` expectations are the table in `design_planner.md` §10; the
 | `planner/grounding.py` | `"2.3 million"` yields both 2.3 and 2.3e6; `"Twenty-one"` → 21; `"$1,500"` → 1500; `"a thousand"` → 1000; **`stat 1500` is rejected against `"about 150 were injured"`**; the verbatim span rejects a paraphrase and a mid-word start |
 | `planner/validate.py` | one failing and one passing case per template-specific rule in `design_templates.md` |
 | `textfit.py` | a string that fits at `size_min` and one that needs `max_lines + 1` |
+| `planner/llm.py` (added Sept 25) | a **200** response whose content contains "not found" returns the parsed JSON (no exception); a **404** with `{"error":"model 'x' not found"}` raises `DependencyMissing`; the LLM-facing schema produced for every template contains no `maxLength`/`minLength`/`maxItems`/`minItems`/`pattern` key anywhere (walk the whole schema) while `enum` survives |
+| planner crash containment (added Sept 25) | a stub backend whose every reply is truncated JSON makes `select` fall back to `kinetic_quote` choices and `props` fall back to the deterministic `kinetic_quote`; **the storyboard stage completes and `plan_report.json` records `fallback_level: 2`**. A grep test asserts `generate_json(` appears in `planner/` only inside `llm.py` |
+| text completeness (added Sept 25) | `"..."`, `"Rescuers wade through waist-"`, `"Modern Era ("`, `"draws crowds at p"` → rejected; `"Line one\nline two"` → repaired to `"Line one line two"` with no error; `"I was a young bride"`, `"$1,500 budget"` and `"Plan B"` → accepted |
+| grounding scale words (added Sept 25) | `numbers("holding 2.3 million gallons")` contains 2.3 and 2,300,000 and **not** 1,000,000; `numbers("a million reasons")` contains 1,000,000; `numbers("two million")` contains 2,000,000 |
 | `planner/voice.py` | first-person rate on all four fixtures equals the measured values in `design_planner.md` §10 (±0.01); a text whose only "I" is inside double quotes → third person; the tag cases `I (26F)` → female, `My (34M) wife (33F)` → male, `Me [F29]` → female, `My sister (22F) said` → no tag; **all 23 evidence cases** in the table in `design_planner.md` §10 (7 accepted, 16 rejected), each as its own parametrised test id; evidence not in the text → rejected; `unknown` with evidence → evidence repaired to null; the full decide() truth table (perspective × gender, 6 rows: only first_person+female → `af_heart`); `--voice am_michael` makes **zero** backend calls, counted at the backend's entry point; `--voice bm_george` → exit 2; a backend that fails 3 times → `unknown`/`no_evidence`/`am_michael`, never an exception |
 | `jobs.py` | every refusal in `design_system_architecture.md` §5 returns exit 3; an edit after approval flips `plan_sha256` |
 | `contracts/` | an unknown key is rejected (`extra="forbid"`); `schema_version: 2` is rejected |
@@ -89,14 +93,14 @@ Runs every gate **bare**, one after another, prints a table of gate / exit code 
 | G6 | TS lint | `npm --prefix renderer run lint` | exit 0 | an unused variable |
 | G7 | TS unit | `npm --prefix renderer test` | exit 0, N passed | breaking the min-span constant |
 | G8 | Schema sync | `./scripts/check_schema_sync.sh` | exit 0 | hand-editing one generated file; **also** emptying one generated file (must be exit 1, not a vacuous pass) |
-| G9 | Renderer purity | `./scripts/check_renderer_purity.sh` | exit 0 | `useCurrentFrame()` in a template |
-| G10 | Gallery | `./scripts/check_gallery.sh` | exit 0: 0 overflows, goldens within tolerance, hold motion present | a `max` fixture string 20 chars longer (overflow); a template frozen during hold (motion check) |
+| G9 | Renderer purity | `./scripts/check_renderer_purity.sh` | exit 0 | `useCurrentFrame()` in a template; **and** `useCurrentFrame()` in a new file under `renderer/src/templates/remotion/` (the exemption must be the exact path `renderer/src/clock/remotion/`, not any directory named `remotion`) |
+| G10 | Gallery | `./scripts/check_gallery.sh` | exit 0: 0 overflows, goldens within tolerance, hold motion present | a `max` fixture string 20 chars longer (overflow); a template frozen during hold (motion check); **deleting `overflow.json` after the render (the gate must fail closed, not skip)** |
 | G11 | Integration | `uv run pytest -q -m slow` | exit 0, N passed | swapping the WER bar to 0% |
 | G12 | E2E | `./scripts/e2e.sh` | exit 0 (§4) | skipping `approve` (render must refuse, and the script must notice) |
 | G13 | Offline | `./scripts/check_offline.sh` | exit 0 (§6) | removing the `deny network-outbound` line (its own self-check must fail) |
 | G14 | Doctor | `uv run infographics doctor` | exit 0 | `ollama stop` / an unpulled model name → exit 4 naming it |
 
-**Gallery gate details:** render every template × {`min`,`typical`,`max`} at its hold frame (frame 60 of a 150-frame synthetic scene whose fixture specifies `timing` explicitly) → `artifacts/gallery/<template>__<variant>.png`.
+**Gallery gate details (fail-closed rules added September 25, 2026):** the gate deletes `artifacts/gallery/current/` and `artifacts/gallery/motion/` before rendering, so a stale still can never satisfy a comparison. A missing or unparseable `overflow.json` is a **failure**, not a skip. Then it renders every template × {`min`,`typical`,`max`} at its hold frame (frame 60 of a 150-frame synthetic scene whose fixture specifies `timing` explicitly) → `artifacts/gallery/<template>__<variant>.png`.
 - (a) `overflow.json` empty.
 - (b) vs `renderer/goldens/<template>__<variant>.png`: a pixel "differs" when any channel differs by > 16; fail when > **0.5%** of pixels differ.
 - (c) **hold motion:** frames 60 and 105 of the `typical` fixture differ in > **0.1%** of pixels.
@@ -112,8 +116,8 @@ Uses a fresh `--jobs-dir` under `artifacts/e2e/<timestamp>/`. Steps and assertio
 1. `new fixtures/scripts/molasses_flood.txt --music fixtures/music/test_bed.wav --sfx-dir fixtures/sfx` → **0**; `status` shows `awaiting_review`; `preview/contact_sheet.png` exists and is non-blank; the log mentions ignoring `clap`; `voice.json` says `am_michael` / `third_person`, and `preview/storyboard.md`'s first line is the voice line.
 2. `render` → **3** (not approved).
 3. `approve` → **0**. Then change one character of one scene's text in `storyboard.json` (with `jq`; the change must keep the plan valid) → `render` → **3** (plan changed).
-4. `preview` → **0** · `approve` → **0** · `render` → **0**; `out/verify.json` all checks true.
-5. **Sync probe:** `render.ts media --sync-probe` for the same job → `artifacts/.../sync.mp4`. For each scene k ≥ 1, pixel (24, 24) at `start_frame − 1` and `start_frame + 1` flips between black (luma < 40) and white (luma > 215). Record the number of scenes checked.
+4. `preview` → **0** · `approve` → **0** · `render` → **0**; `out/verify.json` all checks true; **and the final `timeline.json` still has `audio.music` non-null and `audio.sfx` non-empty, while `audio/music.wav` and at least one `audio/sfx/*.wav` exist.** This is the assertion that proves music and SFX survive the review journey (added September 25, 2026 after they silently did not).
+5. **Sync probe:** `render.ts media --sync-probe` for the same job → `artifacts/.../sync.mp4`. For each scene k ≥ 1, pixel (24, 24) at `start_frame − 1` and `start_frame + 1` flips between black (luma < 40) and white (luma > 215). **The number of scenes checked is computed by the check and written into the report from its output**, never typed into the report template, and it must equal `len(scenes) − 1`.
 6. `new fixtures/audio/molasses_flood_say.m4a` → approve → render → **0** each, and `verify.json` passes.
 7. `story_recipe_box.txt`, `story_room_12.txt` and `emu_war.txt` through to render → **0**; their `voice.json` files match the expectations in §1 (`af_heart`/`llm`, `am_michael`/`no_evidence`, `am_michael`/`third_person`); record stage timings for `story_recipe_box` (§5) and `emu_war` (`design_audio_and_timing.md` §10).
 7b. `new fixtures/scripts/story_recipe_box.txt --voice am_michael` → **0**; `voice.json` has `source: "flag"`, and that job's `logs/voice.log` records zero LLM calls.
@@ -130,6 +134,12 @@ Writes `docs/evals/e2e_<YYYY-MM-DD>.md` (committed): every exit code, the `verif
 | `new` → `awaiting_review` | ≤ **6.5 min** | Ollama running with the model *not yet loaded*; LLM cache and image cache **empty** |
 | `render` | ≤ **3.5 min** | |
 | `preview` with no edits | ≤ **60 s** | Warm caches |
+
+**How it is measured (added September 25, 2026): `scripts/measure_budget.sh`**, never the E2E's timings. The E2E runs with a warm LLM cache and warm image cache, so its planning stages take 0.0–0.2 s and say nothing about the budget. The script:
+1. runs `ollama stop gemma4:26b` (so the model is not yet loaded);
+2. creates a fresh `INFOGRAPHICS_CACHE_DIR` and a fresh jobs dir;
+3. times `new fixtures/scripts/story_recipe_box.txt --music fixtures/music/test_bed.wav --sfx-dir fixtures/sfx`, then `approve`, then `render`, as wall-clock spans;
+4. writes `docs/evals/budget_<YYYY-MM-DD>.md` with the three spans, every stage's `timings_ms`, `llm_calls`/`cache_hits` summed from the stage logs (**cache_hits must be 0** for the run to count), and the image count.
 
 Total ≤ 10 minutes: the user's stated tolerance for a 1–3 minute video, measured at the top of that range. (Re-anchored September 24, 2026 from the 2-minute `emu_war` when the story fixtures became complete ~3-minute stories. The 6/4 split became 6.5/3.5, because planning scales with scene count while rendering is fast.) **Exceeding a bar is filed with the per-stage timings**, never fixed silently by lowering quality (fewer images, a smaller model, lower CRF). Those are the user's trade-offs to make.
 
@@ -161,3 +171,4 @@ Enforces `design_system_architecture.md` §7 with macOS `sandbox-exec` and `scri
 | Planner eval reports | `docs/evals/planner_<date>.md` |
 | E2E reports + contact sheets | `docs/evals/e2e_<date>.md`, `docs/evals/assets/<date>/` |
 | Golden stills | `renderer/goldens/` |
+| Cold-cache performance budget | `docs/evals/budget_<date>.md` (from `scripts/measure_budget.sh`, §5) |

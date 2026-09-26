@@ -18,7 +18,7 @@ Text normalisation before TTS (in this order): convert CRLF to LF; replace curly
 
 Empty body after normalisation → exit 2. Body longer than **1,200 words** → exit 2 `input too long for MVP (max 1200 words)`. That is about 8 minutes of narration, above the 1–3 minute target, and the cap keeps the budget in §9 honest.
 
-`ingest.json`: `{"schema_version":1,"kind":"text"|"audio","source":"input/<file>","title":str|null,"paragraphs":[str]|null,"word_count":int|null}`.
+`ingest.json`: `{"schema_version":1,"kind":"text"|"audio","source":"input/<file>","title":str|null,"paragraphs":[str]|null,"word_count":int|null,"music":"input/<file>"|null,"sfx_dir":"input/sfx"|null}`. `music` and `sfx_dir` are the job-local copies that `compile` reads on every run (`design_system_architecture.md` §4).
 
 ---
 

@@ -53,6 +53,30 @@ Canvas **1080 × 1920**. Zones:
 
 **Contrast test** (`tests/test_contrast.py`, part of G4): recomputes every ratio above from `renderer/src/theme/palette.ts` (parsed) and asserts the floors (text ≥ 4.5, shapes ≥ 3.0). It also asserts that the forbidden pair is still below 4.5. If someone "fixes" the palette so that ink-on-cast becomes legal, the rule in `design_templates.md` §1 (rule 4) should be revisited deliberately rather than left stale.
 
+### 2.1 Composited backgrounds: maps and text over images (added September 25, 2026)
+
+The table in §2 only measures flat token pairs. Verification of Wave A found **two on-screen failures that every gate passed**: a map whose land and sea measured 1.30 : 1, and captions over illustrations that measured 1.95 : 1. Both were spec values that were never measured *as composited*. These are now part of the palette contract, and `tests/test_contrast.py` asserts every row.
+
+**Map colours** (`design_templates.md` §2.15):
+
+| Pair | Ratio | Floor |
+|---|---|---|
+| land `#4466A0` vs sea `#0B1326` | **3.22** | ≥ 3.0 |
+| region land `#7C9FDB` vs land `#4466A0` | **2.15** | ≥ 2.0 (a fill-to-fill distinction) |
+| marker stroke `bgDeep` vs land / vs region land | **3.22 / 6.90** | ≥ 3.0 |
+| marker fill `highlight` vs its stroke `bgDeep` | **12.83** | ≥ 3.0 |
+| chip text `ink` on chip `bgDeep` | **16.83** | ≥ 4.5 |
+
+**Text over images** (`location`, `set_piece`): contrast is measured against the scrim composited over a **pure-white** pixel, the worst case, because FLUX.2 klein's flat illustrations often have cream or white backgrounds. The composite is `alpha × bg + (1 − alpha) × #FFFFFF`.
+
+| Scrim alpha at the text | Composite | `ink` | `inkMuted` |
+|---|---|---|---|
+| 0.53 (the original 320 px scrim at caption height) | `#828998` | 3.19 | **1.95** ✗ |
+| **0.85 (the revised scrim's minimum anywhere text can sit)** | `#37425A` | **9.15** | **5.57** |
+| 0.92 (bottom of the revised scrim) | `#27334D` | 11.46 | 6.98 |
+
+**Rule:** any text drawn over an image must sit where the scrim alpha is ≥ 0.85. `tests/test_contrast.py` recomputes the composite from the scrim stops exported in `renderer/src/theme/layout.ts` and the lowest possible text top (y 807). The gallery gets a `location__worst` fixture whose image is solid white, so the golden shows the worst case to a human reviewer.
+
 ---
 
 ## 3. Typography

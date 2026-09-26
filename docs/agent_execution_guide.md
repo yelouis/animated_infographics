@@ -1,755 +1,400 @@
-# Agent Execution Guide — Queue Complete: Wave A (Offline MVP, 22 items) Delivered
+# Agent Execution Guide — Active Build: Wave B (verification fixes, 13 items) — September 25, 2026
 
-**You are an engineering agent.** Wave A (Offline MVP) is **complete and verified**. All 22 items (A1–A22) are delivered, validated, and passing all 14 battery gates (G1–G14). **The active queue is empty.**
+**You are an engineering agent with no memory of this project.** The offline MVP (Wave A, A1–A22) is built, committed and pushed (head `e374a15`). On September 25, 2026 an independent verification pass re-ran every gate and read the source against the design. **All 14 gates reproduce green — and the product still has defects that no gate could see.** The worst:
+- every reviewed-and-edited video loses its music and sound effects;
+- about one scene in five shows text cut off mid-word;
+- two planner crash paths exist;
+- captions over light illustrations and the map are unreadable.
 
-Do not invent work (§9). Only start new work if the user makes a selection on a deferred item (D1–D9 in `docs/ongoing_general_errors.md` §4) or files a new issue.
+**Wave B fixes them. That is the only approved work.**
 
-**What was approved and delivered:** Wave A, items **A1–A22** (delivered index in §5.1). **What NOT to touch:** everything in §5 (delivered work, accepted equivalents, user decisions, invariants, rejected options). **What must not be started:** everything in §4 (deferred).
+**What is approved:** Wave B, items **B1–B13** in §3, in the order of §2. **What NOT to touch:** everything in §5 (delivered work, accepted equivalents, user decisions, invariants, rejected options). **What must not be started:** everything in §4, including **Issues 3–5**, which await the user's selection in `docs/ongoing_general_errors.md`.
 
-**What the product is, in one paragraph.** A local-only CLI that turns a **text story** (narrated by local TTS in an automatically chosen voice) or an **audio narration** into a **1080×1920 animated explainer video**. It uses flat editorial vector scenes chosen from a library of 16 templates, in sync with the voice, with word-by-word karaoke captions, a persistent cast of vector avatars, locally generated illustrations of places and objects, and optional music and SFX. Every video **stops for human review** before the final render. The long-term goal is live mode (speak in real time and the visuals follow), so the renderer is clock-agnostic from day one.
+**Every number and literal string in this document and in the design docs is a decision, not a suggestion.** Implement as written; do not substitute your own values. If a value is genuinely impossible, keep the *intent*, deviate minimally, say so in the commit body, and add it to §5.2. If the design itself cannot work, **STOP and file it in `docs/ongoing_general_errors.md` with options and a `Your selection: _____` line. Do not improvise, and never fill in a selection line yourself.**
+
+**What the product is, in one paragraph.** A local-only CLI that turns a **text story** (narrated by local TTS in an automatically chosen voice) or an **audio narration** into a **1080×1920 animated explainer video**. It uses flat editorial vector scenes chosen from 16 templates, in sync with the voice, with word-by-word karaoke captions, a persistent cast of vector avatars, locally generated illustrations, and optional music and SFX. Every video **stops for human review** before the final render. The long-term goal is live mode, so the renderer is clock-agnostic.
+
+**The lesson that shaped this wave.** Green gates were not evidence of correctness here: every one of the defects above passed every gate. **For every item, the validation must include the check that would have caught the original defect**, and you must run it against the unfixed code first and see it fail.
 
 ---
 
 ## 0. Standing constraints (apply to every item)
 
-1. **The battery is the regression bar.** After every item, run `scripts/battery.sh` (full, not `--fast`, once G11 exists) and record the numbers in §1.3. **Read every exit code bare.** `cmd | tail` reports `tail`'s exit status, always 0.
-2. **Fully local at runtime.** No cloud API and no network except loopback, ever, at runtime (`design_system_architecture.md` §7). Setup may download.
-3. **Python (Pydantic) is the source of truth for every contract.** JSON Schemas, TypeScript types, the template-registry JSON, the icon map and the country bboxes are **generated**. Never hand-edit `schema/`, `renderer/src/generated/` or `data/geo/country_bboxes.json`.
+1. **The battery is the regression bar.** After every item, run `scripts/battery.sh` (full) and update §1.3. **Read every exit code bare.** `cmd | tail` reports `tail`'s status.
+2. **Fully local at runtime.** No cloud API, no network except loopback (`design_system_architecture.md` §7).
+3. **Python (Pydantic) is the source of truth for every contract.** Generated files (`schema/`, `renderer/src/generated/`, `data/geo/country_bboxes.json`, and from B8 `renderer/public/geo/lakes-50m.json`) are never hand-edited.
 4. **Templates read time only through the clock** (`design_rendering.md` §3).
-5. **The review gate is mandatory.** There is no auto-approve under any name (`design_system_architecture.md` §5).
-6. **The planner never crashes the pipeline and never shows an ungrounded fact** (`design_planner.md`). **The voice stage never guesses a gender**: `af_heart` requires evidence (`design_planner.md` §10).
-7. **One item = one Conventional Commit** (`.agents/skills/commit_message_guidelines/SKILL.md`), with the WHY in the body, including every falsification (the red run, then the green run). **Push after every item:** `git push origin main`. The remote is the private GitHub repo `yelouis/animated_infographics`.
-8. **Record the resolution in the same commit:** one line in `ongoing_general_errors.md` §3 (Resolved index), any new gate numbers in §1.3 below, and, for A8/A9 and A21, collapse Issue 1 / Issue 2 in `ongoing_general_errors.md` §1 into their §3 lines when the *last* item delivering them lands (Issue 1 → with A9; Issue 2 → with A21).
-9. **When this guide and a design doc disagree, stop and file it.** Do not pick one.
-10. **Every stage writes `logs/<stage>.log`, whose last line is `llm_calls=<n> cache_hits=<m> elapsed_ms=<t>`.** Several validations below read these counters. The LLM call counter is incremented **at the backend's entry point**, before any cache lookup or early return. A counter placed beside the work only counts some of the paths.
+5. **The review gate is mandatory.** No auto-approve under any name.
+6. **The planner never crashes the pipeline and never shows an ungrounded or truncated fact** (`design_planner.md` §1, §6, §8). **Every planner LLM call goes through `run_with_retries`.**
+7. **Red first.** Before fixing an item, write or run its falsifying check against the *current* code and record the failure. Then fix, then record the pass. A check you never saw fail is not evidence.
+8. **One item = one Conventional Commit whose scope is the item id**, e.g. `fix(b1): keep music and sfx across preview and rerun`. The WHY goes in the body, including the red and green runs. **Push after every item:** `git push origin main`. **Never amend a pushed commit.**
+9. **Record the resolution in the same commit:** one line under "Wave B" in `ongoing_general_errors.md` §3 in the form `B<n> — <title> — git log --grep "(b<n>)" — <measured result>`. Do **not** write a hash: a commit cannot contain its own hash, and Wave A's index ended up citing 14 pre-amend commits and one that never existed (tracking doc §2.5).
+10. **When this guide and a design doc disagree, stop and file it.**
+11. Every stage writes `logs/<stage>.log` ending in `llm_calls=<n> cache_hits=<m> elapsed_ms=<t>`; the LLM call counter is incremented at the backend's entry point.
 
 ---
 
-## 1. Verified baseline (re-verified September 24, 2026, before any code)
+## 1. Verified baseline (September 25, 2026, independent verification session)
 
-### 1.1 Environment
+### 1.1 Environment (verified)
 
 | Fact | Value |
 |---|---|
-| Machine | Apple **M4 Max**, **64 GB** unified memory, macOS (Darwin 25.6.0) |
-| Free disk | 118 GiB. Models need ≈ 35 GB (planner 19 GB, klein 4B, Whisper, Kokoro). |
-| ffmpeg / ffprobe | **8.1** (Homebrew) |
-| Node | **v26.5.0** (see `design_rendering.md` §1 for the Node 22 fallback rule) |
-| System Python | 3.14.6. **Not used.** The project pins **3.12** through uv. |
-| uv | present (`~/.local/bin/uv`) |
-| Ollama | **0.33.0**. Installed: `glm4`, `gemma4:latest` (8B), `qwen2.5vl:7b`, `moondream`, `tinyllama`, **`gemma4:26b`** (digest `08ae7ec1744bd7f451c4a530afb39d2673ad9d07a8369b8a33a3613b41212a68`). |
-| espeak-ng | **1.52.0** (Homebrew). |
-| mflux | **0.20.0** (installed via uv tool). Remotion **4.0.528**. |
-| macOS `say` | present (fixture generation) |
-| gh | 2.98.0, logged in as `yelouis` |
+| Machine | Apple **M4 Max**, **64 GB**, macOS (Darwin 25.6.0) |
+| ffmpeg / ffprobe | 8.1 · Node **v26.5.0** (Remotion works on it; no Node 22 fallback was needed) · project Python **3.12** via uv |
+| Ollama | 0.33.0 · planner **`gemma4:26b`** present (id `08ae7ec1744b`, 18 GB) |
+| Kokoro / mlx-whisper / pydantic | 0.9.4 / 0.4.3 / 2.13.5 |
+| espeak-ng | 1.52.0 |
+| mflux | **0.20.0**. It ships `mflux-generate-flux2` (`--model flux2-klein-4b`); **there is no `mflux-generate-flux2-klein` executable.** Wave A's `setup.sh` created a symlink of that name in `~/.local/bin` (removed by B9). The only FLUX.2 klein weights on the machine are **4B** (`black-forest-labs/FLUX.2-klein-4B`); no 9B. |
+| Remotion | 4.0.528 (all packages identical) |
 
 ### 1.2 Repository
 
-Two commits' worth of design: `docs/`, `fixtures/scripts/*.txt` (**four** frozen stories; SHA-256 in `design_testing_and_validation.md` §1), `AGENTS.md`, `CLAUDE.md`, `README.md`, `.gitignore`, `.agents/skills/`. **No code, no gates.**
+Wave A: 22 commits, `4df212a`…`e374a15` on `main`, pushed. The correct per-item hashes are in `ongoing_general_errors.md` §3. The design docs were revised on September 25, 2026 (contract changes listed in `ongoing_general_errors.md` §5).
 
-### 1.3 Gates
-
-Each gate is created by the item named. **Replace "NOT BUILT" with the measured result in the commit that creates the gate, and keep this table current.** Definitions and falsifications: `design_testing_and_validation.md` §3.
+### 1.3 Gates (run bare in this verification session)
 
 | # | Gate | Result |
 |---|---|---|
-| G1 | `uv run ruff check .` | exit 0 (All checks passed) |
-| G2 | `uv run ruff format --check .` | exit 0 (99 files already formatted) |
-| G3 | `uv run mypy src` | exit 0 (Success: no issues found in 53 source files) |
-| G4 | `uv run pytest -q -m "not slow"` | exit 0 (169 passed) |
-| G5 | `npm --prefix renderer run typecheck` | exit 0 (0 errors) |
-| G6 | `npm --prefix renderer run lint` | exit 0 (0 errors) |
-| G7 | `npm --prefix renderer test` | exit 0 (15 passed) |
-| G8 | `./scripts/check_schema_sync.sh` | exit 0 (11 files in sync) |
-| G9 | `./scripts/check_renderer_purity.sh` | exit 0 (pure) |
-| G10 | `./scripts/check_gallery.sh` | exit 0 (0 overflows across 51 fixtures, 17 entries matched goldens, hold motion verified) |
-| G11 | `uv run pytest -q -m slow` | exit 0 (18 passed) |
-| G12 | `./scripts/e2e.sh` | exit 0 (passed, steps 1–8 verified across 5 fixture runs) |
-| G13 | `./scripts/check_offline.sh` | exit 0 (passed) |
-| G14 | `uv run infographics doctor` | exit 0 (21 checks OK) |
+| G1 | `uv run ruff check .` | exit 0 |
+| G2 | `uv run ruff format --check .` | exit 0 · 99 files |
+| G3 | `uv run mypy src` | exit 0 · 53 source files |
+| G4 | `uv run pytest -q -m "not slow"` | exit 0 · **169 passed** |
+| G5 | `npm --prefix renderer run typecheck` | exit 0 |
+| G6 | `npm --prefix renderer run lint` | exit 0 |
+| G7 | `npm --prefix renderer test` | exit 0 · **15 passed** (4 files) |
+| G8 | `./scripts/check_schema_sync.sh` | exit 0 |
+| G9 | `./scripts/check_renderer_purity.sh` | exit 0 (but the exemption is too broad → B9) |
+| G10 | `./scripts/check_gallery.sh` | exit 0 · 35 s · 51 goldens compared, hold motion on 17 entries (but the overflow check fails open → B9) |
+| G11 | `uv run pytest -q -m slow` | exit 0 · **18 passed** · 178 s |
+| G12 | `./scripts/e2e.sh` | exit 0 · 847 s · steps 1–8 pass (but it asserts neither music/SFX survival nor a computed sync count → B1, B12; its timings are warm-cache → B13) |
+| G13 | `./scripts/check_offline.sh` | exit 0 · 198 s · self-checks pass (external network denied, loopback allowed); fresh-cache `molasses_flood` reached review in **122.5 s** (planning 27 s, 4 images 83 s): a cold data point, not the budget run |
+| G14 | `uv run infographics doctor` | exit 0 · 21 checks OK |
 
-⚠️ **A gate that could not run is recorded as NOT RUN with the reason, never left blank and never marked green.**
-
----
-
-## 2. Execution order (Wave A Delivered)
-
-All 22 items of Wave A (Offline MVP) delivered and validated in the order below. See §5.1 for delivered metrics and git commit references.
-
-| # | Item | Status | Reference |
-|---|---|---|---|
-| A1 | Bootstrap | **Delivered** | See §5.1 (`b1ad44a`) |
-| A2 | Setup script + `doctor` | **Delivered** | See §5.1 (`927d076`) |
-| A3 | Fixtures | **Delivered** | See §5.1 (`7924f59`) |
-| A4 | Data contracts + schema sync | **Delivered** | See §5.1 (`c7f0c4b`) |
-| A5 | Job store, CLI, review gate | **Delivered** | See §5.1 (`617e569`) |
-| A6 | Timing core (pure) | **Delivered** | See §5.1 (`10dd3a2`) |
-| A7 | LLM backend | **Delivered** | See §5.1 (`7186803`) |
-| A8 | Narrator voice selection | **Delivered** | See §5.1 (`9590fb7`) |
-| A9 | Narration (Kokoro) | **Delivered** | See §5.1 (`5824005`) |
-| A10 | Transcription (Whisper) | **Delivered** | See §5.1 (`715d670`) |
-| A11 | Renderer foundation + `kinetic_quote` | **Delivered** | See §5.1 (`731ad9e`) |
-| A12 | Bible + geo | **Delivered** | See §5.1 (`208d445`) |
-| A13 | Segmentation | **Delivered** | See §5.1 (`1d47dd8`) |
-| A14 | Storyboard + planner eval | **Delivered** | See §5.1 (`2b7dc04`) |
-| A15 | Compile + preview | **Delivered** | See §5.1 (`5260ab2`) |
-| A16 | Final render + verification → **walking skeleton** | **Delivered** | See §5.1 (`8203be5`) |
-| A17 | Visual primitives + gallery gate | **Delivered** | See §5.1 (`18c097b`) |
-| A18 | Templates: statement set (6) | **Delivered** | See §5.1 (`5b88db1`) |
-| A19 | Templates: people set (5) | **Delivered** | See §5.1 (`cedcd5a`) |
-| A20 | Templates: place & time set (4) + delete placeholder | **Delivered** | See §5.1 (`9cddf93`) |
-| A21 | Illustrations (FLUX.2 klein 4B) | **Delivered** | See §5.1 (`142b6a7`) |
-| A22 | E2E, offline gate, performance budget, README | **Delivered** | See §5.1 (`a5d3c07`) |
+**Known, reproduced defects under a green battery** (each is an item below): music/SFX lost after `preview` (verification run `artifacts/e2e/20260925_203215`: final `timeline.audio.music == null`, `sfx == []`, while `input/test_bed.wav` and `input/sfx/` exist) · a "not found" string in a valid reply crashes as a missing model (reproduced with a mock transport) · truncated JSON crashes props planning (reproduced with a stub backend) · 34/701 storyboard strings truncated mid-word · a stray 1,000,000 extracted from "2.3 million" · captions over light images at 1.95 : 1 · map land/sea at 1.30 : 1.
 
 ---
 
-## 3. The items (Queue Complete)
+## 2. Execution order
 
-**All 22 items (A1–A22) of Wave A are complete, verified, and delivered.**
-Detailed specifications, historical build steps, and validation gates for all delivered items are archived below and reflected in git history and §5.1.
-No active items remain in the queue.
-
-Each item has: **what it means for the user** · **Files** · **Interfaces** (where they matter) · **Build** steps · **Validate** (checks, then the falsification that proves the check can fail, then what to open and look at) · **Blast radius**. The design sections named in each item are part of its spec: read them before writing code.
-
-### A1 — Bootstrap
-
-**What this means for the user:** a repository another agent can build in and a battery that says whether it is healthy.
-
-**Files:** `pyproject.toml` · `.python-version` · `uv.lock` · `src/animated_infographics/{__init__.py,config.py}` · `tests/test_import.py` · `tests/conftest.py` · `renderer/{package.json,package-lock.json,tsconfig.json,remotion.config.ts,eslint.config.mjs,vitest.config.ts}` · `renderer/src/{index.ts,Root.tsx,smoke.test.ts}` · `scripts/battery.sh`
-
-**Build:**
-1. The repo exists locally and on GitHub. **Do not rewrite history.**
-2. `pyproject.toml`: src layout; distribution `animated-infographics`, package `animated_infographics`; `requires-python = ">=3.12,<3.13"`; `[project.scripts] infographics = "animated_infographics.cli:app"`. `.python-version` = `3.12`. Runtime deps now: `typer`, `pydantic>=2.8`, `httpx`, `numpy`, `soundfile`, `pysbd`, `pillow`, `rich`. Dev: `pytest`, `ruff`, `mypy`. ML deps arrive with the items that use them (A9 `kokoro>=0.9.4`; A10 `mlx-whisper`, `jiwer`).
-3. Ruff: line-length 100; rules `E,F,I,B,UP`. Mypy: `disallow_untyped_defs = true` for `src/`; `ignore_missing_imports` only for `kokoro`, `mlx_whisper`, `pysbd`, `soundfile`, `misaki`. Pytest: register marker `slow`; `tests/conftest.py` marks every test under `tests/slow/` as `slow` automatically.
-4. `config.py` starts as a module of `Final` constants; every constant named in a design doc is added here, under the same name, by the item that first needs it.
-5. `renderer/` is created by hand, not with an interactive generator. Deps: `remotion`, `@remotion/cli`, `@remotion/bundler`, `@remotion/renderer`, `@remotion/fonts`, `@remotion/layout-utils`, **all pinned to one identical exact version**, plus `react`, `react-dom`, `typescript`, `tsx`, `vitest`, `eslint`, `@remotion/eslint-plugin`, `ajv`, `d3-geo`, `topojson-client`, `world-atlas@2`, `@phosphor-icons/react`, `json-schema-to-typescript`. `tsconfig`: `strict: true`. Scripts: `typecheck` = `tsc --noEmit`; `lint` = `eslint src scripts`; `test` = `vitest run` (**never** `--passWithNoTests`). `Root.tsx` registers a trivial 1-frame composition until A11.
-6. `scripts/battery.sh` (bash, `set -u`, not `set -e`): a static table of G1–G14 → command → creating item. A gate is *built* when its artefact exists: its script file; `tests/slow/*.py` for G11; `src/animated_infographics/doctor.py` for G14; G1–G7 always after A1. Each built gate runs **bare**, with stdout/stderr redirected to `artifacts/battery/<gate>.log`; the exit code is read from `$?` immediately. The key number (e.g. `N passed`) is grepped from the log afterwards. The script prints `gate | exit | key number` and `NOT BUILT (A#)` rows, and exits 1 if any built gate failed. `--fast` skips G11–G13.
-
-**Validate:** `uv sync` → 0; `npm --prefix renderer ci` → 0; `npx remotion versions` (in `renderer/`) → no mismatch; G1–G7 green; `scripts/battery.sh` → 0. **Falsify:** add an unused import → G1 red **and** `battery.sh` exits 1; revert → green. Delete `tests/test_import.py` temporarily → G4 exits non-zero (pytest exit 5, "no tests"), proving an empty suite is not a pass; restore.
-
-**Blast radius:** §1.3 rows G1–G7.
+| # | Item | Why this position |
+|---|---|---|
+| B1 | Music and SFX survive the review journey | The most visible defect: every edited video ships silent of music/SFX. Independent of everything else. |
+| B2 | LLM error classification | Small, and B3–B5 run the planner many times. A spurious "missing model" crash would waste those runs. |
+| B3 | Planner crash containment | B5's eval re-run must not be killable by one malformed reply. |
+| B4 | Grounding: scale words | A grounding change alters which props validate; it must land before B5 re-runs the eval. |
+| B5 | LLM-facing schemas without length limits + text completeness + eval re-run | Changes every planner output; the one expensive eval re-run happens here, after B2–B4. |
+| B6 | Contact sheet flags failed images | Preview-only; before the renderer items so their preview checks show flags correctly. |
+| B7 | Legible text over images; captions through FitText | Changes goldens. Done back to back with B8, so goldens are regenerated in one reviewed batch per item. |
+| B8 | Map legibility; `kinetic_quote` attribution avatar | Changes goldens and adds a generated geo file (G8). |
+| B9 | Gates fail closed; bundle and setup hygiene | Hardens G9/G10 **after** the goldens settle, so the stricter gate validates the final images. |
+| B10 | Remove the dead SFX scheduler | Cleanup; changes the G4 test count, recorded exactly. |
+| B11 | README accuracy | Describes the behaviour B1–B10 produced. |
+| B12 | E2E: computed counts, audible music | Final E2E shape before the last measurement. |
+| B13 | Cold-cache performance budget; close-out | Measures the finished system; closes the wave. |
 
 ---
 
-### A2 — Setup script and `doctor`
+## 3. The items
 
-**What this means for the user:** one command prepares a fresh Mac, and one command says exactly what is missing and how to fix it.
+### B1 — Music and SFX survive the review journey
 
-**Files:** `scripts/setup.sh` · `src/animated_infographics/doctor.py` · `renderer/scripts/gen-country-bboxes.ts` · `data/vendor/CHECKSUMS` · `data/geo/country_bboxes.json` · `renderer/public/fonts/*` (5 TTF + licences)
+**What this means for the user:** today, if they change anything at the review gate, the final video silently loses its music and every sound effect.
 
-**Build:**
-1. `scripts/setup.sh` (idempotent; the only place network is used):
-   - `brew install espeak-ng` if absent · `uv sync` · `npm --prefix renderer ci`
-   - `ollama pull gemma4:26b`
-   - `uv tool install mflux` (record the version)
-   - Pre-download: `mlx-community/whisper-large-v3-turbo`; Kokoro-82M **and the two voices `af_heart` and `am_michael`** (instantiate `KPipeline(lang_code="a", repo_id="hexgrad/Kokoro-82M")` and load each voice once); the FLUX.2 klein **4B** weights, by running one tiny generation (e.g. 256×256, 1 step) and deleting its output. **Verify from mflux's download path that the 4B, not the 9B, was fetched.**
-   - `npx remotion browser ensure` in `renderer/`
-   - Fonts (`design_visual_direction.md` §3): `Poppins-Bold.ttf`, `Poppins-ExtraBold.ttf` + `OFL.txt` from the `google/fonts` repository (`ofl/poppins/`); `Inter-Medium.ttf`, `Inter-SemiBold.ttf`, `Inter-Bold.ttf` + licence from the official `rsms/inter` release archive (`extras/ttf/`) → `renderer/public/fonts/` (**committed**).
-   - GeoNames `cities15000.zip` (unzipped to `cities15000.txt`) and `countryInfo.txt` → `data/vendor/` (**gitignored**), verified against `data/vendor/CHECKSUMS` (**committed**; written on the first download in this item, verified on every later run).
-2. `renderer/scripts/gen-country-bboxes.ts`: `world-atlas` `countries-50m.json` + `countryInfo.txt` (ISO-numeric → ISO3) → `data/geo/country_bboxes.json` = `{ISO3: [minLon, minLat, maxLon, maxLat]}` from `d3.geoBounds`, keys sorted, with the header `"$comment": "GENERATED … DO NOT EDIT"`. Features without an id are skipped and listed on stdout. Committed.
-3. `infographics doctor` (`doctor.py`): one line per check, `OK   <what>` or `MISSING <what> — run: <fix>`; exit **4** if any is missing. Checks:
-   - Python 3.12; `ffmpeg`; `ffprobe`; `espeak-ng`
-   - Ollama reachable at `127.0.0.1:11434`; the planner model (default `gemma4:26b`, overridable by `INFOGRAPHICS_PLANNER_MODEL`) present in `/api/tags`
-   - `mflux-generate-flux2-klein` on PATH
-   - In the HF cache (use `huggingface_hub.try_to_load_from_cache` or `scan_cache_dir`, never the network): the Whisper model, the Kokoro model, **`voices/af_heart.pt` and `voices/am_michael.pt`**, and the klein-4B weights (name the repo id mflux uses in a code comment)
-   - `renderer/node_modules`; the Remotion headless browser (find where `ensure` installs it; name the path in a code comment)
-   - the five font files; `data/vendor/*` against `CHECKSUMS`; `data/geo/country_bboxes.json`
+**The gap:**
+- `src/animated_infographics/stages/compile.py:36-55` takes music and SFX from `ctx.music_path` / `ctx.sfx_dir`. It falls back to `audio/music.wav` and `audio/sfx/` only if those still exist.
+- `src/animated_infographics/jobs.py:41` registers `audio/music.wav` and `audio/sfx` as **compile outputs**, so `invalidate_after()` deletes them before every recompile.
+- `src/animated_infographics/cli.py:286` (`preview`) and `:429` (`rerun`) build a bare `RunContext()`.
+- Net effect: after `preview`, compile runs with no context paths and no files, so `timeline.audio.music = null`, `sfx = []`.
+- The E2E never asserted otherwise. Contract: `design_system_architecture.md` §4 ("Job-local inputs are authoritative"), `design_audio_and_timing.md` §1 (`ingest.json` fields).
 
-**Validate:** `setup.sh` twice → both 0 (idempotent); `doctor` → 0. **Falsify:** `INFOGRAPHICS_PLANNER_MODEL=gemma4:not-a-model uv run infographics doctor` → exit 4 naming it. Temporarily rename `voices/am_michael.pt` in the cache (or point `HF_HOME` at an empty dir) → exit 4 naming the voice. Rename one font → exit 4 naming it. Restore everything → 0. Record in §1.1 the installed version of **every** tool and model: the Ollama model digest from `ollama show`, and the versions of mflux, Remotion, kokoro and mlx-whisper.
-
-**Blast radius:** §1.1, §1.3 G14; `README.md` gains a Setup section.
-
----
-
-### A3 — Fixtures
-
-**What this means for the user:** every claim about quality, including "the right voice was chosen", is measured on the same inputs.
-
-**Files:** `scripts/make_fixtures.sh` · `fixtures/audio/molasses_flood_say.m4a` · `fixtures/music/test_bed.wav` · `fixtures/sfx/{whoosh,pop,ding,hit,clap}_test.wav` · `fixtures/expected/{molasses_flood,emu_war,story_recipe_box,story_room_12}.json` · `fixtures/CHECKSUMS`
-
-**Build:**
-1. `scripts/make_fixtures.sh` per `design_testing_and_validation.md` §1. `say -v Samantha` (if absent from `say -v '?'`, use the first `en_US` voice and record which) on `molasses_flood.txt` → AIFF → ffmpeg AAC 128 kbps mono → `.m4a`. Music and SFX come from ffmpeg `lavfi` (`sine`, `anoisesrc=color=pink`) plus `afade`, at 48 kHz stereo s16, with the durations and frequencies in that table. The music peaks at −20 dBFS ± 1 dB (verify with `volumedetect`).
-2. `fixtures/expected/<name>.json`, **exactly these keys**:
-
-   ```json
-   {"numbers": [1919, 15, 2300000, 25, 35, 21, 150],
-    "cast_names": [], "narrator": false,
-    "places": [{"name": "Boston", "country_iso3": "USA", "lat": 42.36, "lon": -71.06, "tol_deg": 0.1, "geo_source": "gazetteer"}],
-    "voice": "am_michael", "voice_reason": "third_person",
-    "evidence_contains": null, "narrator_facial_hair": null}
-   ```
-
-   Values per fixture are those in `design_testing_and_validation.md` §1 and the table in `design_planner.md` §10. Details:
-   - `emu_war` has `places: [{"country_iso3": "AUS"}]` (name and coordinates not asserted).
-   - `story_recipe_box` lists Duluth and Thunder Bay; `story_room_12` lists Amarillo.
-   - Both story files have `narrator: true`.
-   - `story_recipe_box` has `evidence_contains: "granddaughter"` and `narrator_facial_hair: "none"`.
-   - A place entry asserts only the keys it contains.
-3. `fixtures/CHECKSUMS`: SHA-256 of every fixture file (scripts, audio, music, sfx, expected).
-
-**Validate:** the four scripts' SHA-256 values equal the frozen values in the testing doc. **If one does not, stop: a fixture was edited.** `shasum -a 256 -c fixtures/CHECKSUMS` → 0. ffprobe every generated file: durations as specified (±10 ms), sample rates as specified. **Falsify:** verify a copy with one changed byte → non-zero.
-
-**Blast radius:** `fixtures/`, `scripts/make_fixtures.sh` only.
-
----
-
-### A4 — Data contracts and schema sync
-
-**What this means for the user:** the plan they review and the video that renders are guaranteed to describe the same thing.
-
-**Files:** `src/animated_infographics/contracts/{models.py,templates.py,icons.py,export.py}` · `schema/*.schema.json` · `renderer/src/generated/{contracts.ts,templateRegistry.json,iconNames.json,iconMap.ts}` · `scripts/check_schema_sync.sh` · `tests/data/props_examples.json` · `tests/test_contracts.py`
-
-**Build:**
-1. `models.py`: every model in `design_data_contracts.md` §2–7 and §9, as frozen Pydantic v2 models with `extra="forbid"`. The **`VoiceDecision`** model (§9) enforces its invariants with a `model_validator`. Every top-level model has `schema_version: Literal[1]`.
-2. `templates.py`: `TextSlot`, `SfxCue`, `TemplateSpec` and `REGISTRY: dict[str, TemplateSpec]` with **all 16** templates. Transcribe every props limit, slot row, SFX cue, `spread` and requirement from `design_templates.md` §2. `Scene.props` is a discriminated union keyed on `template`.
-3. `icons.py`: the allow-list (`design_templates.md` §4; 120–200 names; must include the seven emotion glyphs of §2.11).
-4. `export.py` (`uv run python -m animated_infographics.contracts.export [--out DIR]`): writes every generated file in `design_data_contracts.md` §1, with the DO-NOT-EDIT header, deterministically (sorted keys, stable ordering). `iconMap.ts` uses **explicit named imports** in whichever export form the installed `@phosphor-icons/react` provides. TS types come from `json-schema-to-typescript`, invoked by `export.py` through `npx`.
-5. `scripts/check_schema_sync.sh`: export into a temp dir; `diff -r` against the committed files **and** `data/geo/country_bboxes.json` (regenerated by A2's script); exit 1 on any difference; **exit 1 if any compared file is missing or empty on either side.**
-
-**Validate:** G8 green. Unit tests: an unknown key is rejected; `schema_version: 2` is rejected; each `VoiceDecision` invariant has one violating example rejected; one valid and one invalid props example per template load from `tests/data/props_examples.json` as expected. G5 compiles `iconMap.ts`. **Falsify (all three, red then green):** hand-edit one generated file → G8 exit 1; **empty** one generated file → G8 exit 1 (not a vacuous pass); misspell one icon in the allow-list and re-export → G5 red.
-
-**Blast radius:** §1.3 G8.
-
----
-
-### A5 — Job store, CLI and the review gate
-
-**What this means for the user:** nothing ever renders without their approval of exactly the plan that renders.
-
-**Files:** `src/animated_infographics/{jobs.py,cli.py,errors.py}` · `tests/test_jobs.py` · `tests/test_cli.py`
-
-**Interfaces:**
-
-```python
-STAGES = ("ingest", "voice", "narrate", "transcribe", "bible", "segment",
-          "storyboard", "assets", "compile", "preview")
-# text path skips "transcribe"; audio path skips "voice" and "narrate"
-class ValidationFailed(Exception): ...     # → exit 2
-class GateRefused(Exception): ...          # → exit 3
-class DependencyMissing(Exception): ...    # → exit 4
-StageFn = Callable[["Job", "RunContext"], None]
-class Job:
-    @classmethod
-    def create(cls, input_path: Path, jobs_dir: Path, now: datetime) -> "Job": ...
-    @classmethod
-    def open(cls, ref: str, jobs_dir: Path) -> "Job": ...
-    def plan_sha256(self) -> str: ...
-    def run(self, stages: Sequence[str], registry: Mapping[str, StageFn], ctx: RunContext) -> None: ...
-    def invalidate_after(self, stage: str) -> None: ...
-```
-
-**Build:** everything in `design_system_architecture.md` §4–6: job ids, layout, `state.json`, the stage runner with `stage_input_sha256` skip logic and downstream invalidation, `plan_sha256`, every command, option and exit code, and the environment-variable table. The CLI maps the three exception types to exit codes 2/3/4 and anything else to 1 (with the traceback in `logs/<stage>.log`). Stages that do not exist yet raise `NotImplementedError("stage not implemented: <name>")` → exit 1. Option validation happens **before** a job directory is created: `--voice` with audio input or a voice outside `af_heart`/`am_michael` → exit 2.
-
-**Validate:** tests drive the state machine with **fake stage functions** that write minimal valid files. There is a test for every refusal in architecture §5 (exit 3), for invalidation (re-running `segment` deletes `storyboard.json`, `timeline.json` and `preview/`), and for the two `--voice` rejections (exit 2, and no job directory created). At least one test is the **journey**: `new → approve → edit storyboard.json → render (3) → preview → approve → render (0)`, in sequence on one job, without rebuilding state between steps. **Falsify:** delete the `approval.plan_sha256 == plan_sha256(now)` comparison → the journey test fails at the post-edit render; restore.
-
-**Blast radius:** none beyond these modules.
-
----
-
-### A6 — Timing core
-
-**What this means for the user:** visuals and the highlighted caption word land on the spoken word, and pacing stays watchable.
-
-**Files:** `src/animated_infographics/timing/{frames.py,beats.py,captions.py,items.py,sfx.py}` · `tests/test_timing_*.py`
-
-**Interfaces:**
-
-```python
-def ms_to_frame(ms: int) -> int
-def scene_start_frames(beats: Sequence[Beat]) -> list[int]
-def duration_frames(transcript: Transcript) -> int
-def build_beats(transcript: Transcript, groups: Sequence[Sequence[int]]) -> list[Beat]
-def paginate(transcript: Transcript) -> list[CaptionPage]         # ms; frames applied in compile
-def item_frames(n: int, scene_frames: int, spread: float) -> list[int]
-def count_frames(scene_frames: int) -> int
-def schedule_sfx(cues: Sequence[SfxCue], available: Mapping[str, int], muted: set[str]) -> list[SfxEvent]
-```
-
-**Build:** exactly `design_audio_and_timing.md` §6–9 and `design_templates.md` §1 rule 5. No I/O, no models, no randomness.
-
-**Validate:** every case for these modules in `design_testing_and_validation.md` §2, including the 500-stream property test (seeded) and `ms_to_frame(550) == 17`, `ms_to_frame(516) == 15`, and start frame **144** for a beat at 5,000 ms. **Falsify:** replace round-half-up with Python's `round` → the 550 case fails; set `LEAD_MS = 0` → the 144 case fails; set `CAPTION_MAX_WORDS = 4` → the paging case fails.
-
-**Blast radius:** §1.3 G4 count.
-
----
-
-### A7 — LLM backend
-
-**What this means for the user:** planning runs locally, is deterministic on re-runs, and survives bad model output.
-
-**Files:** `src/animated_infographics/planner/{__init__.py,llm.py}` · `tests/test_llm.py` · `tests/slow/test_llm_slow.py`
-
-**Interfaces:**
-
-```python
-class LLMBackend(Protocol):
-    calls: int          # incremented at entry, before cache lookup
-    cache_hits: int
-    def generate_json(self, *, stage: str, messages: list[dict], schema: dict, attempt: int) -> dict: ...
-@dataclass
-class Attempt: output: dict | None; errors: list[str]
-def run_with_retries(backend: LLMBackend, *, stage: str, system: str, user: str, schema: dict,
-                     validate: Callable[[dict], tuple[dict, list[str]]], max_attempts: int = 3
-                     ) -> tuple[dict | None, list[Attempt]]
-```
-
-`validate` returns a possibly repaired output plus errors; empty errors means accept.
-
-**Build:** `design_planner.md` §1 exactly: `OllamaBackend` with every setting in the table, the canonical-JSON cache key, `cache/llm/` relocatable by `INFOGRAPHICS_CACHE_DIR`, the retry transcript format, and `INFOGRAPHICS_PLANNER_MODEL`. Ollama down, or the model absent → `DependencyMissing` (exit 4). A JSON parse failure is a failed attempt, never an exception. `run_with_retries` returns `(None, attempts)` after the last failure, so callers own their fallback. Create `tests/slow/` here (this creates **G11**).
-
-**Validate:** unit tests with `httpx.MockTransport`: the second attempt carries the previous output and the error lines; the seed is 7, 8, 9 across attempts; the cache key is identical for dicts with different key order; a cache hit still increments `calls` (entry-point counter) and `cache_hits`. Slow: **20/20** schema-conforming responses from `gemma4:26b` on a toy schema with an `enum` and a `maxLength`; the response carries no thinking content (`think: false` honoured); record the mean latency. **Falsify:** a non-existent model → exit 4 with its name; move the `calls += 1` below the cache check → the cache-hit counting test fails.
-
-**Blast radius:** §1.3 G11.
-
----
-
-### A8 — Narrator voice selection (NEW, Issue 1)
-
-**What this means for the user:** a Reddit story told by a woman is read by a female voice. Everything else (history, men's stories, stories where the narrator's gender is never stated) is read by a male voice. The system never guesses a gender from stereotypes.
-
-**Read first:** `design_planner.md` §10 (the rule, constants, lexicons, the `voice.json` shape, the fixture table) and `design_data_contracts.md` §9.
-
-**Files:** `src/animated_infographics/planner/voice.py` · `src/animated_infographics/planner/prompts/voice.md` · `src/animated_infographics/stages/voice.py` (stage wrapper) · `tests/test_voice.py` · `tests/slow/test_voice_slow.py`
-
-**Interfaces:**
-
-```python
-FIRST_PERSON_TOKENS: Final[frozenset[str]]
-FEMALE_TOKENS: Final[frozenset[str]]
-MALE_TOKENS: Final[frozenset[str]]
-POSSESSIVES: Final[frozenset[str]] = frozenset({"my", "our", "your", "his", "her", "their", "its"})
-NARRATOR_TAG_RE: Final[re.Pattern[str]]            # the pattern in design_planner.md §10 step 3, re.IGNORECASE
-
-def strip_quoted(text: str) -> str                  # curly→straight quotes, then drop every "…" span
-def first_person_rate(text: str) -> float           # on strip_quoted(text); round(…, 2)
-def find_narrator_tag(text: str) -> tuple[Literal["female", "male"], str] | None
-def self_identifying_token(evidence: str, gender: Literal["female", "male"]) -> str | None
-def validate_gender_answer(text: str, answer: dict) -> tuple[dict, list[str]]
-def decide_voice(perspective: str, gender: str) -> str
-def select_voice(title: str | None, body: str, *, flag_voice: str | None,
-                 backend: LLMBackend) -> VoiceDecision
-```
-
-**Build:**
-1. Constants into `config.py`/`voice.py` **verbatim** from `design_planner.md` §10 (`VOICE_DEFAULT`, `VOICE_FEMALE_NARRATOR`, `INSTALLED_VOICES`, the token sets, `FIRST_PERSON_RATE_MIN = 2.0`).
-2. `select_voice` runs the five steps of §10 **in order**, returning at the first step that decides:
-   - (1) flag → `source="flag"`, `reason="flag"`, all analysis fields `None`, **no backend call**;
-   - (2) `first_person_rate(title + "\n" + body) < 2.0` → `third_person`, `am_michael`, no backend call;
-   - (3) `find_narrator_tag(title + "\n" + body)` on the **unstripped** text → `reason="tag"`, evidence = the matched text, no backend call;
-   - (4) one `run_with_retries(stage="voice", …, validate=partial(validate_gender_answer, text))` → accepted `female`/`male` gives `reason="llm"`; `None` (all attempts failed) or `unknown` gives `narrator_gender="unknown"`, `reason="no_evidence"`;
-   - (5) `voice = decide_voice(...)`.
-3. `validate_gender_answer`: rule a (repair `unknown`+evidence → evidence `None`), rule b (verbatim span via `planner/grounding.py`'s `norm` + word-boundary substring; **if A14's `grounding.py` does not exist yet, create `norm()` and `is_verbatim_span()` there now**, exactly per `design_planner.md` §8, and A14 reuses them), rule c (`self_identifying_token` must return non-`None` for the claimed gender).
-4. `self_identifying_token` implements rule c of `design_planner.md` §10 **exactly**:
-   - split into clauses on `. ! ? ; :`; tokenise with `[A-Za-z0-9'\-éÉ]+`, **keeping case**;
-   - scan for Form A openers (`I'm`, or `I` + `am|was|became`, or `I've` + `been`), then check the next 4 tokens as candidates;
-   - scan for Form B anchors (`as`/`being`, any case), then check the next 4 tokens as candidates, each also requiring a `SUBJ` token within the 4 tokens after it;
-   - a candidate must pass the four checks (lowercase as written; lexicon or hyphen-head; no possessive or `'s` before; no capitalised non-`SUBJ` token after);
-   - return the first passing candidate, else `None`.
-
-   Implement the four checks as four separately named helpers, so each falsification below removes exactly one.
-5. `prompts/voice.md`: the substance listed in §10 step 4, with the full text given as `{text}` and the instruction to return JSON only. It includes two short in-prompt examples: one `female` with evidence copied exactly, and one `unknown` with `null`. **The examples must not use the fixtures' sentences**; that would teach to the test.
-6. Stage wrapper `stages/voice.py`: reads `ingest.json` (title + paragraphs joined by `\n\n`), reads the `--voice` flag from the run context, writes `voice.json`, and writes `logs/voice.log` ending in the counters line (§0 rule 10). Register it in the stage registry for text inputs only.
+**Implementation:**
+1. Add `music: str | None` and `sfx_dir: str | None` (job-relative) to the ingest record model in `contracts/models.py`. Export (G8).
+2. `stages/ingest.py`: when the run context carries music/SFX (only `new` sets them), record `"input/<music filename>"` and `"input/sfx"` in `ingest.json`; otherwise record `null`.
+3. `stages/compile.py`: read `ingest.json`. If `music` is set, run `prepare_music(job.dir / music, audio/music.wav)` **on every run**. If `sfx_dir` is set, run `prepare_sfx(job.dir / sfx_dir, audio/sfx)` on every run. Delete both `ctx` reads and both "already exists" fallbacks.
+4. **Only `stages/ingest.py` may read `ctx.music_path` / `ctx.sfx_dir`.** Add a unit test that greps `src/animated_infographics/` for those attribute names and asserts they appear only in `cli.py` (where `new` sets them) and `stages/ingest.py`.
+5. `jobs.py:55`: add `"ingest.json"` to `STAGE_INPUT_DEPENDENCIES["compile"]`.
+6. `scripts/e2e.sh` step 4: after `render`, assert `timeline.audio.music` non-null, `audio.sfx` non-empty, and that `audio/music.wav` and ≥ 1 `audio/sfx/*.wav` exist (`design_testing_and_validation.md` §4).
 
 **Validate:**
-- **Unit** (fake backend; every case in `design_testing_and_validation.md` §2's `planner/voice.py` row). In particular:
-  - the four fixtures' rates equal 5.45 (`story_recipe_box`) / 3.67 (`story_room_12`) / 0.00 / 0.00 (±0.01);
-  - the tag cases; **all 23 evidence cases** in `design_planner.md` §10's table, each its own parametrised test id;
-  - the 6-row `decide_voice` truth table;
-  - `--voice am_michael` → `backend.calls == 0`;
-  - a backend that fails three times → `unknown` / `no_evidence` / `am_michael` with no exception.
-- **Slow** (real `gemma4:26b`, `--no-llm-cache`):
-  - all four fixtures match `fixtures/expected/*.json` (`voice`, `voice_reason`, `evidence_contains`);
-  - `molasses_flood` and `emu_war` have `calls == 0` for this stage;
-  - the two inline snippets in the testing doc give `unknown`/`am_michael` and `male`/`am_michael`.
-- **Falsify, each red then green:**
-  - (a) remove the possessive check → `I'm her daughter` is accepted → red;
-  - (a2) remove the lowercase check → `I am the Queen of this house` is accepted → red;
-  - (a3) remove the name-after check → `I'm sister Maya's favourite` is accepted → red;
-  - (a4) remove Form B's following-`I` requirement → `She treated me as a sister for years` is accepted → red;
-  - (b) drop the first-person prefix group from `NARRATOR_TAG_RE` → `My sister (22F) said` is detected as a narrator tag → red;
-  - (c) remove `strip_quoted` from `first_person_rate` → the "I only inside quotes" case becomes first person → red;
-  - (d) call the backend before checking the flag → the zero-calls test → red.
-- **Look:** paste the four fixtures' `voice.json` contents into the commit body.
+- **Red first:** add the unit test below and the E2E assertion, run them on the unfixed code, and record both failures.
+- **Unit:** build a job with `ingest.json` naming music and SFX; run compile; `invalidate_after("storyboard")`; run compile again with `RunContext()`. `timeline.audio.music` must be non-null and `sfx` non-empty.
+- **Journey:** `new … --music … --sfx-dir …` → edit `storyboard.json` → `preview` → `approve` → `render`. The assertions from step 6 must hold.
+- **Falsify:** restore the `ctx.music_path` read in compile → the unit test is red; restore.
 
-**Blast radius:** `ongoing_general_errors.md` Issue 1 status gets "A8 delivered; A9 pending". Nothing else.
+**Blast radius:** `contracts/models.py`, `schema/`, `renderer/src/generated/` (regenerate), `stages/ingest.py`, `stages/compile.py`, `jobs.py`, `scripts/e2e.sh`, tests.
 
 ---
 
-### A9 — Narration (Kokoro)
+### B2 — LLM error classification
 
-**What this means for the user:** a pasted story becomes a clean narration in the selected voice, with exact word timings.
+**What this means for the user:** today, a caption like "the recipe card was not found" makes the tool claim the planner model is missing and quit.
 
-**Files:** `src/animated_infographics/{ingest.py,audio/narrate.py,audio/loudness.py,stages/ingest.py,stages/narrate.py}` · `tests/slow/test_narrate_slow.py`
+**The gap:** `src/animated_infographics/planner/llm.py:161` raises `DependencyMissing` whenever the lowercase response text contains "not found", including in successful 200 replies. Reproduced September 25 with `httpx.MockTransport`: a 200 reply whose JSON content was `{"caption": "The last recipe card was not found"}` raised "Ollama model 'gemma4:26b' not found". Contract: `design_planner.md` §1 ("Error classification").
 
-**Interfaces:**
-
-```python
-def ingest(input_path: Path, title_override: str | None) -> IngestRecord
-def narrate(ingest: IngestRecord, voice: VoiceDecision, out_dir: Path) -> tuple[Transcript, NarrationOffsets]
-def loudnorm_two_pass(src: Path, dst: Path, *, target_lufs: float, true_peak: float, lra: float,
-                      sample_rate: int, channels: int) -> LoudnessReport
-def measure_loudness(path: Path) -> LoudnessReport    # ffmpeg ebur128=peak=true
-```
-
-**Build:** `design_audio_and_timing.md` §1, §2, §5:
-- One `KPipeline(lang_code="a", repo_id="hexgrad/Kokoro-82M", device="cpu")` per job; one call per sentence with `voice=voice.voice`, `speed=1.0`.
-- Concatenate `Result.audio` in order; insert the pause constants as zero samples; write `audio/narration_24k_raw.wav` (float32).
-- Build words from `Result.tokens` with the four token→word rules. Build sentences and paragraphs (title = sentence 0, `is_title: true`).
-- Two-pass `loudnorm` → `audio/narration.wav` (48 kHz mono s16).
-- `narration.json.voice` = `voice.json.voice`. Add `kokoro>=0.9.4`. Wire `ingest` and `narrate`.
-
-**Validate (slow, all four fixtures):**
-- `transcript.json` satisfies every invariant in `design_data_contracts.md` §2.
-- `narration.json` offsets are **exact**: segment samples plus inserted silence equal `narration_24k_raw.wav`'s length **to the sample**.
-- `narration.wav` is 48 kHz mono s16 at −16 ± 0.5 LUFS integrated.
-- `narration.json.voice == voice.json.voice`; `story_recipe_box` is `af_heart`, the other three `am_michael`.
-- **The voice parameter really reaches Kokoro:** synthesise the first sentence of `molasses_flood` with each voice. The two raw arrays must not be equal. Record the median spectral centroid (numpy FFT over 2,048-sample frames whose RMS exceeds −40 dBFS) for each voice. **Expectation:** `af_heart`'s is higher. If it is not, investigate whether the voice argument is being ignored before accepting it, and record the finding.
-- Record `narrate` wall time on `emu_war` (bar ≤ 60 s) and the narration duration.
-
-**Falsify:** drop `PAUSE_BETWEEN_SENTENCES_MS` from the offset sum only → the exact-offset test fails; hard-code `voice="af_heart"` in `narrate` → the per-fixture voice assertion fails.
-
-**Blast radius:** §1.3 G11 count. **Issue 1 collapses** into one §3 line (A8 + A9 together).
-
----
-
-### A10 — Transcription (Whisper)
-
-**What this means for the user:** their own recordings work, and we know how far ASR timing can be trusted, which live mode will depend on.
-
-**Files:** `src/animated_infographics/{audio/transcribe.py,stages/transcribe.py}` · `tests/slow/test_transcribe_slow.py`
-
-**Build:** `design_audio_and_timing.md` §3, §5. Add `mlx-whisper` and dev dep `jiwer`. Wire `transcribe` (audio path: `ingest` → `transcribe`; no `voice`, no `narrate`).
-
-**Validate (slow):**
-- WER ≤ **8%** on `molasses_flood_say.m4a` vs the source text (normalise: lowercase, strip punctuation).
-- Whisper on **Kokoro's** `molasses_flood` narration vs Kokoro's own timestamps: word-start error median ≤ **80 ms**, p95 ≤ **250 ms**. Align words by `difflib.SequenceMatcher` over normalised tokens and compare matched pairs only; record the match rate.
-- `transcribe` of the `emu_war` narration ≤ **45 s**.
-
-**Record the measured values.** **Falsify:** compute WER against `story_room_12.txt` instead → the bar fails.
-
-**Blast radius:** §1.3 G11 count.
-
----
-
-### A11 — Renderer foundation (+ `kinetic_quote`)
-
-**What this means for the user:** the look, the captions, the sound and the sync exist, before any intelligence is attached.
-
-**Files:**
-- `renderer/src/theme/{palette.ts,type.ts,motion.ts,layout.ts}`
-- `renderer/src/clock/{types.ts,SceneClockContext.tsx,GlobalClockContext.tsx}`
-- `renderer/src/clock/remotion/{RemotionSceneClock.tsx,RemotionGlobalClock.tsx}`
-- `renderer/src/story/{Story.tsx,calculateMetadata.ts,Background.tsx,SceneLayer.tsx,Captions.tsx,AudioLayer.tsx,SyncProbe.tsx,entities.tsx}`
-- `renderer/src/components/FitText.tsx`
-- `renderer/src/templates/{index.ts,kinetic_quote.tsx,Placeholder.tsx}`
-- `renderer/src/gallery/{Gallery.tsx,fixtures/kinetic_quote.ts}`
-- `renderer/scripts/render.ts` · `renderer/test-data/timeline_smoke.json` · `scripts/check_renderer_purity.sh`
-
-**Build:**
-- Theme tokens from `design_visual_direction.md` §1–5 and §8 (the only place hex codes and sizes live).
-- The clock per `design_rendering.md` §3: the Remotion adapter is the only code touching `useCurrentFrame`/`useVideoConfig`/`<Sequence>`.
-- `Story` per `design_rendering.md` §1, §4, §5:
-  - Ajv validation in `calculateMetadata`;
-  - the background;
-  - `SceneLayer` mounting each scene from `start_frame` for `min(end_frame + EXIT_FRAMES, duration_frames) − start_frame` frames, later scenes on top;
-  - `Captions` on the global clock, respecting `hide_captions`;
-  - `AudioLayer` for narration, music and SFX;
-  - `SyncProbe` when `debug.sync_probe`;
-  - `entities.tsx` exposing `useCast(id)`, `usePlace(id)`, `useSetPiece(id)` from the timeline dictionaries.
-- `FitText` per §6, with fonts awaited through `delayRender`.
-- `templates/index.ts` maps every one of the 16 registry names to a component: `kinetic_quote` real (`design_templates.md` §2.2), **the other 15 → `Placeholder`** (a `bgRaised` card with the template name and `NOT YET IMPLEMENTED`).
-- `render.ts` with `stills` / `media` / `gallery` modes, public-dir assembly, one bundle + one browser per invocation, `onBrowserLog` capture, and the exit codes of `design_rendering.md` §2.
-- `check_renderer_purity.sh` (**G9**) with `grep -rnF` over all `.ts`/`.tsx` under `renderer/src/` except `src/clock/remotion/`.
-- `timeline_smoke.json`: 3 `kinetic_quote` scenes, 2 caption pages, `fixtures/music/test_bed.wav` standing in for narration, `debug.sync_probe: true`.
+**Implementation:**
+1. Only when `resp.status_code != 200`:
+   - 404, or a JSON `error` field naming a missing model → `DependencyMissing` (exit 4);
+   - any other non-200 → raise `LLMResponseError(ValueError)`, which `run_with_retries` counts as a failed attempt.
+2. A 200 response is never inspected beyond `message.content`.
 
 **Validate:**
-- G9 green.
-- Render the smoke timeline in `media` mode → ffprobe 1080×1920, 30/1, frame count = `duration_frames`; the sync probe flips at both scene boundaries (pixel (24, 24) at `start − 1` / `start + 1`; luma < 40 vs > 215).
-- `gallery` for `kinetic_quote`: three stills, zero overflow on `max`.
+- The `planner/llm.py` unit rows in `design_testing_and_validation.md` §2: 200 containing "not found" → parsed JSON returned; 404 → exit-4 error; 500 → failed attempt, then fallback.
+- **Red first** with the 200 case on the unfixed code.
+- **Falsify:** re-add the substring check → red.
 
-**Falsify:** add `useCurrentFrame()` to `kinetic_quote` → G9 exit 1, revert → 0; shift `SceneLayer`'s mount by one frame → the sync-probe check fails. **Look:** open the three gallery stills and the middle frame of the smoke render, and describe them in the commit body.
-
-**Blast radius:** §1.3 G9.
+**Blast radius:** `planner/llm.py`, `tests/test_llm.py`.
 
 ---
 
-### A12 — Bible and geo resolution
+### B3 — Planner crash containment
 
-**What this means for the user:** the same person looks the same all video long, places land on the map where they really are, and a female narrator's avatar matches her voice.
+**What this means for the user:** today, one malformed or truncated reply from the model crashes the whole planning stage instead of falling back.
 
-**Files:** `src/animated_infographics/planner/{bible.py,geo.py,prompts/bible.md}` · `src/animated_infographics/stages/bible.py` · `tests/test_geo.py` · `tests/test_bible.py` · `tests/slow/test_bible_slow.py`
+**The gap:**
+- `src/animated_infographics/planner/props.py:223-260` and `planner/select.py:246-300` run their own retry loops. They call `backend.generate_json(...)` (`props.py:233`, `select.py:256`) **outside any try**.
+- `generate_json` raises `json.JSONDecodeError` on unparseable content. Reproduced September 25: a stub backend returning truncated JSON made `plan_single_template_props` raise `JSONDecodeError`.
+- Their retries also omit the previous output as an `assistant` message, which `design_planner.md` §1 requires.
 
-**Interfaces:**
+**Implementation:**
+1. Rewrite `plan_single_template_props` to call `run_with_retries(backend, stage="props", system=…, user=…, schema=…, validate=…)`. The `validate` callable builds the `Scene` from the dict, runs `validate_scene`, and returns `(dict, errors)`. Take `attempts` for `plan_report.json` from the returned list.
+2. Do the same for each selection window in `select.py` (`stage="select"`); the existing checks become its `validate`.
+3. The fallbacks stay exactly as they are: select → `kinetic_quote` choices; props → alternate, then deterministic `kinetic_quote`.
+4. Add a unit test: `generate_json(` may appear under `src/animated_infographics/planner/` only in `llm.py`. Corroborate that absence with the count of `run_with_retries(` call sites, which must be **5**: voice, bible, segment, select, props.
 
-```python
-class Gazetteer:
-    @classmethod
-    def load(cls, cities: Path, country_info: Path) -> "Gazetteer": ...  # index built once, pickled under the cache dir keyed by the files' SHA-256
-    def resolve(self, name: str, country_iso3: str | None) -> tuple[float, float] | None: ...
-def plan_bible(transcript: Transcript, voice: VoiceDecision | None, backend: LLMBackend,
-               gazetteer: Gazetteer, bboxes: Mapping[str, tuple[float, float, float, float]]) -> Bible
-def repair_bible(raw: Bible, voice: VoiceDecision | None, gazetteer: Gazetteer, bboxes: ...) -> Bible   # pure
-```
+**Validate:** the "planner crash containment" row in `design_testing_and_validation.md` §2 (every reply truncated → storyboard completes, `fallback_level: 2` recorded). **Red first** on the unfixed code (the stage raises). **Falsify:** put one direct `generate_json` back → the grep test is red.
 
-**Build:** `design_planner.md` §2: the prompt (including the narrator's gender when `voice.json` knows it), the schema with enums, the five deterministic repairs (**repair 5 is new: female narrator → `facial_hair: "none"`**), gazetteer matching with `alternatenames`, the bbox check with a 0.5° margin, and the fallback bible. Wire the `bible` stage; for audio inputs `voice` is `None`.
+**Blast radius:** `planner/props.py`, `planner/select.py`, tests. Scene-count parity: the four fixtures must still produce exactly one scene per beat.
+
+---
+
+### B4 — Grounding: scale words are not numbers on their own
+
+**What this means for the user:** today, a wrong "1 million" could appear on screen and pass the fact check.
+
+**The gap:** `src/animated_infographics/planner/grounding.py:101` treats `thousand`/`million`/`billion` as spelled numbers by themselves. Reproduced September 25: `numbers("holding 2.3 million gallons")` returns `[2.3, 2300000.0, 1000000.0]`. Contract: `design_planner.md` §8 (new scale-word bullet).
+
+**Implementation:** a scale word contributes a value only inside a spelled run (`two million`) or after a leading `a` (`a million`). After a digit number it only scales that number (already handled by the `DIGIT_SCALE_MAP` path).
+
+**Validate:** the "grounding scale words" unit row (`design_testing_and_validation.md` §2), **red first**. All existing grounding tests still pass, including "about 150" rejecting a stat of 1,500. **Falsify:** revert → the "not 1,000,000" case is red.
+
+**Blast radius:** `planner/grounding.py`, `tests/test_grounding.py`.
+
+---
+
+### B5 — LLM-facing schemas without length limits; text completeness; planner eval re-run
+
+**What this means for the user:** today, about one scene in five shows text chopped off mid-word ("Rescuers wade through waist-", "Modern Era (").
+
+**The gap:**
+- The schemas sent as Ollama `format` carry Pydantic's `maxLength`: `planner/props.py:194` (`spec.props_model.model_json_schema()`), `planner/bible.py:22` (`BIBLE_SCHEMA`) and `planner/voice.py:101` (`maxLength: 160`).
+- Constrained decoding enforces them by **force-closing the string**, so truncated text is always "valid".
+- Measured September 25 over the 177 unique scenes in `artifacts/e2e/*`: **34 of 701 strings sit exactly at their `maxLength` with no terminal punctuation; 21 contain raw newlines.**
+- This is also why the committed planner eval (`docs/evals/planner_2026-09-25.md`) shows a 0.0% fallback rate.
+- Contract: `design_planner.md` §1 (LLM-facing schemas), §6 item 6 (text completeness).
+
+**Implementation:**
+1. `planner/llm.py`: `llm_facing_schema(schema: dict) -> dict` recursively removes `maxLength`, `minLength`, `maxItems`, `minItems` and `pattern` everywhere (properties, `items`, `$defs`, `anyOf`/`oneOf`); `enum`, `type`, `required` and `additionalProperties` stay. **Apply it inside `OllamaBackend.generate_json`, before building the payload and before computing the cache key**, so no caller can bypass it. The caches invalidate once; that is expected.
+2. Validation still enforces every limit, through Pydantic plus the text-fit check. Retry messages name the field, its length and its limit, and ask for "a complete phrase".
+3. `planner/validate.py`:
+   - `normalize_text(s)`: collapse whitespace, including `\n`, to single spaces and strip. Apply it to every free-text field **before** validation in `props.py`, and again in `compile.py` before writing `timeline.json` (so hand-edited newlines never reach the renderer).
+   - `text_complete_errors(path, s)` implements `design_planner.md` §6 item 6 for the free-text fields: `title`, `subtitle`, `text`, `caption`, `descriptor`, `traits[]`, `label`, `heading`, `points[]`, `kicker`, `contact_name`, `messages[].text`, `lines[].text`, `events[].label`, `markers[].label`, `edges[].label`, and a non-empty `suffix`. It is **not** applied to ids, enums, `prefix`, `date_label` or `era_label`; those wait on Issue 4.
+4. `evals/text_audit.py`: over a set of `storyboard.json` files, count strings at exactly their `maxLength` without terminal punctuation, strings containing `\n`, and strings failing `text_complete_errors`. Print JSON.
+5. Re-run the planner eval (`--no-llm-cache`) → a new `docs/evals/planner_<date>.md`. Add a "text audit" section from step 4 over the eval's storyboards.
 
 **Validate:**
-- **Unit:**
-  - Boston resolves to USA by gazetteer; `Constantinople` resolves to Istanbul through `alternatenames`;
-  - LLM coordinates outside the country bbox → `geo_source: "none"`;
-  - duplicate colour slots repaired deterministically;
-  - **repair 5:** a bible whose narrator has `facial_hair: "beard"` with `narrator_gender: "female"` comes out `"none"`; the same bible with `male`, `unknown` or `voice=None` is unchanged.
-- **Slow:** the expectation checks for all four fixtures:
-  - Boston by gazetteer;
-  - Meredith + an `AUS` place;
-  - `Rose`, `Danny`, `Walt` + narrator with `facial_hair: "none"` + Duluth (Minnesota, not Georgia) and Thunder Bay by gazetteer;
-  - `Alvarez`, `Deb`, `Sofia` + narrator + Amarillo by gazetteer.
+- **Red first:** run `evals/text_audit.py` over the existing `artifacts/e2e/*/jobs/**/storyboard.json` and record the counts. Expect the 34 at-limit and 21 newline strings measured above.
+- Unit: every row of the "text completeness" test, and a schema-walk test proving no length keys survive `llm_facing_schema` for any template, the bible or voice, while `enum` does.
+- After the eval: **0 newline strings, 0 completeness failures**. Record the at-limit count (expected near 0; each remaining one must end with punctuation).
+- All `design_planner.md` §9 bars still hold (fallback L2 ≤ 15%, distinct templates, 0 violations, `story_recipe_box` planner wall time ≤ 240 s, voice 4/4). **A rise in fallbacks is honest and expected. If a bar fails, file it with the numbers; never loosen it.**
+- **Falsify:** skip `llm_facing_schema` in `generate_json` → the schema-walk test is red.
 
-  A warm-cache re-run is byte-identical.
-
-**Falsify:** remove the bbox check → the out-of-bbox unit test fails; remove repair 5 → its unit test fails.
-
-**Blast radius:** none.
+**Blast radius:** `planner/llm.py`, `planner/validate.py`, `planner/props.py`, `compile.py`, `evals/text_audit.py`, `docs/evals/planner_<date>.md`, tests. Prompt changes, if any, are recorded with their SHA-256 in the eval report.
 
 ---
 
-### A13 — Segmentation
+### B6 — The contact sheet flags failed images
 
-**What this means for the user:** each scene carries one idea and stays on screen long enough to read.
+**What this means for the user:** today, a scene whose illustration failed looks normal on the contact sheet. The reviewer only learns about it from `report.json`.
 
-**Files:** `src/animated_infographics/planner/{segment.py,prompts/segment.md}` · `src/animated_infographics/stages/segment.py` · `tests/test_segment.py` · `tests/slow/test_segment_slow.py`
+**The gap:** `src/animated_infographics/stages/preview.py:52-64` flags only overflow ∪ fallback. `design_rendering.md` §7 steps 3–4 also require scenes whose image failed. `report.json` already lists `failed_images` (`preview.py:322-336`) but nothing uses it for flags.
 
-**Build:** `design_planner.md` §3, then A6's `build_beats` on every result, including the fallback. Wire `segment`.
+**Implementation:** flagged scenes = overflow ∪ `fallback_level 2` ∪ scenes whose `place_id` / `set_piece_id` names an entity with manifest `status: "failed"`. `storyboard.md`'s flags column adds `image failed`.
 
-**Validate:** unit: the partition validator rejects a gap, a duplicate and an out-of-order index; the fallback gives one group per sentence. Slow: every fixture's `beats.json` tiles the narration; every beat k ≥ 1 is within [1,500, 8,000] ms (or logged "no valid split"); record beat counts and the duration histogram. **Falsify:** skip the merge pass → the bounds assertion fails on at least one fixture. If it does not, construct a synthetic transcript where it must, and say so.
+**Validate:** a unit test with a manifest marking `v1` failed and a `set_piece` scene on `v1`: that tile's label strip pixel is `danger` (`#FF6B8B`), and its `storyboard.md` row contains `image failed`. **Red first**; **falsify** by removing the new set → red. **Look:** run a job with `INFOGRAPHICS_IMAGE_TIMEOUT_S=1` and describe the contact sheet.
 
-**Blast radius:** none.
-
----
-
-### A14 — Storyboard planning and the planner eval
-
-**What this means for the user:** every beat gets a fitting visual, numbers on screen are exactly the numbers said, and nothing breaks when the model misbehaves.
-
-**Files:** `src/animated_infographics/planner/{select.py,props.py,validate.py,grounding.py,prompts/select.md,prompts/props.md}` · `src/animated_infographics/textfit.py` · `src/animated_infographics/stages/storyboard.py` · `src/animated_infographics/evals/planner.py` · `tests/test_grounding.py` · `tests/test_validate.py` · `tests/test_select_rules.py` · `tests/test_textfit.py`
-
-**Interfaces:**
-
-```python
-def norm(s: str) -> str
-def numbers(s: str) -> list[float]
-def is_verbatim_span(needle: str, haystack: str) -> bool
-def digits_grounded(label: str, transcript_text: str) -> bool
-def fits(text: str, slot: TextSlot) -> FitResult                        # Pillow, size_min, box_width × 0.95
-def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]         # shared by planner and `preview`
-def validate_plan(bible: Bible, storyboard: Storyboard, ctx: PlanContext) -> list[str]
-def allowed_templates(bible: Bible) -> list[str]
-def apply_rules(choices: list[Choice], n_scenes: int) -> tuple[list[Choice], list[RuleRepair]]
-def plan_storyboard(transcript, beats, bible, backend) -> tuple[Storyboard, PlanReport]
-```
-
-**Build:** `design_planner.md` §4–8:
-- The allowed-template computation; 6-beat windows with 2 beats of context; rules R1–R5 (R3 after props).
-- The per-scene fallback ladder; the deterministic `title_card` and `kinetic_quote`; `plan_report.json`.
-- `norm`/`is_verbatim_span` already exist from A8. Extend `grounding.py`, don't duplicate.
-- `evals/planner.py` per §9 on **all four** fixtures, including the voice-decision column. Wire the `storyboard` stage.
-
-**Validate:** unit cases per the testing doc §2 (grounding, validators, rules, textfit). **Falsify:** stub `numbers()` to return every number × 10 → the `1500`-vs-`150` rejection test goes **red** (1500 now matches) and the correct-stat test goes **red** (it no longer matches); restore → green.
-
-Run the planner eval → `docs/evals/planner_<date>.md` committed, **every bar in `design_planner.md` §9 met**, including voice 4/4. The independent re-validation of the final storyboards shows 0 violations. If a bar fails:
-1. Iterate on prompts; every change re-runs the eval.
-2. If it still fails, run the eval on `qwen3.6:35b` and **file the model choice as an issue**.
-3. Never loosen a bar.
-
-**Blast radius:** §1.3 G4/G11 counts.
+**Blast radius:** `stages/preview.py`, `preview.py`, tests.
 
 ---
 
-### A15 — Compile and preview
+### B7 — Legible text over images; captions through FitText
 
-**What this means for the user:** after `new`, they get a contact sheet and a readable storyboard, headed by the voice decision, so they can judge the whole video in a minute, plus a way to fix what they don't like.
+**What this means for the user:** today, captions on place and object illustrations are unreadable (pale text on a pale image), and a very long caption word can overflow the caption band.
 
-**Files:** `src/animated_infographics/{compile.py,preview.py,audio/mix_prep.py}` · `src/animated_infographics/stages/{assets.py,compile.py,preview.py}` · `tests/test_compile.py` · `tests/test_preview.py`
+**The gap:**
+- `renderer/src/templates/location.tsx:147-157` and `set_piece.tsx:125-135` implement the old 320 px 0→85% scrim, **as the design said**. The design was wrong: over a white pixel the caption measured **1.95 : 1** (tile `s006` of `docs/evals/assets/2026-09-25/e2e_recipe_box_contact_sheet.png`).
+- `renderer/src/story/Captions.tsx:66` uses a fixed `fontSize: 76` with no FitText (the spec is 76→60 px, max 2 lines).
+- Contracts (revised): `design_templates.md` §2.13 and §2.14, `design_visual_direction.md` §2.1 and §8.
 
-**Build:**
-- `compile.py`: `design_data_contracts.md` §7; `design_audio_and_timing.md` §6–9; `design_templates.md` §1 rule 5.
-- `mix_prep.py`: music/SFX normalisation and role parsing; unknown roles are ignored with a warning naming the file.
-- An interim `assets` stage (until A21) writing a manifest with every image `null`.
-- `preview.py` per `design_rendering.md` §7, with the **voice line first** in `storyboard.md` (exact formats in `design_planner.md` §10; audio inputs print `Voice: (recorded audio)`).
-- Wire `compile`, `preview`, `approve`'s overflow refusal, and `new` end-to-end to `awaiting_review`.
+**Implementation:**
+1. `renderer/src/theme/layout.ts`: export `IMAGE_SCRIM = { stops: [[640, 0], [800, 0.85], [1120, 0.92]] }` (y in canvas px, alpha of `bg`) and `IMAGE_TEXT_MIN_TOP = 807`.
+2. `renderer/src/components/ImageScrim.tsx` draws that gradient; `location` and `set_piece` both use it. The caption sits 12 px above the name; the name is bottom-aligned at y 1080.
+3. Commit `renderer/public/gallery/white.png` (solid `#FFFFFF`, 1024²) and add gallery fixture variant **`worst`** for `location` (max-length name and caption over `white.png`).
+4. `tests/test_contrast.py`: parse `IMAGE_SCRIM` and the palette. Interpolate the alpha at `IMAGE_TEXT_MIN_TOP` (must be ≥ 0.85), composite `bg` over white, and assert `ink` and `inkMuted` ≥ 4.5 : 1.
+5. Captions: render every caption page through `FitText` with a caption slot `{font: display, weight 800, size_max 76, size_min 60, max_lines 2, box_width 900}` defined once in `theme/type.ts`. The overflow log uses scene id `captions`.
 
 **Validate:**
-- Every compiled timeline validates in Python **and** in the renderer (Ajv).
-- Unit tests:
-  - tiling;
-  - hidden captions on the narrated title only;
-  - the 24-frame SFX gap;
-  - round-robin SFX files;
-  - the four voice-line formats.
-- `infographics new fixtures/scripts/molasses_flood.txt --music fixtures/music/test_bed.wav --sfx-dir fixtures/sfx` → exit 0, `awaiting_review`.
-- **Open `contact_sheet.png` and `storyboard.md` and look at them.** Commit a copy of the contact sheet to `docs/evals/assets/<date>/a15_molasses_contact_sheet.png`.
+- **Red first:** the new contrast test against the current scrim values must fail (alpha ≈ 0.53 at y 807 → 1.95 : 1).
+- G10 with regenerated goldens for `location`, `set_piece` and the new `location__worst`. **Open each regenerated golden and describe it in the commit body**: the text must be plainly readable on white.
+- Re-run `preview` on a `story_recipe_box` job and describe the `set_piece` tiles.
+- **Falsify:** set the 800 stop to 0.53 → the contrast test is red.
 
-**Falsify:** a `report.json` with non-empty `overflow` → `approve` exits 3; an edited storyboard with an ungrounded `stat_callout` → `preview` exits 2 and names the field.
-
-**Blast radius:** none beyond the modules.
+**Blast radius:** `location.tsx`, `set_piece.tsx`, `ImageScrim.tsx`, `layout.ts`, `type.ts`, `Captions.tsx`, gallery fixtures and goldens, `tests/test_contrast.py`.
 
 ---
 
-### A16 — Final render and output verification (walking skeleton)
+### B8 — Map legibility; `kinetic_quote` attribution avatar
 
-**What this means for the user:** the first real MP4. Placeholders stand in for unbuilt templates, but timing, captions, sound, voice and the review gate are all proven.
+**What this means for the user:** today, the map is a dark rectangle with an invisible coastline and hidden markers, and quoted lines show a letter in a circle instead of the character.
 
-**Files:** `src/animated_infographics/{render.py,stages/render.py}` · `src/animated_infographics/evals/e2e.py` · `scripts/e2e.sh`
+**The gap:**
+- `renderer/src/components/MapView.tsx:139,150,153,167` use the old colours, again **as the design said**. The design was wrong: land/sea measured **1.30 : 1**.
+- `:209` draws a radius-8 dot, and `:218` puts the label chip at `m.y − 48`, over the dot.
+- There is no lakes layer, so Lake Superior (the setting of `story_recipe_box`) is drawn as land.
+- `renderer/src/templates/kinetic_quote.tsx:170` renders `cast.name[0]` in a circle instead of the `Avatar`. That is a deviation from `design_templates.md` §2.2.
+- Contracts: `design_templates.md` §2.2 and §2.15, `design_visual_direction.md` §2.1.
 
-**Build:** `render.py` per `design_rendering.md` §8 (settings, every `verify.json` check); `scripts/e2e.sh` steps 1–6 of `design_testing_and_validation.md` §4, **including step 1's voice assertions** (**G12**). The script asserts every exit code explicitly (`[ $? -eq 3 ] || fail "…"`), never through a pipe.
-
-**Validate:** G12 green:
-- exit codes exactly as specified at every step;
-- `verify.json` all true for the text input and the audio input;
-- the sync probe flips at every scene boundary (record the count);
-- `molasses_flood`'s `voice.json` is `am_michael` / `third_person`.
-
-**Falsify:** render a copy of the timeline with `duration_frames` altered → the frame-count check fails; remove the `approve` call from the script → step 2's expected-3 assertion catches it. **Look:** extract three frames of `final.mp4` (start, middle, end) with ffmpeg and describe them in the commit body.
-
-**Blast radius:** §1.3 G12.
-
----
-
-### A17 — Visual primitives and the gallery gate
-
-**What this means for the user:** a consistent cast and a consistent look, held in place by a gate that catches visual regressions.
-
-**Files:** `renderer/src/components/{Avatar.tsx,Icon.tsx,Chip.tsx,Panel.tsx,Bubble.tsx,MapView.tsx,mapFraming.ts}` · `renderer/src/components/*.test.ts` · `renderer/src/gallery/fixtures/avatar_sheet.ts` · `renderer/goldens/` · `scripts/check_gallery.sh` · `tests/test_contrast.py`
-
-**Build:**
-- `Avatar` per `design_visual_direction.md` §6: all parameters, all 8 expressions, `age` scaling, and the elder hair rule.
-- `Icon` via the generated `iconMap.ts`.
-- `Chip`, `Panel`, `Bubble`.
-- `MapView` framing math as a pure `mapFraming.ts` (`design_templates.md` §2.15: min span, 25% padding, projection choice) with vitest tests.
-- An `avatar_sheet` gallery entry: 8 expressions × 4 parameter combinations, including an `elder` with `crown` and a `child`.
-- `scripts/check_gallery.sh` with overflow, golden diff and hold-motion checks, plus `--update`, per `design_testing_and_validation.md` §3.
-- The contrast test per `design_visual_direction.md` §2.
-
-**Validate:** G10 green over `kinetic_quote` and `avatar_sheet`. **Look at the avatar sheet**, including at 140 px: every expression must be recognisable. **Falsify:** change one palette colour → golden diff red; freeze `kinetic_quote`'s hold motion → motion check red; make `ink`-on-cast legal in a test copy of the palette → the forbidden-pair assertion red.
-
-**Blast radius:** §1.3 G10.
-
----
-
-### A18 — Templates: statement set
-
-`title_card`, `stat_callout`, `icon_list`, `reveal`, `cause_effect`, `comparison` (`design_templates.md` §2.1, §2.3–2.7).
-
-**What this means for the user:** numbers, lists, twists and cause-and-effect stop looking like placeholders.
-
-**Files:** `renderer/src/templates/<name>.tsx` and `renderer/src/gallery/fixtures/<name>.ts` for each, plus goldens.
-
-**Build:** each template exactly per its section: layout coordinates, slots from the registry, motion, and hold motion. Entrances use `timing.item_frames` and `timing.count_frames` from the timeline, never a local formula. Three fixtures each (`min`, `typical`, `max`).
-
-**Validate:** G10 green with zero overflow on every `max` fixture. If `max` cannot fit, lower the limit in `design_templates.md` **and** the registry in the same commit; never go below `size_min`. **Open every golden** and state in the commit body that it matches its layout spec: positions, colours, and navy text on cast colours. Re-run `new` on `molasses_flood` and check that these six templates are no longer placeholders on the contact sheet.
-
----
-
-### A19 — Templates: people set
-
-`character_intro`, `dialogue`, `text_thread`, `emotion_beat`, `relationship_map` (§2.8–2.12).
-
-**What this means for the user:** Reddit-style stories come alive: who said what, the text thread, the reaction, who is related to whom.
-
-**Build/Validate:** as A18. Additionally:
-- The `story_recipe_box` and `story_room_12` contact sheets both show `text_thread` or `dialogue` for their texted exchanges (Danny's photo text; the Deb exchange). If the planner chose neither, file it with the plan report rather than forcing it.
-- The narrator avatar in `story_recipe_box` has no facial hair (repair 5, now visible).
-- `story_recipe_box` shows a `map_focus` with a path from Duluth to Thunder Bay, or files why not.
-
----
-
-### A20 — Templates: place & time set, and delete the placeholder
-
-`location`, `set_piece`, `map_focus`, `timeline` (§2.13–2.16).
-
-**What this means for the user:** history stories get their maps, timelines and places.
-
-**Build/Validate:** as A18, with the icon fallback path (image `null`) as the `typical` fixture until A21. Then **delete `Placeholder.tsx`** and its mapping. Add a vitest **containment test in both directions**: every name in `templateRegistry.json` has a component file, and every component file in `src/templates/` (except `index.ts`) is in the registry. **Falsify:** remove one component → red. Check `grep -rnF "NOT YET IMPLEMENTED" renderer/src` → nothing, and corroborate that absence with the containment test's count (**16**).
-
----
-
-### A21 — Illustrations (FLUX.2 klein 4B; Issue 2)
-
-**What this means for the user:** places and key objects get real illustrations in one consistent style, and a failure never breaks a video.
-
-**Files:** `src/animated_infographics/assets/illustrate.py` · `src/animated_infographics/stages/assets.py` (replaces the interim) · `tests/test_illustrate.py` · `tests/slow/test_illustrate_slow.py`
-
-**Interfaces:**
-
-```python
-def image_prompt(kind: Literal["place", "set_piece"], visual_description: str) -> str
-def image_seed(prompt: str) -> int
-def cache_key(prompt: str, *, mflux_version: str) -> str
-def generate(prompt: str, out: Path, *, timeout_s: int) -> ImageResult     # subprocess; never raises on tool failure
-def run_assets(bible: Bible, job: Job) -> AssetManifest
-```
-
-**Build:** `design_visual_direction.md` §7 exactly:
-- **4B only**: the prompts and the `STYLE` string verbatim, the seed formula, the cache key, 1024×1024, 4 steps, quantize 8.
-- The per-image timeout (`INFOGRAPHICS_IMAGE_TIMEOUT_S`, default 180), the manifest, and the icon fallback.
-- `generate` builds an argument list, **never a shell string**. It passes the model-selection flag the installed mflux needs for the 4B (verified with `--help` and recorded in a code comment).
-- Output goes to a temp file, is validated with Pillow (opens, `verify()`, exactly 1024×1024), then renamed atomically into `cache/images/<key>.png` and copied into the job.
-- Swap the `location`/`set_piece` `typical` gallery fixtures to a real generated image and update their goldens.
-- **There is no Z-Image-Turbo code path, flag or benchmark** (Issue 2 → Option A).
+**Implementation:**
+1. `theme/palette.ts`: add `mapSea #0B1326`, `mapLand #4466A0`, `mapRegion #7C9FDB`, `mapBorder #0B1326`. `MapView` uses only these.
+2. Markers: radius 14, `highlight` fill, 4 px `bgDeep` stroke. Pulse ring radius 14→48, 4 px `highlight`, opacity 0.6→0, period 30. Chips: `bgDeep` fill, `ink` text, bottom edge at marker y − 26 (or top edge at y + 26 within 120 px of the panel top). Put the chip-placement math in a pure function in `mapFraming.ts`.
+3. Lakes:
+   - `scripts/setup.sh` downloads Natural Earth `geojson/ne_50m_lakes.geojson` from the `nvkelso/natural-earth-vector` repository (public domain) into `data/vendor/`, pinned in `data/vendor/CHECKSUMS`.
+   - A new `renderer/scripts/gen-lakes.ts` writes `renderer/public/geo/lakes-50m.json` (GeoJSON with a `"$comment"` DO-NOT-EDIT header, coordinates rounded to 3 decimals). It is committed, and `check_schema_sync.sh` regenerates and diffs it.
+   - `MapView` draws the lakes above land in `mapSea`.
+   - `doctor` checks the file.
+4. `kinetic_quote`: the attribution renders `<Avatar>` at 120 px (expression `neutral`) with a name chip below, per §2.2.
+5. `tests/test_contrast.py` asserts every map row in `design_visual_direction.md` §2.1 from the parsed palette.
 
 **Validate:**
-- Unit: `image_seed` is stable and in `[0, 2**31)`; `cache_key` changes when any keyed field changes; the prompt strings match the doc byte for byte.
-- Slow: the second generation of the same prompt is a cache hit in < 1 s; with `INFOGRAPHICS_IMAGE_TIMEOUT_S=1` every image fails, the manifest says `failed`, `preview/report.json` lists them, and the preview still completes with icon fallbacks. **That timeout run is the falsification of the fallback path.**
-- Record images per fixture and total `assets` wall time on `story_recipe_box` (the budget fixture).
-- **Look:** open the `molasses_flood`, `emu_war` and `story_recipe_box` contact sheets. Images must be flat vector, text-free and on-palette. If they are not, file it with the images attached. Small wording fixes to `STYLE` are allowed if noted in the commit; changing the model is not.
+- **Red first:** the new map contrast assertions fail on the current colours.
+- vitest: the chip rectangle and dot circle are disjoint for both placements (**falsify** with the old −48 offset → red).
+- G10 with regenerated `map_focus` and `kinetic_quote` goldens; open each and describe it.
+- Re-run `preview` on `story_recipe_box`. The `map_focus` tile must show Lake Superior as water between the Duluth and Thunder Bay markers, both dots visible; describe it.
+- **Falsify:** set `mapLand` back to `#1F2F52` → the contrast test is red.
 
-**Blast radius:** **Issue 2 collapses** into one §3 line.
+**Blast radius:** `MapView.tsx`, `mapFraming.ts` (+ tests), `palette.ts`, `kinetic_quote.tsx`, `gen-lakes.ts`, `renderer/public/geo/`, `setup.sh`, `data/vendor/CHECKSUMS`, `check_schema_sync.sh`, `doctor.py`, goldens, `tests/test_contrast.py`.
 
 ---
 
-### A22 — E2E, offline gate, performance budget, README
+### B9 — Gates fail closed; bundle and setup hygiene
 
-**What this means for the user:** proof the whole thing works, locally, within their 10-minute tolerance, and instructions to use it.
+**What this means for the user:** today, two safety checks can pass without checking anything, every render copies the whole test-fixture folder into the video bundle, and setup writes into their home directory.
 
-**Files:** `scripts/e2e.sh` (completed) · `scripts/check_offline.sh` · `scripts/offline.sb` · `README.md` · `docs/evals/{e2e,planner}_<date>.md`
+**The gap:**
+- `scripts/check_gallery.sh:60` skips the overflow check when `overflow.json` is absent, and treats an unparseable file as 0 overflows. `:40-41` never clean the output directories, so stale stills can satisfy the comparison.
+- `scripts/check_renderer_purity.sh:9` exempts **any** directory named `remotion`, not only `renderer/src/clock/remotion/`.
+- `renderer/scripts/render.ts:74-77` copies the repository's `fixtures/` into every job's `render_public/`, contrary to `design_rendering.md` §2 (revised).
+- `scripts/setup.sh:35-38` symlinks `~/.local/bin/mflux-generate-flux2-klein` → `mflux-generate-flux2` to match a command name that mflux 0.20.0 does not ship. `assets/illustrate.py:182-183` then claims it was "verified with `mflux-generate-flux2-klein --help`".
 
-**Build:**
-- `scripts/e2e.sh` steps 7, 7b and 8, plus the committed report (`design_testing_and_validation.md` §4). **Step 7 covers all three other fixtures through render with their voice assertions; step 7b checks the `--voice` override with zero voice-stage LLM calls.**
-- `scripts/check_offline.sh` + `scripts/offline.sb` (§6).
-- Re-run the planner eval with all 16 templates live.
-- Measure the performance budget (§5).
-- README Usage section: `new` → read the voice line and look at the contact sheet → edit → `preview` → `approve` → `render`. Explain automatic voice selection and `--voice af_heart|am_michael`, and the music/SFX role naming convention.
-- README Credits: GeoNames CC BY 4.0, fonts OFL, Phosphor MIT, Natural Earth, Kokoro, FLUX.2 [klein] 4B, Gemma 4, and the Remotion licence note.
+**Implementation:**
+1. `check_gallery.sh`: `rm -rf` both output dirs first; a missing or unparseable `overflow.json` → `fail`.
+2. `check_renderer_purity.sh`: grep all of `renderer/src/`, then drop only lines whose path starts with `renderer/src/clock/remotion/`.
+3. `render.ts`: remove the fixtures copy. The smoke test builds its own temporary job dir with `fixtures/music/test_bed.wav` at `audio/narration.wav`.
+4. mflux:
+   - `illustrate.py` invokes **`mflux-generate-flux2 --model flux2-klein-4b`**, and `TOOL_NAME` becomes `mflux-generate-flux2`. The cache key changes; images regenerate once.
+   - `setup.sh` stops creating the symlink and removes it if it points at `mflux-generate-flux2`.
+   - `doctor` checks `mflux-generate-flux2` on PATH **and** that its `--help` output lists `flux2-klein-4b`.
+   - Record in the design that mflux 0.20.0 exposes klein through `mflux-generate-flux2 --model` (`design_visual_direction.md` §7 and `design_system_architecture.md` §8, in this item's commit).
+
+**Validate:** the G9 and G10 falsifications in `design_testing_and_validation.md` §3: a new `renderer/src/templates/remotion/x.tsx` using `useCurrentFrame` → G9 red; deleting `overflow.json` after the render → G10 red. After a render, `render_public/fixtures` does not exist. `doctor` with `PATH` lacking mflux → exit 4.
+
+**Blast radius:** the three scripts, `render.ts`, `illustrate.py`, `doctor.py`, `setup.sh`, two design docs, tests.
+
+---
+
+### B10 — Remove the dead SFX scheduler
+
+**What this means for the user:** nothing visible; it removes a tested-but-unused copy of the SFX rules that could drift from the real one.
+
+**The gap:** `src/animated_infographics/timing/sfx.py` (`schedule_sfx`, its own copies of `SFX_MIN_GAP_FRAMES`/`SFX_VOLUME`, and a path format lacking `job/`) is exported by `timing/__init__.py:14,29` and tested by `tests/test_timing_sfx.py`, but **never called**: `compile.py:155-185` schedules SFX inline and is itself tested (`tests/test_compile.py:203,256`).
+
+**Implementation:** delete `timing/sfx.py`, its exports and `tests/test_timing_sfx.py`.
+
+**Validate:** `grep -rn "schedule_sfx\|timing.sfx" src tests` returns nothing. Corroborate the absence with the count: G4 drops by exactly the number of deleted tests (**3**), and `test_compile.py`'s SFX tests still pass.
+
+**Blast radius:** those three files; §1.3 G4 count.
+
+---
+
+### B11 — README accuracy
+
+**What this means for the user:** the README currently tells them things that are not true.
+
+**The gap:**
+- `README.md:7` claims the MVP is complete and verified by all gates, as if defect-free.
+- `:52` and `:95` say music is "ducked to −20 dBFS". The code (`audio/mix_prep.py:80-93`, `renderer/src/story/AudioLayer.tsx:14`) normalises music to −16 LUFS and plays it at volume 0.126 (−18 dB), with a 1 s fade-in and a 2 s fade-out, and no ducking.
+- `:97-100` describe SFX roles that do not match the registry cues.
+- `:129` credits Outfit, JetBrains Mono, Space Grotesk and Fraunces (none are shipped; `ls renderer/public/fonts`) and omits Inter.
+
+**Implementation:**
+- Status line: "Wave A delivered; Wave B (verification fixes) in progress" (the close-out in B13 updates it again).
+- Music: the sentence above, stated exactly.
+- SFX roles per `design_templates.md` §2: `whoosh` at the start of `title_card`, `comparison`, `location` and `set_piece`; `pop` on item entrances and the `character_intro`/`relationship_map` starts; `ding` at a stat's count end; `hit` at a `reveal`'s start.
+- Fonts: Poppins (Google Fonts, OFL) and Inter (rsms/inter, OFL).
+- Add Natural Earth lakes to the credits (B8).
+
+**Validate:** `grep -nE "Outfit|JetBrains|Space Grotesk|Fraunces|20 dBFS" README.md` returns nothing, and the font credits equal the TTF families in `renderer/public/fonts`.
+
+**Blast radius:** `README.md`.
+
+---
+
+### B12 — E2E: computed counts, audible music
+
+**What this means for the user:** the proof that sync and music work becomes a measurement instead of a sentence typed into a report.
+
+**The gap:**
+- `scripts/e2e.sh:502` writes "Checked: 9 scene boundaries" into the report as literal text. `evals/e2e.py check-sync`'s result is printed but never parsed.
+- The per-fixture voice lines in the report template are hard-coded strings.
+- No check proves music is actually **audible** in the mix, only (from B1) that it is referenced.
+
+**Implementation:**
+1. `check-sync` prints JSON `{"checked": n, "expected": len(scenes) − 1, "failures": [...]}`. `e2e.sh` parses it, asserts `checked == expected` and no failures, and writes the numbers into the report.
+2. Report voice lines are read from each job's `voice.json`.
+3. **Audible music:** for the step-4 job (rendered with music), measure the RMS of the final MP4's audio in the window [duration − 1.4 s, duration − 1.0 s] with ffmpeg `atrim` + `astats`. Narration is silent there (end hold) while music is fading out. Assert RMS > −60 dBFS, and record the value.
 
 **Validate:**
-- G12 and G13 green.
-- G13's self-check falsified once: remove the `deny` line → the self-check must fail; restore.
-- `docs/evals/e2e_<date>.md` and `docs/evals/planner_<date>.md` committed.
-- Performance bars met **or filed with per-stage timings** (the `voice` stage included).
-- **The full battery green**, every number recorded in §1.3.
+- **Falsify:** make `check-sync` skip one boundary → the count assertion is red.
+- **Falsify:** render the step-4 job with music removed from its timeline (a copy) → the RMS assertion is red (expect below −80 dBFS, i.e. digital silence).
+- Record both.
+
+**Blast radius:** `scripts/e2e.sh`, `evals/e2e.py`, the E2E report.
+
+---
+
+### B13 — Cold-cache performance budget; close-out
+
+**What this means for the user:** today, nobody knows whether a 3-minute story really stays within their 10-minute tolerance. The claim that it did was measured with warm caches.
+
+**The gap:** `docs/evals/e2e_2026-09-25.md`'s stage timings show `bible`, `segment` and `storyboard` at 0.0–0.2 s, meaning a warm LLM cache (and warm image cache: `assets` 0.1 s). The procedure is in `design_testing_and_validation.md` §5; no `scripts/measure_budget.sh` exists.
+
+**Implementation:** write `scripts/measure_budget.sh` exactly per §5 (unload the model, fresh cache dir, fresh jobs dir, timed `new` / `approve` / `render` on `story_recipe_box` with music and SFX, `cache_hits` must total 0). Commit `docs/evals/budget_<date>.md`.
+
+**Validate:** bars from §5: `new` → review ≤ 6.5 min, `render` ≤ 3.5 min, total ≤ 10 min. **Exceeding a bar is filed with per-stage timings, not tuned away.** The report must show `cache_hits = 0`, or the run does not count.
 
 **Close-out:**
-1. Rewrite this guide's title and §2–§3 to **Queue Complete** mode.
-2. Move Wave A to §5.1 with one line per item.
-3. Update `ongoing_general_errors.md` §1.
-4. **Stop. Do not invent work** (§9).
+1. Full battery, bare; update §1.3.
+2. Rewrite this guide to **Queue Complete** (or to the next wave, if the user has selected on Issues 3–5).
+3. Move Wave B to §5.1.
+4. Update `ongoing_general_errors.md` §1.
+5. Stop.
 
 ---
 
 ## 4. Deferred — do NOT start
 
-Each needs the user's selection in `ongoing_general_errors.md` §4:
-- **D1** video input + PiP
-- **D2** 16:9 output
-- **D3** multi-voice narration
-- **D4** live mode
-- **D5** Reddit URL fetch
-- **D6** public-domain photo sourcing
-- **D7** historical map borders
-- **D8** web editor
-- **D9** a cloud LLM backend
-
-Honouring the constraints in `design_future_live_and_video.md` (F1–F6) is in scope now; building these features is not.
+- **Issues 3, 4, 5** (`ongoing_general_errors.md`): fake writing in illustrations; timeline labels that are not dates; meaning errors in planner output. Each awaits `Your selection`. They become a wave only after the user selects.
+- **D1–D9** (`ongoing_general_errors.md` §4): video input + PiP, 16:9, multi-voice, live mode, Reddit URL fetch, public-domain photos, historical borders, web editor, cloud LLM.
 
 ---
 
@@ -757,90 +402,76 @@ Honouring the constraints in `design_future_live_and_video.md` (F1–F6) is in s
 
 ### 5.1 Already delivered
 
-All 22 items of Wave A (Offline MVP) delivered:
+**Wave A (A1–A22), verified September 25, 2026.** One line per item, with its correct commit and verification result, is in `ongoing_general_errors.md` §3. Items marked "✓" there are not to be reworked. Items marked "→ B<n>" are touched only as that B item specifies.
 
-- **A1** — Bootstrap (`b1ad44a`): G1–G7 green, battery 7/7 built gates pass, 1 pytest passed, 1 vitest passed.
-- **A2** — Setup script and doctor (`927d076`): 20/20 checks OK in doctor, setup.sh idempotent (twice 0), G14 green.
-- **A3** — Fixtures (`7924f59`): 15 fixture files generated and checksummed, 4 scripts verified against design SHA-256, music peak -20.0 dBFS, 5 SFX generated.
-- **A4** — Data contracts and schema sync (`c7f0c4b`): G8 green (11 files in sync), 10/10 pytest passed, 16 template props validated, G5 compiles iconMap.ts.
-- **A5** — Job store, CLI and the review gate (`617e569`): G1–G8, G14 green; 19 pytest passed; all 5 exit 3 refusals verified; journey test verified and falsified.
-- **A6** — Timing core (`10dd3a2`): G1–G8, G14 green; 39 pytest passed (20 new timing unit tests); 500-stream property test verified; 3 falsifications verified.
-- **A7** — LLM backend (`7186803`): G1–G8, G11, G14 green; 45 fast pytest + 1 slow integration test passed; G11 active; 20/20 structured output conformance on gemma4:26b (mean latency 1.96s); 2 falsifications verified.
-- **A8** — Narrator voice selection (`9590fb7`): G1–G8, G11, G14 green; 82 fast pytest + 3 slow tests passed; all 23 evidence cases verified; 4 fixtures matched expected facts; 7 falsifications verified.
-- **A9** — Narration (Kokoro) (`5824005`): G1–G8, G11, G14 green; 96 fast pytest + 8 slow tests passed; 4 fixtures synthesized with exact sample accounting; loudness -16 ± 0.5 LUFS; emu_war 11.65s (bar ≤ 60s); spectral centroid verified; 2 falsifications verified.
-- **A10** — Transcription (Whisper) (`715d670`): G1–G8, G11, G14 green; 98 fast pytest + 11 slow tests passed; molasses_flood_say WER 4.17% (bar ≤ 8%); Kokoro vs Whisper timing: match 97.5% (bar ≥ 90%), median error 40.0ms (bar ≤ 80ms), p95 error 239.4ms (bar ≤ 250ms); emu_war transcribe 6.00s (bar ≤ 45s); falsification verified.
-- **A11** — Renderer foundation (+ kinetic_quote) (`731ad9e`): G1–G9, G11, G14 green; G9 active (pure); 100 fast pytest passed; smoke media render 1080x1920@30fps verified with ffprobe; sync probe flips verified at frames 29/31 (0 vs 255) and 59/61 (255 vs 0); gallery kinetic_quote min/typical/max 0 overflows; 2 falsifications verified.
-- **A12** — Bible and geo resolution (`208d445`): G1–G9, G11, G14 green; 118 fast pytest + 13 slow tests passed; Boston, Duluth, Thunder Bay, Amarillo resolved via GeoNames gazetteer; antimeridian-aware country bbox checking; female narrator facial hair repaired to none; 2 falsifications verified.
-- **A13** — Segmentation (`1d47dd8`): G1–G9, G11, G14 green; 125 fast pytest + 15 slow tests passed; 4 fixtures segmented with continuous narration tiling and duration bounds [1500, 8000]ms; beat counts: molasses_flood 8, emu_war 20, story_recipe_box 26, story_room_12 24; falsification verified.
-- **A14** — Storyboard planning and the planner eval (`2b7dc04`): G1–G9, G11, G14 green; 149 fast pytest passed; planner eval passed 4/4 fixtures with 0 violations, fallback L2 0.0% (bar ≤ 15%), distinct templates 6/11/16/13 (bars ≥ 5/7), story_recipe_box wall time 49.0s (bar ≤ 240s), voice match 4/4; falsification verified.
-- **A15** — Compile and preview (`5260ab2`): G1–G9, G11, G14 green; 158 fast pytest passed; molasses_flood compiled with 10 scenes, duration 1834 frames, 0 overflow, Ajv & Python valid; 2 falsifications verified.
-- **A16** — Final render and output verification (`8203be5`): G1–G9, G11, G12, G14 green; G12 active (e2e passed); text & audio runs verify.json all true; sync probe flipped across all 9 scene boundaries (0 to 255); 2 falsifications verified.
-- **A17** — Visual primitives and the gallery gate (`18c097b`): G1–G12, G14 green; G10 active (0 overflows, goldens matched, hold motion passed); 161 fast pytest passed, 11 vitest passed; 6 visual primitives implemented; WCAG 2.x contrast verified; 3 falsifications verified.
-- **A18** — Templates: statement set (`5b88db1`): G1–G12, G14 green; G10 active (0 overflows across 24 fixtures, 8 templates matched goldens, hold motion verified); 6 statement templates implemented; molasses_flood contact sheet validated; 2 falsifications verified.
-- **A19** — Templates: people set (`cedcd5a`): G1–G12, G14 green; G10 active (0 overflows across 39 fixtures, 13 templates matched goldens, hold motion verified); 5 people templates implemented; story_recipe_box and story_room_12 preview validated; 2 falsifications verified.
-- **A20** — Templates: place & time set + delete placeholder (`9cddf93`): G1–G12, G14 green; G10 active (0 overflows across 51 fixtures, 17 entries matched goldens, hold motion verified); 4 place & time templates implemented; Placeholder.tsx deleted (0 NOT YET IMPLEMENTED matches); containment test verified and falsified; golden diff falsified; overflow falsified.
-- **A21** — Illustrations (FLUX.2 klein 4B) (`142b6a7`): G1–G12, G14 green; 169 fast pytest + 18 slow tests passed; mflux flux2-klein-4b editorial vector generation (1024x1024, 4 steps, quantize 8) verified; cache hit < 1s; story_recipe_box assets budget: 3 images (p1, p2, v1); timeout fallback verified and falsified.
-- **A22** — E2E, offline gate, performance budget, README (`a5d3c07`): G1–G14 green bare; macOS sandbox G13 network-outbound denied, localhost allowed; G12 steps 1–8 passed (all 4 fixtures verified, audio pipeline verified, 9 scene boundaries frame-accurate, warm cache byte-identical); 4/4 planner eval passed (0 violations, 0% fallback); performance budget met (story_recipe_box ~3 min video renders in 2.65 min, full pipeline < 3.5 min vs 10 min bar); README complete.
+### 5.2 Accepted equivalents (checked September 25, 2026; do not "fix" these back)
 
-### 5.2 Accepted equivalents
-
-None yet. When an implementation reaches a spec's intent by a different structure, record it here with the reason, so the next pass does not "fix" it back.
+- **The sync probe is drawn inside each scene's layer** (`SceneLayer.tsx`), not as a separate Story layer. The top-most mounted scene draws it, which gives exactly the spec's "current scene" colour, and G12 step 5 proves the flips frame-accurate.
+- **The geo bbox check handles antimeridian-crossing countries** (`planner/geo.py:191`; USA, RUS, NZL, KIR). Recorded in `design_planner.md` §2.
+- **`image_prompt` strips a trailing period** from `visual_description` before appending ". Wide establishing view…", avoiding "..".
+- **`FitText` gives multi-line boxes 0.35 of a line of extra height** for glyph ascenders. It cannot hide a whole extra line, so real overflow is still detected.
+- **The gallery computes fixture timing with a TypeScript port of `item_frames`** (`renderer/src/story/timing.ts`), because gallery fixtures have no Python compile step. It is used by the gallery only, never by `Story`.
+- **`fixtures/CHECKSUMS` uses paths relative to `fixtures/`**; verify with `(cd fixtures && shasum -a 256 -c CHECKSUMS)`.
+- **`plan_report.json.llm_calls` counts the storyboard stage's calls only** (select + props); voice, bible and segment report theirs in their own stage logs.
+- **Node 26** works for Remotion 4.0.528; the Node 22 fallback in `design_rendering.md` §1 was not needed.
 
 ### 5.3 User decisions
 
 **September 23, 2026 (design grilling):**
-- Offline first; a template library (not generated code or generated video).
-- First content: **history + Reddit-style stories**. MVP inputs: **text script + audio only**.
-- Imagery: vector + local illustrations + open map data.
-- **Python pipeline + TypeScript/Remotion renderer**, **fully local** (no paid or cloud APIs).
-- **9:16 first**; **word-by-word karaoke captions**; **flat editorial vector** style; 1–3 min videos in ~10 min.
-- **Scenes + persistent cast**; **single narrator** per video; **mandatory review gate**; **music + SFX from a user-supplied pack**.
-- Live mode later, with the **webcam in a corner**.
+- Offline first; a template library.
+- History + Reddit-style stories; text + audio inputs.
+- Mixed imagery; Python + TypeScript/Remotion; fully local.
+- 9:16; word-by-word karaoke captions; flat editorial vector; 1–3 min videos in about 10 min.
+- Scenes + a persistent cast; single narrator; a mandatory review gate; music + SFX from a user-supplied pack.
+- Live mode later, with the webcam in a corner.
 
-**September 24, 2026 (selections):**
-- **Issue 1 → A + B:** "If the story from reddit seems to be from a female's perspective then use af_heart, else use am_michael." Interpreted in `design_planner.md` §10.
+**September 24, 2026:**
+- **Issue 1 → A + B:** "If the story from reddit seems to be from a female's perspective then use af_heart, else use am_michael."
 - **Issue 2 → A:** FLUX.2 [klein] 4B.
-- **Test stories must be complete stories** (r/stories-style, a full arc), not fragments.
+- Test stories must be complete stories.
 
 ### 5.4 Invariants and intentional design decisions
 
-- **Voice rule asymmetry:** `af_heart` only with first person **and** checkable self-identification (a Reddit tag or a verbatim evidence span with a non-possessive gendered token); everything else is `am_michael`. Never infer gender from occupation, interests, emotions or a partner's gender. `I'm her daughter` → `am_michael` is an accepted false negative.
-- **The voice is decided before narration and cannot change within a job**; a different voice means a new job with `--voice`.
-- **`--voice` accepts only the installed `af_heart` and `am_michael`.**
-- **LLM call counters are incremented at the backend's entry point.**
-- **Cast members are vector avatars only**, never generated images. Illustrations are for places and set pieces only.
-- **No auto-approve**, under any name. Tests use the real `approve`.
-- **`approve` refuses while any text overflows.**
-- **Scenes lead the voice by 200 ms; captions never lead.**
-- **Scenes are placed at absolute frames. Never `TransitionSeries`**: it shortens the timeline and desyncs every later scene.
-- **Item and count timings are computed once, in Python**, and shared by SFX and visuals.
-- **Grounding is a hard gate**: numbers, dates and quotes on screen must come from the narration.
-- **Place coordinates come from the gazetteer first**; LLM coordinates are accepted only inside the country bbox (+0.5°).
-- **Text on cast colours and on `highlight` is navy `bg`**, never `ink` (1.52–3.21 : 1, measured).
-- **Python is the contract source of truth**; generated files are never hand-edited.
-- **`kinetic_quote` is the universal fallback** and always validates by construction.
-- **Captions are hidden only during a `title_card` whose beat is the narrated title.**
-- **FLUX.2 klein 9B is non-commercial: never use it.** Z-Image-Turbo is not used either (Issue 2).
-- **Beat boundaries are not human-editable** in the MVP.
-- **The `sandbox-exec` offline gate stays** even though the tool is deprecated. If it breaks, file it.
-- **Fixtures are original texts.** Never commit a real Reddit or other third-party post as a fixture: it is the author's copyrighted work, and its facts are not ours to freeze. Users may of course *run* the tool on any story they have the right to use.
+**New, September 25, 2026:**
+- **Job-local inputs are authoritative.** No stage reads music or SFX from command-line options (B1).
+- **Every planner LLM call goes through `run_with_retries`** (B3).
+- **LLM-facing schemas carry no length constraints**; limits are enforced by validators and retries (B5).
+- **Text over an image only where the scrim is ≥ 85%** (B7).
+- **Commit scope is the item id; resolved lines cite the id, never a hash.**
+
+**Unchanged:**
+- The voice rule's asymmetry: `af_heart` only with first person **and** checkable self-identification; `am_michael` otherwise.
+- The voice is decided before narration; `--voice` accepts only `af_heart` and `am_michael`.
+- Cast = vector avatars only.
+- No auto-approve; `approve` refuses on overflow.
+- Scenes lead the voice by 200 ms; captions never lead.
+- Absolute-frame scenes, never `TransitionSeries`.
+- Item and count timings are computed once, in Python.
+- Grounding is a hard gate; gazetteer-first geo.
+- Navy text on cast colours and on `highlight`.
+- Python is the contract source; `kinetic_quote` is the universal fallback.
+- FLUX.2 klein **9B is never used**, and neither is Z-Image-Turbo.
+- Beat boundaries are not human-editable.
+- The `sandbox-exec` offline gate stays.
+- Fixtures are original texts; never commit third-party posts.
 
 ### 5.5 Assessed and rejected — do NOT re-propose
 
-- Live-first, or parallel offline/live tracks.
-- LLM-written code per scene (hybrid or pure); text-to-video or image-generated scenes.
-- Video input or Reddit URL fetching in the MVP.
-- Vector-only imagery; illustration-heavy scenes; generated portraits for cast.
-- TypeScript-only or Python-only (Manim/MoviePy) stacks; Claude or any cloud API.
-- Both aspects at once, or 16:9 first.
-- Sentence subtitles, no captions, or a caption toggle.
-- Paper-cutout, whiteboard or dark-cinematic styles; a persistent continuous stage or a pure slideshow.
-- Multi-voice in the MVP; an optional review gate or a web editor; music-only or no audio bed.
-- `TransitionSeries` for transitions; TypeScript as the schema source; trusting LLM coordinates without a check; re-transcribing TTS audio with Whisper for timings.
-- **Voices `bm_george` and `af_bella`** (Issue 1 options C and D).
-- **A four-voice listening bake-off** (dropped once the user selected).
-- **Z-Image-Turbo, or any image-model bake-off** (Issue 2 option B).
-- **Inferring narrator gender from context or stereotypes**, or using `af_heart` as the default.
+**Unchanged from Wave A:**
+- Live-first or parallel tracks; LLM-written scene code; generated video.
+- Video input or URL fetching in the MVP.
+- Vector-only or illustration-heavy imagery; generated cast portraits.
+- Single-language stacks; any cloud API.
+- Both aspects, or 16:9 first; subtitles, no captions, or a caption toggle.
+- Other art styles; a persistent stage or a pure slideshow.
+- Multi-voice in the MVP; an optional gate or a web editor; music-only or no audio bed.
+- `TransitionSeries`; TypeScript as the schema source; unchecked LLM coordinates; Whisper re-timing of TTS audio.
+- Voices `bm_george`/`af_bella`; a voice bake-off; Z-Image-Turbo or an image bake-off; inferring narrator gender from stereotypes.
+
+**New, September 25, 2026:**
+- **Fixing truncation by raising `maxLength`**: the model would still be cut off at the new limit.
+- **Relaxing the fallback bar** if B5 raises the fallback rate.
+- **Keeping the `mflux-generate-flux2-klein` symlink.**
 
 ---
 
@@ -848,32 +479,29 @@ None yet. When an implementation reaches a spec's intent by a different structur
 
 | What | Where |
 |---|---|
-| Product, pipeline, repo/job layout, CLI, exit codes, env vars, review gate, local-only policy, pinned models | `design_system_architecture.md` |
-| JSON file shapes (incl. `voice.json` §9), source of truth, generation, sync gate | `design_data_contracts.md` |
-| Ingest, TTS, ASR, loudness, frame math, beats, captions paging, SFX scheduling | `design_audio_and_timing.md` |
-| LLM backend, **narrator voice selection (§10)**, prompts, bible, segmentation, selection, props, validators, grounding, fallback, planner eval | `design_planner.md` |
-| The 16 templates | `design_templates.md` |
-| Palette (with measured contrast), type, layout zones, motion, background, avatars, captions style, illustration | `design_visual_direction.md` |
-| Remotion project, clock, spans, overflow, render CLI, preview (voice line), final render, verification, sync probe | `design_rendering.md` |
-| Fixtures (four scripts), unit/integration layers, the 14 gates and their falsifications, E2E, offline gate, budget, artefacts | `design_testing_and_validation.md` |
-| Live mode, video input, 16:9: constraints now, sketches later | `design_future_live_and_video.md` |
-| Phase overview | `master_implementation_plan.md` |
-| Open issues, selections, deferred items, resolved index, decision log | `ongoing_general_errors.md` |
+| Product, pipeline, repo/job layout, **job-local inputs (§4)**, CLI, env vars, review gate, local-only policy, pinned models | `design_system_architecture.md` |
+| JSON file shapes, source of truth, generation, sync gate | `design_data_contracts.md` |
+| Ingest (**`ingest.json` music/SFX fields**), TTS, ASR, loudness, frame math, beats, captions paging, SFX scheduling | `design_audio_and_timing.md` |
+| LLM backend (**error classification, `run_with_retries` everywhere, LLM-facing schemas**), voice selection §10, bible, segmentation, selection, props, validators (**text completeness**), grounding (**scale words**), fallback, eval | `design_planner.md` |
+| The 16 templates (**revised §2.2, §2.13–2.15**) | `design_templates.md` |
+| Palette, **composited contrast §2.1**, type, layout zones, motion, avatars, captions, illustration | `design_visual_direction.md` |
+| Remotion, clock, spans, overflow, render CLI (**bundle contents**), preview, verification, sync probe | `design_rendering.md` |
+| Fixtures, unit/integration rows (**new rows**), gates and falsifications (**fail-closed G10, exact G9**), E2E (**music/SFX + computed counts**), offline gate, **cold budget procedure §5**, artefacts | `design_testing_and_validation.md` |
+| Live mode, video input, 16:9 | `design_future_live_and_video.md` |
+| Open issues (**3–5**), resolved index (**corrected**), lessons, deferred items, decision log | `ongoing_general_errors.md` |
 
 ---
 
 ## 7. Validation standard
 
-- **A gate must be able to fail.** Before trusting a gate, name the input that turns it red, run it, and record the red run next to the green one.
-- **Read exit codes bare.**
-- **A gate that did not run is not a pass.**
-- **Open the artefact and ask what it shows.** A still, contact sheet, frame or `voice.json` you did not look at is not evidence. Describe what you saw in the commit body.
-- **Measure; do not estimate.** Record numbers, not "pass".
-- **A check over a hand-written list only verifies the list.** Pair it with a containment check against what is actually used (the icon map compiles against the real package; registry ↔ component files in both directions).
-- **A search used to prove absence must not encode an incidental convention**, and should be corroborated a second way.
-- **Instrumentation has control flow too.** Count at the entry point, or the counter measures a subset of paths.
-- **Write the test for the journey, not only the defence.** The review-gate tests run `new → approve → edit → render` in sequence, as a person would.
-- **A rename that breaks a test means updating the assertion.** Never add production code whose only consumer is a matcher.
+- **Red first.** Run the falsifying check against the unfixed code and record the failure before fixing.
+- **A gate must be able to fail**, and must **fail closed**: a missing input to a check is a failure, not a skip.
+- **A perfect score is a reason to look harder.** Wave A's 0.0% fallback rate was produced by truncation.
+- **Measure what the viewer sees, composited.** Contrast is computed against the real background, including a worst-case white image, not only between flat tokens.
+- **Invocation options are not state.** If a later stage needs it, it lives in the job.
+- **Warm caches measure nothing about a cold budget.**
+- **Read exit codes bare. A gate that did not run is not a pass. Open every artefact and describe it.**
+- **A check over a hand-written list only verifies the list**; pair it with a containment check.
 - **Never loosen a bar to pass it.** File it with the measurement.
 
 ---
@@ -881,35 +509,33 @@ None yet. When an implementation reaches a spec's intent by a different structur
 ## 8. THE LOOP
 
 ```
-(1) Is there an approved item? Wave A, A1–A22, in §2 order. If all are done,
-    STOP. Never start a deferred item (§4). Never fill in a `Your selection:` line.
-(2) Read the item, then EVERY design section it points to, before writing code.
-(3) If the guide and a design doc disagree, or a spec is impossible: STOP and
-    file it in ongoing_general_errors.md with options. Minimal deviations that
-    keep the intent go in the commit body AND §5.2.
-(4) Build it. Only what the item says. Nothing from §5.5.
-(5) Validate: the item's checks, then its FALSIFICATION (red, then green).
-    A gate that cannot go red is not a gate.
+(1) Is there an approved item? Wave B, B1–B13, in §2 order. If all are done,
+    STOP. Never start Issues 3–5 or D1–D9 without a user selection.
+    Never fill in a `Your selection:` line.
+(2) Read the item and EVERY design section it names before writing code.
+(3) RED FIRST: run the item's falsifying check on the unfixed code; record
+    the failure. If it passes on unfixed code, the check is wrong: fix the check.
+(4) Build only what the item says. Nothing from §5.5.
+(5) GREEN: run the item's checks; then the falsification (break it again,
+    see red, restore, see green).
 (6) Open every artefact the item produces and describe what it shows.
-(7) Run the full battery, bare. Update §1.3 with measured numbers.
-    NOT RUN is a legal result; blank is not.
-(8) One item = one Conventional Commit, WHY in the body, including the red and
-    green runs. Add ONE line to ongoing_general_errors.md §3 in the same commit;
-    collapse Issue 1 with A9 and Issue 2 with A21.
+(7) Full battery, bare. Update §1.3. NOT RUN is legal; blank is not.
+(8) ONE commit, scope = item id: `fix(bN): …`. WHY + red/green runs in the
+    body. Add ONE line under "Wave B" in ongoing_general_errors.md §3, citing
+    `git log --grep "(bN)"`, never a hash. Do not amend after pushing.
 (9) git push origin main.
 (10) Next item.
 ```
 
 ---
 
-## 9. Definition of Done: Wave A
+## 9. Definition of Done: Wave B
 
-- [x] A1–A22 each landed as one pushed commit, each with its falsifications recorded.
-- [x] §1.3: every gate G1–G14 green, measured this session, read bare.
-- [x] The voice stage matches all four fixture expectations in the slow suite, the planner eval and the E2E.
-- [x] `docs/evals/planner_<date>.md` and `docs/evals/e2e_<date>.md` committed, all bars met or filed.
-- [x] Performance budget on `story_recipe_box` (~3 min, the longest fixture) met or filed with per-stage timings.
-- [x] Issues 1 and 2 collapsed into §3 lines of `ongoing_general_errors.md`.
-- [x] No placeholder template remains; the 16-template containment test is green.
-- [x] README has Setup, Usage (including voice selection) and Credits.
-- [x] This guide rewritten to **Queue Complete** mode. **Then stop. The queue is empty; do not invent work.** The only legitimate triggers for new work are a user selection on an open issue or a deferred item, or a gate going red (investigate and **file** it).
+- [ ] B1–B13 each landed as one pushed commit scoped to its id, each with its red run and green run recorded.
+- [ ] §1.3: every gate G1–G14 green, measured this session, read bare.
+- [ ] Music and SFX survive the review journey (E2E step 4 assertions) and are **audible** in the final MP4 (B12 RMS check).
+- [ ] The new planner eval shows 0 newline strings and 0 completeness failures, and every §9 bar is met or filed.
+- [ ] The contrast test covers the image scrim (worst case, white) and every map pair.
+- [ ] `docs/evals/budget_<date>.md` is committed from a cold run with `cache_hits = 0`, bars met or filed.
+- [ ] README states only what is true.
+- [ ] This guide rewritten to **Queue Complete** (or to the user-selected next wave). **Then stop. Do not invent work.** The only legitimate triggers for new work are a user selection on Issues 3–5 or D1–D9, or a gate going red (investigate and **file** it).

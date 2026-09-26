@@ -32,6 +32,12 @@ class LLMBackend(Protocol):
 
 The response's `message.content` is parsed with `json.loads`. A parse failure counts as a failed attempt, never a crash.
 
+**Error classification (added September 25, 2026).** `DependencyMissing` (exit 4) is raised **only** for a connection failure, or for a **non-200** response whose error body names a missing model. A 200 response is never inspected for words like "not found": the first implementation did that, so any caption containing "not found" crashed the job as a "missing model".
+
+**Every planner LLM call goes through `run_with_retries`** (voice, bible, segment, select, props). No stage may call `generate_json` directly. `run_with_retries` is the only place that converts parse failures, validation failures and truncated JSON into retries, and then into the stage's deterministic fallback. Two stages that bypassed it (select, props) crashed the storyboard stage on a single malformed reply.
+
+**LLM-facing schemas carry no length constraints (added September 25, 2026).** The schema passed as `format` is the Pydantic schema with **every `maxLength`, `minLength`, `maxItems`, `minItems` and `pattern` removed**; `enum`, `type`, `required` and `additionalProperties` stay. Limits are stated in the prompt instead, and enforced afterwards by Pydantic and the validators, with the retry message naming the field and its limit (`props.caption: 61 characters, limit 48 — rewrite it shorter as a complete phrase`). **Why:** Ollama's constrained decoding enforces `maxLength` by force-closing the string at the limit. It does not make the model write something shorter. Wave A's storyboards had **34 of 701 strings cut mid-word** ("Rescuers wade through waist-", "Modern Era ("), all of which passed validation. That is also why the planner eval reported a 0.0% fallback rate: truncation made every answer valid.
+
 **Response cache.** Key = SHA-256 of the canonical JSON (sorted keys, no whitespace) of `{model, messages, format, options, think}`. Stored at `cache/llm/<key>.json` (`{"request": …, "response": …, "elapsed_ms": …}`). Cache hits are counted in `plan_report.json`. `--no-llm-cache` bypasses reads but still writes. **The cache is what makes re-runs and tests deterministic.** The second run of the same job with a warm cache must produce byte-identical `bible.json`, `beats.json` and `storyboard.json`.
 
 **Retry protocol (every stage):** up to **3 attempts** (0, 1, 2). After a failed attempt, append the model's previous output as an `assistant` message and a `user` message:
@@ -72,6 +78,7 @@ Return corrected JSON only.
    - Normalise (casefold, strip diacritics via NFKD) and match against GeoNames `cities15000` `name`, `asciiname` and every comma-separated `alternatenames` entry. Candidates in the place's `country_iso3` (via `countryInfo.txt` ISO→ISO3) are preferred; among those, the highest population wins. A match sets `lat`/`lon` from GeoNames and `geo_source: "gazetteer"`.
    - No gazetteer match but the LLM gave coordinates: accept **only if** they fall inside `data/geo/country_bboxes.json[country_iso3]` expanded by **0.5°** on every side → `geo_source: "llm"`. Otherwise null them → `geo_source: "none"`.
    - `kind: "fictional"` → geo null, `geo_source: "none"`.
+   - *Accepted equivalent (September 25, 2026):* the bbox check handles countries whose bbox crosses the antimeridian (USA, RUS, NZL, KIR), where `minLon > maxLon`. Keep it.
 5. **Narrator avatar consistency:** if `voice.json.narrator_gender == "female"` and the bible has an `is_narrator` member, set that member's `avatar.facial_hair = "none"`. A female voice over a bearded avatar would contradict itself on screen. No other avatar field is constrained, and nothing is constrained for `male` or `unknown`.
 
 **Fallback** after 3 failed attempts: `{title: <title or first 60 chars of sentence 0>, logline: <first 140 chars of the transcript>, genre: "other", cast: [], places: [], set_pieces: []}`. The pipeline continues; the eval counts it.
@@ -162,6 +169,9 @@ The **same functions** run on LLM output (inside the ladder) and on human edits 
 3. **Text fit (§7).**
 4. **Grounding (§8)** where the template declares it (`design_templates.md`).
 5. **Template-specific rules** listed per template in `design_templates.md` (e.g. `highlight_index` in range, edge endpoints distinct).
+6. **Text completeness (added September 25, 2026)**, for every free-text string field (not ids, enums, `prefix`, or `date_label`/`era_label`):
+   - **Repair (not an error):** runs of whitespace, including `\n`, collapse to one space; strip the ends.
+   - **Errors:** the string contains no letter or digit (`"..."`, `"—"`); it ends with `-`, `(`, `[`, `,`, `:` or `/`; its `(`/`)`, `[`/`]` or `"` characters are unbalanced; its last word is a truncation fragment (a single **lowercase** letter other than `a`, e.g. "…crowds at p"; a capital like "Plan B" is legitimate). Error format: `props.caption: looks cut off ("…crowds at p")`.
 
 ---
 
@@ -181,6 +191,7 @@ The renderer independently detects overflow in the DOM (`design_rendering.md` §
 - Digit numbers: `\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?`, commas removed. If followed by whitespace plus `thousand|million|billion` (case-insensitive), multiply by 1e3/1e6/1e9 **and also** keep the unscaled value.
 - Spelled numbers: maximal runs of `zero…nineteen`, `twenty…ninety` (hyphenated compounds like `twenty-one` included), `hundred`, `thousand`, `million`, `billion`, with an optional leading `a` (`a thousand` = 1000), parsed with standard English place-value rules.
 - `%` is stripped (the value is the number).
+- **A scale word is never a number on its own (added September 25, 2026).** `thousand`/`million`/`billion` count as a spelled number only as part of a spelled run (`two million`) or with a leading `a` (`a million`). After a digit number (`2.3 million`) they only scale it. The first implementation extracted a stray `1,000,000` from "2.3 million gallons", so a wrong on-screen "1 million" would have been accepted as grounded.
 
 **Rules:**
 
