@@ -109,6 +109,17 @@ def _parse_spelled_run(tokens: list[str]) -> float | None:
     if not tokens:
         return None
 
+    # Per design_planner.md §8:
+    # A scale word is never a number on its own.
+    # thousand/million/billion count as a spelled number only as part of a spelled run (two million)
+    # or with a leading a (a million). After a digit number (2.3 million) they only scale it.
+    has_small = any(_parse_small(t) is not None for t in tokens)
+    has_leading_a = (
+        len(tokens) >= 2 and tokens[0].lower() in ("a", "an") and tokens[1].lower() in SCALE_WORDS
+    )
+    if not (has_small or has_leading_a):
+        return None
+
     total = 0.0
     current = 0.0
     for i, t in enumerate(tokens):

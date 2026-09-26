@@ -166,6 +166,7 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 - B1 — Music and SFX survive the review journey — git log --grep "(b1)" — G1–G14 green bare, 171 passed (+2 tests); ingest records job-relative music/sfx; compile reads ingest.json on every run; review journey test verifies music and sfx survive edit and invalidation; e2e step 4 asserts music and sfx present in timeline and files.
 - B2 — LLM error classification — git log --grep "(b2)" — G1–G14 green bare, 175 passed (+3 tests); 200 responses containing 'not found' accepted; 404 raises DependencyMissing; non-200 raises LLMResponseError; run_with_retries recovers from transient 500.
 - B3 — Planner crash containment — git log --grep "(b3)" — G1–G14 green bare, 180 passed (+5 tests); generate_json called only in llm.py; 5 run_with_retries call sites in planner; select and props recover on attempt 2 after malformed attempt 0; truncated replies complete with fallback_level 2.
+- B4 — Grounding scale words — git log --grep "(b4)" — G1–G14 green bare, 181 passed (+1 test); numbers("holding 2.3 million gallons") returns 2.3 and 2300000.0 without stray 1000000.0; spelled runs require small number or leading a/an.
 
 ---
 

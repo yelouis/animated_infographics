@@ -15,6 +15,20 @@ def test_numbers_digit_with_scale() -> None:
     assert 2.3e6 in nums
 
 
+def test_grounding_scale_words() -> None:
+    """Verify scale words are not numbers on their own."""
+    nums_holding = numbers("holding 2.3 million gallons")
+    assert 2.3 in nums_holding
+    assert 2300000.0 in nums_holding
+    assert 1000000.0 not in nums_holding
+
+    nums_a_million = numbers("a million reasons")
+    assert 1000000.0 in nums_a_million
+
+    nums_two_million = numbers("two million")
+    assert 2000000.0 in nums_two_million
+
+
 def test_numbers_spelled_twenty_one() -> None:
     nums = numbers("Twenty-one people died in the flood.")
     assert 21.0 in nums
