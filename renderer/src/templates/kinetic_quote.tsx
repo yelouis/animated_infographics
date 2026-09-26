@@ -1,6 +1,7 @@
 import React from "react";
 import { interpolate } from "remotion";
 import { useSceneClock } from "../clock/SceneClockContext";
+import { Avatar } from "../components/Avatar";
 import { FitText, type FitTextSlot } from "../components/FitText";
 import type { KineticQuoteProps } from "../generated/contracts";
 import { useCast } from "../story/entities";
@@ -151,41 +152,43 @@ export const KineticQuote: React.FC<KineticQuoteTemplateProps> = ({
             gap: 16,
           }}
         >
-          {/* 120 px avatar circle with cast colour */}
+          {/* 120 px parametric avatar component */}
+          <Avatar
+            avatar={cast.avatar}
+            size={120}
+            color={castColor}
+            expression="neutral"
+          />
+
           <div
             style={{
-              width: 120,
-              height: 120,
-              borderRadius: 60,
               backgroundColor: castColor,
-              display: "flex",
+              borderRadius: 999,
+              padding: "6px 20px",
+              display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
-              color: palette.bg,
-              fontFamily: "Poppins, sans-serif",
-              fontWeight: 800,
-              fontSize: 48,
+              maxWidth: 600,
             }}
           >
-            {cast.name ? cast.name[0].toUpperCase() : ""}
+            <FitText
+              slot={ATTRIBUTION_SLOT}
+              text={cast.name}
+              sceneId={sceneId}
+              template="kinetic_quote"
+              slotName="attribution_name"
+              debug={debug}
+              isGallery={isGallery}
+              style={{
+                textAlign: "center",
+                color: palette.bg,
+                whiteSpace: "nowrap",
+              }}
+            />
           </div>
-
-          <FitText
-            slot={ATTRIBUTION_SLOT}
-            sceneId={sceneId}
-            template="kinetic_quote"
-            slotName="attribution_name"
-            debug={debug}
-            isGallery={isGallery}
-            style={{
-              textAlign: "center",
-              color: castColor,
-            }}
-          >
-            {cast.name}
-          </FitText>
         </div>
       )}
+
     </div>
   );
 };

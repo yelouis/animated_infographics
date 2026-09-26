@@ -107,3 +107,59 @@ export function createMapProjection({
 
   return projection;
 }
+
+export interface ChipPlacement {
+  placement: "above" | "below";
+  top: number;
+  transform: string;
+  chipTop: number;
+  chipBottom: number;
+  chipLeft: number;
+  chipRight: number;
+}
+
+export function computeChipPlacement({
+  markerX,
+  markerY,
+  chipWidth = 120,
+  chipHeight = 36,
+  topThreshold = 120,
+}: {
+  markerX: number;
+  markerY: number;
+  chipWidth?: number;
+  chipHeight?: number;
+  topThreshold?: number;
+}): ChipPlacement {
+  const isNearTop = markerY < topThreshold;
+  if (isNearTop) {
+    // Top edge sits 12 px below dot bottom edge (y + 14 + 12 = y + 26)
+    const chipTop = markerY + 26;
+    const chipBottom = chipTop + chipHeight;
+    return {
+      placement: "below",
+      top: chipTop,
+      transform: "translateX(-50%)",
+      chipTop,
+      chipBottom,
+      chipLeft: markerX - chipWidth / 2,
+      chipRight: markerX + chipWidth / 2,
+    };
+  } else {
+    // Bottom edge sits 12 px above dot top edge (y - 14 - 12 = y - 26)
+    const chipBottom = markerY - 26;
+    const chipTop = chipBottom - chipHeight;
+    return {
+      placement: "above",
+      top: markerY - 26,
+      transform: "translate(-50%, -100%)",
+      chipTop,
+      chipBottom,
+      chipLeft: markerX - chipWidth / 2,
+      chipRight: markerX + chipWidth / 2,
+    };
+  }
+}
+
+
+

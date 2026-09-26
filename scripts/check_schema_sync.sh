@@ -17,6 +17,7 @@ FILES_TO_CHECK=(
   "renderer/src/generated/iconNames.json"
   "renderer/src/generated/iconMap.ts"
   "data/geo/country_bboxes.json"
+  "renderer/public/geo/lakes-50m.json"
 )
 
 TMP_DIR="$(mktemp -d)"
@@ -29,7 +30,11 @@ uv run python -m animated_infographics.contracts.export --out "$TMP_DIR" > /dev/
 mkdir -p "$TMP_DIR/data/geo"
 npx --prefix renderer tsx renderer/scripts/gen-country-bboxes.ts "$TMP_DIR/data/geo/country_bboxes.json" > /dev/null
 
-# 3. Check for existence, non-emptiness, and identity on each file
+# 3. Regenerate lakes into temp dir
+mkdir -p "$TMP_DIR/renderer/public/geo"
+npx --prefix renderer tsx renderer/scripts/gen-lakes.ts "$TMP_DIR/renderer/public/geo/lakes-50m.json" > /dev/null
+
+# 4. Check for existence, non-emptiness, and identity on each file
 for file in "${FILES_TO_CHECK[@]}"; do
   # Check committed file exists and is not empty
   if [ ! -f "$REPO_ROOT/$file" ]; then
@@ -58,5 +63,5 @@ for file in "${FILES_TO_CHECK[@]}"; do
   fi
 done
 
-echo "G8: Schema and contracts sync check passed (11 files verified)."
+echo "G8: Schema and contracts sync check passed (12 files verified)."
 exit 0

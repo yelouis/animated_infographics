@@ -115,7 +115,7 @@ export const MapFocus: React.FC<MapFocusTemplateProps> = ({
     return (
       <div
         style={{
-          backgroundColor: palette.bgRaised,
+          backgroundColor: palette.bgDeep,
           borderRadius: 20,
           padding: "6px 16px",
           boxShadow: "0 4px 16px rgba(0, 0, 0, 0.4)",

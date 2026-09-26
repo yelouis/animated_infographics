@@ -3,9 +3,11 @@ import { geoPath } from "d3-geo";
 import * as topojson from "topojson-client";
 import type { Topology } from "topojson-specification";
 import worldTopology from "world-atlas/countries-110m.json";
+import lakesData from "../../public/geo/lakes-50m.json";
 import { palette } from "../theme/palette";
 import { Chip } from "./Chip";
-import { createMapProjection, type GeoPoint } from "./mapFraming";
+import { NUMERIC_TO_ISO3 } from "./countryCodes";
+import { computeChipPlacement, createMapProjection, type GeoPoint } from "./mapFraming";
 
 export interface MapMarker {
   placeId: string;
@@ -76,6 +78,11 @@ export const MapView: React.FC<MapViewProps> = ({
     return { countryFeatures: feats, bordersPath: bPath };
   }, [pathGenerator]);
 
+  const lakeFeatures = useMemo(() => {
+    return (lakesData as unknown as { features: GeoJSON.Feature[] }).features || [];
+  }, []);
+
+
   // Projected marker positions
   const projectedMarkers = useMemo(() => {
     return markers.map((m) => {
@@ -88,9 +95,9 @@ export const MapView: React.FC<MapViewProps> = ({
     });
   }, [markers, projection]);
 
-  // Pulse ring animation: r 16 -> 48, opacity 0.6 -> 0, period 30 frames
+  // Pulse ring animation: r 14 -> 48, 4 px highlight stroke, opacity 0.6 -> 0, period 30 frames
   const pulsePhase = (frame % 30) / 30;
-  const pulseR = 16 + pulsePhase * 32;
+  const pulseR = 14 + pulsePhase * (48 - 14);
   const pulseOpacity = 0.6 * (1 - pulsePhase);
 
   // Path curves if path is true and >= 2 markers
@@ -136,7 +143,7 @@ export const MapView: React.FC<MapViewProps> = ({
         height,
         borderRadius: radius,
         overflow: "hidden",
-        backgroundColor: "#0F1B33", // Sea
+        backgroundColor: palette.mapSea,
         boxSizing: "border-box",
         ...style,
       }}
@@ -147,11 +154,24 @@ export const MapView: React.FC<MapViewProps> = ({
         style={{ position: "absolute", top: 0, left: 0, display: "block" }}
       >
         {/* Sea background */}
-        <rect width={width} height={height} fill="#0F1B33" />
+        <rect width={width} height={height} fill={palette.mapSea} />
 
-        {/* Land polygons */}
-        <g fill="#1F2F52">
+        {/* Land polygons (mapRegion for region country, mapLand for others) */}
+        <g>
           {countryFeatures.map((feat, idx) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const d = pathGenerator(feat as any);
+            if (!d) return null;
+            const iso3 = NUMERIC_TO_ISO3[String(parseInt(String(feat.id), 10))];
+            const isRegion = region !== "world" && iso3 === region;
+            const fill = isRegion ? palette.mapRegion : palette.mapLand;
+            return <path key={idx} d={d} fill={fill} />;
+          })}
+        </g>
+
+        {/* Lakes layer (drawn above land in sea colour) */}
+        <g fill={palette.mapSea}>
+          {lakeFeatures.map((feat, idx) => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const d = pathGenerator(feat as any);
             if (!d) return null;
@@ -164,7 +184,7 @@ export const MapView: React.FC<MapViewProps> = ({
           <path
             d={bordersPath}
             fill="none"
-            stroke="#3A5080"
+            stroke={palette.mapBorder}
             strokeWidth="1.5"
             strokeLinejoin="round"
           />
@@ -195,27 +215,35 @@ export const MapView: React.FC<MapViewProps> = ({
         {/* Marker Dots & Pulse Rings */}
         {projectedMarkers.map((m, idx) => (
           <g key={idx}>
-            {/* Primary Pulse ring */}
+            {/* Primary Pulse ring: radius 14->48, 4 px highlight stroke, opacity 0.6->0 */}
             <circle
               cx={m.x}
               cy={m.y}
               r={pulseR}
               fill="none"
               stroke={palette.highlight}
-              strokeWidth={3}
+              strokeWidth={4}
               opacity={pulseOpacity}
             />
-            {/* 16px highlight dot (r=8) */}
-            <circle cx={m.x} cy={m.y} r={8} fill={palette.highlight} />
+            {/* Dot: radius 14 px, fill highlight, with a 4 px bgDeep stroke */}
+            <circle
+              cx={m.x}
+              cy={m.y}
+              r={14}
+              fill={palette.highlight}
+              stroke={palette.bgDeep}
+              strokeWidth={4}
+            />
           </g>
         ))}
       </svg>
 
       {/* Marker Labels (Chip) */}
       {projectedMarkers.map((m, idx) => {
-        // Above marker unless within 120px of top
-        const isNearTop = m.y < 120;
-        const chipTop = isNearTop ? m.y + 16 : m.y - 48;
+        const placement = computeChipPlacement({
+          markerX: m.x,
+          markerY: m.y,
+        });
 
         if (renderMarkerLabel) {
           return (
@@ -224,8 +252,8 @@ export const MapView: React.FC<MapViewProps> = ({
               style={{
                 position: "absolute",
                 left: m.x,
-                top: chipTop,
-                transform: "translateX(-50%)",
+                top: placement.top,
+                transform: placement.transform,
                 pointerEvents: "none",
               }}
             >
@@ -240,14 +268,14 @@ export const MapView: React.FC<MapViewProps> = ({
             style={{
               position: "absolute",
               left: m.x,
-              top: chipTop,
-              transform: "translateX(-50%)",
+              top: placement.top,
+              transform: placement.transform,
               pointerEvents: "none",
             }}
           >
             <Chip
               label={m.label}
-              color={palette.bgRaised}
+              color={palette.bgDeep}
               textColor={palette.ink}
               size="sm"
             />
@@ -257,3 +285,4 @@ export const MapView: React.FC<MapViewProps> = ({
     </div>
   );
 };
+

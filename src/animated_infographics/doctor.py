@@ -264,6 +264,16 @@ def run_doctor() -> int:
             "npx --prefix renderer tsx renderer/scripts/gen-country-bboxes.ts",
         )
 
+    # 13. renderer/public/geo/lakes-50m.json
+    lakes_file = project_root / "renderer" / "public" / "geo" / "lakes-50m.json"
+    if lakes_file.is_file() and lakes_file.stat().st_size > 100:
+        report_ok("renderer/public/geo/lakes-50m.json")
+    else:
+        report_missing(
+            "renderer/public/geo/lakes-50m.json",
+            "npx --prefix renderer tsx renderer/scripts/gen-lakes.ts",
+        )
+
     if missing_count > 0:
         return 4
     return 0

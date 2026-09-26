@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { computeFramedBbox, createMapProjection } from "./mapFraming";
+import {
+  computeChipPlacement,
+  computeFramedBbox,
+  createMapProjection,
+} from "./mapFraming";
 
 describe("mapFraming", () => {
+
   it("enforces minimum span for regional maps (8x6 degrees)", () => {
     // Single point: Boston at (lat 42.36, lon -71.06)
     const bbox = computeFramedBbox([{ lat: 42.36, lon: -71.06 }], "USA");
@@ -78,4 +83,60 @@ describe("mapFraming", () => {
       }
     }
   });
+
+  it("ensures marker dot circle and chip rectangle are disjoint for both placements", () => {
+    const dotRadius = 14;
+    const chipWidth = 120;
+    const chipHeight = 36;
+
+    // Helper: distance between circle (cx, cy) and AABB [left, right, top, bottom]
+    function circleRectDistance(
+      cx: number,
+      cy: number,
+      rect: { left: number; right: number; top: number; bottom: number }
+    ): number {
+      const nearestX = Math.max(rect.left, Math.min(cx, rect.right));
+      const nearestY = Math.max(rect.top, Math.min(cy, rect.bottom));
+      const dx = cx - nearestX;
+      const dy = cy - nearestY;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    // 1. Placement above (y >= 120): bottom edge at y - 26
+    const aboveY = 200;
+    const abovePlacement = computeChipPlacement({
+      markerX: 400,
+      markerY: aboveY,
+      chipWidth,
+      chipHeight,
+    });
+    expect(abovePlacement.placement).toBe("above");
+    expect(abovePlacement.chipBottom).toBe(aboveY - 26);
+    const distAbove = circleRectDistance(400, aboveY, {
+      left: abovePlacement.chipLeft,
+      right: abovePlacement.chipRight,
+      top: abovePlacement.chipTop,
+      bottom: abovePlacement.chipBottom,
+    });
+    expect(distAbove).toBeGreaterThan(dotRadius);
+
+    // 2. Placement below (y < 120): top edge at y + 26
+    const belowY = 80;
+    const belowPlacement = computeChipPlacement({
+      markerX: 400,
+      markerY: belowY,
+      chipWidth,
+      chipHeight,
+    });
+    expect(belowPlacement.placement).toBe("below");
+    expect(belowPlacement.chipTop).toBe(belowY + 26);
+    const distBelow = circleRectDistance(400, belowY, {
+      left: belowPlacement.chipLeft,
+      right: belowPlacement.chipRight,
+      top: belowPlacement.chipTop,
+      bottom: belowPlacement.chipBottom,
+    });
+    expect(distBelow).toBeGreaterThan(dotRadius);
+  });
 });
+

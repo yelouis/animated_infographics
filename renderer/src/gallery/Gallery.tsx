@@ -128,7 +128,25 @@ const GALLERY_PLACES: Record<string, TimelinePlace> = {
     name: "Boston",
     image: null,
   },
+  p4: {
+    country_iso3: "CAN",
+    icon: "Snowflake",
+    lat: 75.0,
+    lon: -75.0,
+    name: "Arctic Outpost",
+    image: null,
+  },
+  p5: {
+    country_iso3: "ECU",
+    icon: "Boat",
+    lat: 0.0,
+    lon: -78.46,
+    name: "Equator Terminal",
+    image: null,
+  },
+
 };
+
 
 const GALLERY_SET_PIECES: Record<string, TimelineSetPiece> = {
   sp1: {

@@ -9,6 +9,10 @@ export const palette = {
   inkMuted: "#B8C1D6",
   highlight: "#FFD166",
   danger: "#FF6B8B",
+  mapSea: "#0B1326",
+  mapLand: "#4466A0",
+  mapRegion: "#7C9FDB",
+  mapBorder: "#0B1326",
   castSlots: [
     "#F4A261",
     "#2A9D8F",

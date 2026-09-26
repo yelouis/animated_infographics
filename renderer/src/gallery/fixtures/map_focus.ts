@@ -29,19 +29,21 @@ export const mapFocusFixtures: Record<"min" | "typical" | "max", MapFocusProps> 
     region: "world",
     markers: [
       {
-        place_id: "p1",
-        label: "Duluth Station HQ",
-      },
-      {
-        place_id: "p2",
-        label: "Thunder Bay Harbor",
+        place_id: "p4",
+        label: "Arctic Station Alert",
       },
       {
         place_id: "p3",
         label: "Boston Distilling Co",
       },
+      {
+        place_id: "p5",
+        label: "Equator Station",
+      },
     ],
+
     path: true,
-    caption: "From the Great Lakes across the border down to the coast",
+    caption: "From the high Arctic outpost across the coast to the equator",
   },
 };
+

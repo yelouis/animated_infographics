@@ -167,3 +167,50 @@ def test_scrim_contrast_over_white() -> None:
     assert ratio_muted >= 4.5, (
         f"inkMuted on scrim composite {comp} has ratio {ratio_muted:.2f} < 4.5"
     )
+
+
+def test_map_contrast() -> None:
+    """Assert map contrast ratios per design_visual_direction.md §2.1 and
+    design_templates.md §2.15.
+    """
+    tokens, _ = parse_palette_ts()
+
+    map_sea = tokens["mapSea"]
+    map_land = tokens["mapLand"]
+    map_region = tokens["mapRegion"]
+    bg_deep = tokens["bgDeep"]
+    highlight = tokens["highlight"]
+    ink = tokens["ink"]
+
+    # 1. land vs sea (floor >= 3.0, expected 3.22)
+    ratio_land_sea = contrast_ratio(map_land, map_sea)
+    assert ratio_land_sea >= 3.0, f"land vs sea ratio {ratio_land_sea:.2f} < 3.0"
+    assert round(ratio_land_sea, 2) == 3.22
+
+    # 2. region land vs land (floor >= 2.0, expected 2.15)
+    ratio_region_land = contrast_ratio(map_region, map_land)
+    assert ratio_region_land >= 2.0, f"region land vs land ratio {ratio_region_land:.2f} < 2.0"
+    assert round(ratio_region_land, 2) == 2.15
+
+    # 3. marker stroke bgDeep vs land / vs region land (floor >= 3.0, expected 3.22 / 6.90)
+    ratio_stroke_land = contrast_ratio(bg_deep, map_land)
+    assert ratio_stroke_land >= 3.0, f"marker stroke vs land ratio {ratio_stroke_land:.2f} < 3.0"
+    assert round(ratio_stroke_land, 2) == 3.22
+
+    ratio_stroke_region = contrast_ratio(bg_deep, map_region)
+    assert ratio_stroke_region >= 3.0, (
+        f"marker stroke vs region land ratio {ratio_stroke_region:.2f} < 3.0"
+    )
+    assert round(ratio_stroke_region, 2) == 6.90
+
+    # 4. marker fill highlight vs its stroke bgDeep (floor >= 3.0, expected 12.83)
+    ratio_marker_stroke = contrast_ratio(highlight, bg_deep)
+    assert ratio_marker_stroke >= 3.0, (
+        f"marker fill vs stroke ratio {ratio_marker_stroke:.2f} < 3.0"
+    )
+    assert round(ratio_marker_stroke, 2) == 12.83
+
+    # 5. chip text ink on chip bgDeep (floor >= 4.5, expected 16.83)
+    ratio_chip = contrast_ratio(ink, bg_deep)
+    assert ratio_chip >= 4.5, f"chip text ink on bgDeep ratio {ratio_chip:.2f} < 4.5"
+    assert round(ratio_chip, 2) == 16.83

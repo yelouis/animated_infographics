@@ -132,10 +132,19 @@ if [ ! -f "$VENDOR_DIR/countryInfo.txt" ]; then
   curl -sSL https://download.geonames.org/export/dump/countryInfo.txt -o "$VENDOR_DIR/countryInfo.txt"
 fi
 
+if [ ! -f "$VENDOR_DIR/ne_50m_lakes.geojson" ]; then
+  echo "Downloading ne_50m_lakes.geojson..."
+  curl -sSL https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_lakes.geojson -o "$VENDOR_DIR/ne_50m_lakes.geojson"
+fi
+
 echo "Verifying data/vendor/CHECKSUMS..."
 (cd "$VENDOR_DIR" && shasum -a 256 -c CHECKSUMS)
 
 echo "=== 10. Generate country bboxes ==="
 npx --prefix renderer tsx renderer/scripts/gen-country-bboxes.ts
 
+echo "=== 11. Generate lakes ==="
+npx --prefix renderer tsx renderer/scripts/gen-lakes.ts
+
 echo "=== Setup complete ==="
+

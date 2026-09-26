@@ -36,3 +36,19 @@ def test_doctor_mflux_missing_klein_model_exits_4() -> None:
             result = runner.invoke(app, ["doctor"])
             assert result.exit_code == 4
             assert "MISSING mflux-generate-flux2 with flux2-klein-4b support" in result.stdout
+
+
+def test_doctor_missing_lakes_json_exits_4() -> None:
+    from pathlib import Path
+
+    orig_is_file = Path.is_file
+
+    def fake_is_file(self: Path) -> bool:
+        if self.name == "lakes-50m.json":
+            return False
+        return orig_is_file(self)
+
+    with patch.object(Path, "is_file", fake_is_file):
+        result = runner.invoke(app, ["doctor"])
+        assert result.exit_code == 4
+        assert "MISSING renderer/public/geo/lakes-50m.json" in result.stdout
