@@ -93,6 +93,16 @@ def test_cache_key_changes_on_any_keyed_field() -> None:
     assert key_version_change != key_base
 
 
+def test_cache_key_differs_for_seed_and_seed_plus_one() -> None:
+    prompt = "A rugged estate on the shore of Lake Superior"
+    version = "0.20.0"
+    s = image_seed(prompt)
+    key_s = cache_key(prompt, seed=s, mflux_version=version)
+    key_s1 = cache_key(prompt, seed=s + 1, mflux_version=version)
+    assert key_s != key_s1
+    assert cache_key(prompt, seed=None, mflux_version=version) == key_s
+
+
 def test_generate_cache_hit_does_not_invoke_subprocess(tmp_path: Path) -> None:
     from animated_infographics.assets.illustrate import generate
 

@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import os
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 from typing import Final
@@ -161,13 +162,32 @@ def run_doctor() -> int:
     except Exception:
         report_missing("Ollama at 127.0.0.1:11434", "ollama serve")
 
-    # 6. mflux-generate-flux2-klein on PATH
-    if shutil.which("mflux-generate-flux2-klein"):
-        report_ok("mflux-generate-flux2-klein on PATH")
-    elif shutil.which("mflux-generate-flux2"):
-        report_ok("mflux-generate-flux2 on PATH")
+    # 6. mflux-generate-flux2 on PATH and supports flux2-klein-4b
+    mflux_bin = shutil.which("mflux-generate-flux2")
+    if not mflux_bin:
+        report_missing("mflux-generate-flux2 on PATH", "uv tool install mflux")
     else:
-        report_missing("mflux-generate-flux2-klein on PATH", "uv tool install mflux")
+        try:
+            res = subprocess.run(
+                [mflux_bin, "--help"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                check=False,
+            )
+            help_text = res.stdout + " " + res.stderr
+            if "flux2-klein-4b" in help_text:
+                report_ok("mflux-generate-flux2 on PATH (supports flux2-klein-4b)")
+            else:
+                report_missing(
+                    "mflux-generate-flux2 with flux2-klein-4b support",
+                    "uv tool update mflux",
+                )
+        except Exception as e:
+            report_missing(
+                "mflux-generate-flux2 with flux2-klein-4b support",
+                f"error running mflux-generate-flux2 --help: {e}",
+            )
 
     # 7. In HF cache (Whisper, Kokoro, af_heart, am_michael, klein 4B)
     whisper_repo = "mlx-community/whisper-large-v3-turbo"

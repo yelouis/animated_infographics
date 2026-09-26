@@ -32,10 +32,13 @@ if ! command -v mflux-generate-flux2 >/dev/null 2>&1; then
   uv tool install mflux
 fi
 
-# Ensure mflux-generate-flux2-klein is available on PATH
-if ! command -v mflux-generate-flux2-klein >/dev/null 2>&1; then
-  FLUX2_BIN="$(command -v mflux-generate-flux2)"
-  ln -sf "$FLUX2_BIN" "$HOME/.local/bin/mflux-generate-flux2-klein"
+# Remove legacy symlink if it points to mflux-generate-flux2
+LEGACY_SYMLINK="$HOME/.local/bin/mflux-generate-flux2-klein"
+if [ -L "$LEGACY_SYMLINK" ]; then
+  TARGET="$(readlink "$LEGACY_SYMLINK" || true)"
+  if [[ "$TARGET" == *"mflux-generate-flux2"* ]]; then
+    rm -f "$LEGACY_SYMLINK"
+  fi
 fi
 
 echo "=== 6. Pre-downloading HuggingFace models ==="

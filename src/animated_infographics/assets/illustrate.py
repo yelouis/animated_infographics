@@ -31,7 +31,7 @@ STYLE: Final[str] = (
 )
 
 MODEL_NAME: Final[str] = "flux2-klein-4b"
-TOOL_NAME: Final[str] = "mflux-generate-flux2-klein"
+TOOL_NAME: Final[str] = "mflux-generate-flux2"
 IMAGE_WIDTH: Final[int] = 1024
 IMAGE_HEIGHT: Final[int] = 1024
 IMAGE_STEPS: Final[int] = 4
@@ -96,15 +96,16 @@ def image_seed(prompt: str) -> int:
     return int(hashlib.sha256(prompt.encode("utf-8")).hexdigest()[:8], 16) % (2**31)
 
 
-def cache_key(prompt: str, *, mflux_version: str) -> str:
+def cache_key(prompt: str, *, seed: int | None = None, mflux_version: str) -> str:
     """Compute canonical cache key from generation parameters."""
+    actual_seed = image_seed(prompt) if seed is None else seed
     payload = {
         "height": IMAGE_HEIGHT,
         "mflux_version": mflux_version,
         "model": MODEL_NAME,
         "prompt": prompt,
         "quantize": IMAGE_QUANTIZE,
-        "seed": image_seed(prompt),
+        "seed": actual_seed,
         "steps": IMAGE_STEPS,
         "tool": TOOL_NAME,
         "width": IMAGE_WIDTH,
@@ -128,11 +129,18 @@ def get_mflux_version() -> str:
     return "0.20.0"
 
 
-def generate(prompt: str, out: Path, *, timeout_s: int = DEFAULT_TIMEOUT_S) -> ImageResult:
-    """Generate image via mflux-generate-flux2-klein subprocess; never raises on tool failure."""
+def generate(
+    prompt: str,
+    out: Path,
+    *,
+    seed: int | None = None,
+    timeout_s: int = DEFAULT_TIMEOUT_S,
+) -> ImageResult:
+    """Generate image via mflux-generate-flux2 subprocess; never raises on tool failure."""
     t0 = time.perf_counter()
     mflux_ver = get_mflux_version()
-    key = cache_key(prompt, mflux_version=mflux_ver)
+    actual_seed = image_seed(prompt) if seed is None else seed
+    key = cache_key(prompt, seed=actual_seed, mflux_version=mflux_ver)
     base_cache = Path(os.environ.get("INFOGRAPHICS_CACHE_DIR", "./cache"))
     cache_dir = base_cache / "images"
     cache_path = cache_dir / f"{key}.png"
@@ -175,12 +183,11 @@ def generate(prompt: str, out: Path, *, timeout_s: int = DEFAULT_TIMEOUT_S) -> I
                 cache_key=key,
             )
 
-    seed = image_seed(prompt)
     temp_dir = Path(tempfile.gettempdir())
     temp_file = temp_dir / f"mflux_{key}_{int(time.time() * 1000)}.png"
 
     # Note: The installed mflux v0.20.0 supports --model flux2-klein-4b for the 4B weights.
-    # Verified with `mflux-generate-flux2-klein --help` where --model accepts `flux2-klein-4b`.
+    # Verified with `mflux-generate-flux2 --help` where --model accepts `flux2-klein-4b`.
     cmd = [
         bin_path,
         "--model",
@@ -194,7 +201,7 @@ def generate(prompt: str, out: Path, *, timeout_s: int = DEFAULT_TIMEOUT_S) -> I
         "--height",
         str(IMAGE_HEIGHT),
         "--seed",
-        str(seed),
+        str(actual_seed),
         "--prompt",
         prompt,
         "--output",
@@ -299,7 +306,6 @@ def generate(prompt: str, out: Path, *, timeout_s: int = DEFAULT_TIMEOUT_S) -> I
 def run_assets(bible: Bible, job: Job) -> AssetManifest:
     """Run illustration generation for all places and set pieces in bible."""
     timeout_s = int(os.environ.get("INFOGRAPHICS_IMAGE_TIMEOUT_S", DEFAULT_TIMEOUT_S))
-    mflux_ver = get_mflux_version()
     images_dir = job.dir / "assets" / "images"
     images_dir.mkdir(parents=True, exist_ok=True)
 
@@ -308,14 +314,13 @@ def run_assets(bible: Bible, job: Job) -> AssetManifest:
     # Places: up to 4 per bible cap
     for p in bible.places[:4]:
         prompt = image_prompt("place", p.visual_description)
-        key = cache_key(prompt, mflux_version=mflux_ver)
         out_path = images_dir / f"{p.id}.png"
         res = generate(prompt, out_path, timeout_s=timeout_s)
         entities.append(
             AssetEntity(
                 id=p.id,
                 prompt=prompt,
-                cache_key=key,
+                cache_key=res.cache_key,
                 status=res.status,
                 elapsed_ms=res.elapsed_ms,
                 error=res.error,
@@ -325,14 +330,13 @@ def run_assets(bible: Bible, job: Job) -> AssetManifest:
     # Set pieces: up to 3 per bible cap
     for s in bible.set_pieces[:3]:
         prompt = image_prompt("set_piece", s.visual_description)
-        key = cache_key(prompt, mflux_version=mflux_ver)
         out_path = images_dir / f"{s.id}.png"
         res = generate(prompt, out_path, timeout_s=timeout_s)
         entities.append(
             AssetEntity(
                 id=s.id,
                 prompt=prompt,
-                cache_key=key,
+                cache_key=res.cache_key,
                 status=res.status,
                 elapsed_ms=res.elapsed_ms,
                 error=res.error,

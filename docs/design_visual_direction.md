@@ -138,7 +138,7 @@ Parametric flat SVG, `viewBox 0 0 200 200`, driven only by `bible.cast[].avatar`
 
 | Setting | Value |
 |---|---|
-| Tool | `mflux-generate-flux2-klein` (installed with `uv tool install mflux`), **4B** weights. Verify the model variant with `--help` and the download path; the 9B is non-commercial and **must not** be used. |
+| Tool | mflux 0.20.0 exposes klein through `mflux-generate-flux2 --model flux2-klein-4b` (installed with `uv tool install mflux`), **4B** weights. Verify the model variant with `--help` and the download path; the 9B is non-commercial and **must not** be used. |
 | Size | **1024 × 1024** |
 | Steps | **4** |
 | Quantize | **8** |
