@@ -12,6 +12,7 @@ from animated_infographics.contracts.models import (
     CauseEffectScene,
     CharacterIntroScene,
     ComparisonScene,
+    CriticReport,
     DialogueScene,
     EmotionBeatScene,
     IconListScene,
@@ -35,6 +36,13 @@ from animated_infographics.contracts.models import (
     Transcript,
 )
 from animated_infographics.contracts.templates import REGISTRY
+from animated_infographics.planner.critic import (
+    build_critic_request,
+    critic_mismatches,
+    format_disagreement_message,
+    needs_critic,
+    validate_critic_answer,
+)
 from animated_infographics.planner.llm import LLMBackend, run_with_retries
 from animated_infographics.planner.select import plan_template_selection
 from animated_infographics.planner.validate import PlanContext, validate_scene
@@ -180,8 +188,10 @@ def plan_single_template_props(
     backend: LLMBackend,
     prompt_template: str,
     compact_bible: str,
+    extra_user_prompt: str | None = None,
+    max_attempts: int = 3,
 ) -> tuple[Scene | None, list[str], int]:
-    """Attempt up to 3 tries to generate and validate props for a single template.
+    """Attempt up to max_attempts tries to generate and validate props for a single template.
 
     Returns:
         (scene_or_none, errors_accumulated, attempts_made)
@@ -209,6 +219,8 @@ def plan_single_template_props(
         writing_rules=writing_rules,
         field_limits=field_limits,
     )
+    if extra_user_prompt:
+        base_user_prompt += f"\n\n{extra_user_prompt}"
 
     system = (
         "You are an expert storyboard planner for animated educational explainer videos. "
@@ -243,7 +255,7 @@ def plan_single_template_props(
         user=base_user_prompt,
         schema=narrowed_schema,
         validate=validate_props,
-        max_attempts=3,
+        max_attempts=max_attempts,
     )
 
     if result is not None:
@@ -261,6 +273,95 @@ def plan_single_template_props(
 
     last_errors = attempts[-1].errors if attempts else ["All attempts failed"]
     return (None, last_errors, len(attempts))
+
+
+def _evaluate_scene_critic(
+    candidate_scene: Scene,
+    beat: Beat,
+    prev_beat: Beat | None,
+    next_beat: Beat | None,
+    transcript: Transcript,
+    bible: Bible,
+    backend: LLMBackend,
+    prompt_template: str,
+    compact_bible: str,
+) -> tuple[Scene, CriticReport, int]:
+    """Run blind critic check on candidate scene if required per design_planner.md §11.
+
+    Returns:
+        (final_scene, critic_report, extra_llm_calls)
+    """
+    if not needs_critic(candidate_scene):
+        return (
+            candidate_scene,
+            CriticReport(status="not_applicable", mismatches=[], changed=False),
+            0,
+        )
+
+    system, user, schema = build_critic_request(candidate_scene, beat, prev_beat, next_beat, bible)
+
+    def validate_critic(raw: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+        return validate_critic_answer(candidate_scene, raw)
+
+    critic_res, critic_attempts = run_with_retries(
+        backend,
+        stage="critic",
+        system=system,
+        user=user,
+        schema=schema,
+        validate=validate_critic,
+        max_attempts=3,
+        num_predict=256,
+        temperature=0.0,
+    )
+    critic_calls = len(critic_attempts)
+
+    if critic_res is None:
+        return (
+            candidate_scene,
+            CriticReport(status="unavailable", mismatches=[], changed=False),
+            critic_calls,
+        )
+
+    mismatches = critic_mismatches(candidate_scene, critic_res, bible)
+    if not mismatches:
+        return (
+            candidate_scene,
+            CriticReport(status="agree", mismatches=[], changed=False),
+            critic_calls,
+        )
+
+    # Disagreement: re-request same template's props once with disagreement message
+    disagreement_msg = format_disagreement_message(mismatches)
+    retry_scene, _, retry_attempts = plan_single_template_props(
+        candidate_scene.template,
+        candidate_scene.id,
+        candidate_scene.beat_i,
+        beat,
+        prev_beat,
+        next_beat,
+        transcript,
+        bible,
+        backend,
+        prompt_template,
+        compact_bible,
+        extra_user_prompt=disagreement_msg,
+        max_attempts=1,
+    )
+    extra_calls = critic_calls + retry_attempts
+
+    if retry_scene is not None:
+        return (
+            retry_scene,
+            CriticReport(status="mismatch_retried", mismatches=mismatches, changed=True),
+            extra_calls,
+        )
+
+    return (
+        candidate_scene,
+        CriticReport(status="mismatch_retried", mismatches=mismatches, changed=False),
+        extra_calls,
+    )
 
 
 def plan_storyboard(
@@ -330,6 +431,7 @@ def plan_storyboard(
                     fallback_level=0,
                     attempts=0,
                     errors=[],
+                    critic=CriticReport(status="not_applicable", mismatches=[], changed=False),
                 )
             )
             continue
@@ -384,10 +486,25 @@ def plan_storyboard(
                 else:
                     accumulated_errors.extend(a_errs)
 
-        # Fallback level 2: deterministic kinetic_quote
-        if scene_result is None:
+        if scene_result is not None:
+            # Fallback level 0 or 1: check critic per §11
+            scene_result, critic_report, extra_calls = _evaluate_scene_critic(
+                scene_result,
+                beat,
+                prev_beat,
+                next_beat,
+                transcript,
+                bible,
+                backend,
+                prompt_template,
+                compact_bible,
+            )
+            total_llm_calls += extra_calls
+        else:
+            # Fallback level 2: deterministic kinetic_quote
             fallback_level = 2
             scene_result = build_deterministic_kinetic_quote(scene_id, idx, beat)
+            critic_report = CriticReport(status="not_applicable", mismatches=[], changed=False)
 
         scenes.append(scene_result)
         plan_report_scenes.append(
@@ -399,6 +516,7 @@ def plan_storyboard(
                 fallback_level=fallback_level,  # type: ignore[arg-type]
                 attempts=total_scene_attempts,
                 errors=accumulated_errors,
+                critic=critic_report,
             )
         )
 
@@ -453,6 +571,7 @@ def plan_storyboard(
                     fallback_level=1 if new_scene.template == alt_template else 2,
                     attempts=old_rep.attempts,
                     errors=old_rep.errors,
+                    critic=CriticReport(status="not_applicable", mismatches=[], changed=False),
                 )
             else:
                 seen_intro_cast.add(cast_id)

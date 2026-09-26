@@ -37,6 +37,8 @@ class LLMBackend(Protocol):
         user: str | None = None,
         schema: dict[str, Any],
         attempt: int,
+        num_predict: int | None = None,
+        temperature: float = 0.3,
     ) -> dict[str, Any]:
         """Generate structured JSON conforming to schema."""
         ...
@@ -80,16 +82,19 @@ class OllamaBackend:
         messages: list[dict[str, str]],
         schema: dict[str, Any],
         attempt: int,
+        num_predict: int | None = None,
+        temperature: float = 0.3,
     ) -> tuple[str, dict[str, Any]]:
+        effective_num_predict = num_predict if num_predict is not None else 2048
         cache_obj: dict[str, Any] = {
             "format": schema,
             "messages": messages,
             "model": self.model,
             "options": {
                 "num_ctx": 16384,
-                "num_predict": 2048,
+                "num_predict": effective_num_predict,
                 "seed": 7 + attempt,
-                "temperature": 0.3,
+                "temperature": temperature,
             },
             "think": False,
         }
@@ -106,6 +111,8 @@ class OllamaBackend:
         user: str | None = None,
         schema: dict[str, Any],
         attempt: int,
+        num_predict: int | None = None,
+        temperature: float = 0.3,
     ) -> dict[str, Any]:
         """Generate structured JSON via Ollama or return cached response."""
         # calls counter is incremented at entry, before cache lookup
@@ -118,7 +125,9 @@ class OllamaBackend:
             if user:
                 messages.append({"role": "user", "content": user})
 
-        key, cache_obj = self._canonical_cache_key(messages, schema, attempt)
+        key, cache_obj = self._canonical_cache_key(
+            messages, schema, attempt, num_predict=num_predict, temperature=temperature
+        )
         cache_file = self.cache_dir / f"{key}.json"
 
         # Check response cache
@@ -133,6 +142,7 @@ class OllamaBackend:
                 # Corrupt cache file, proceed with fresh generation
                 pass
 
+        effective_num_predict = num_predict if num_predict is not None else 2048
         payload = {
             "model": self.model,
             "messages": messages,
@@ -141,10 +151,10 @@ class OllamaBackend:
             "stream": False,
             "keep_alive": "15m",
             "options": {
-                "temperature": 0.3,
+                "temperature": temperature,
                 "seed": 7 + attempt,
                 "num_ctx": 16384,
-                "num_predict": 2048,
+                "num_predict": effective_num_predict,
             },
         }
 
@@ -218,6 +228,8 @@ def run_with_retries(
     schema: dict[str, Any],
     validate: Callable[[dict[str, Any]], tuple[dict[str, Any], list[str]]],
     max_attempts: int = 3,
+    num_predict: int | None = None,
+    temperature: float = 0.3,
 ) -> tuple[dict[str, Any] | None, list[Attempt]]:
     """Run generation up to max_attempts, appending errors to conversation on failure."""
     messages: list[dict[str, str]] = [
@@ -229,12 +241,19 @@ def run_with_retries(
 
     for attempt_idx in range(max_attempts):
         raw_output: dict[str, Any] | None = None
+        extra_kwargs: dict[str, Any] = {}
+        if num_predict is not None:
+            extra_kwargs["num_predict"] = num_predict
+        if temperature != 0.3:
+            extra_kwargs["temperature"] = temperature
+
         try:
             raw_output = backend.generate_json(
                 stage=stage,
                 messages=list(messages),
                 schema=schema,
                 attempt=attempt_idx,
+                **extra_kwargs,
             )
             repaired_output, errors = validate(raw_output)
             attempts.append(Attempt(output=raw_output, errors=errors))

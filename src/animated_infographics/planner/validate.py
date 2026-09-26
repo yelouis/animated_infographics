@@ -191,6 +191,9 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
         errors.extend(quote_errors)
 
     elif isinstance(props, StatCalloutProps):
+        # Meaning rule (Issue 5 / Option A): currency symbols in suffix
+        if any(sym in props.suffix for sym in ("$", "£", "€")):
+            errors.append("props.suffix: currency symbols belong in prefix")
         # Rendered value line
         rendered_val = props.prefix + _format_stat_value(props.value, props.decimals)
         if props.display_scale != "none":
@@ -301,10 +304,16 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
             )
         errors.extend(_check_slot("props.caption", props.caption, slots["caption"]))
         errors.extend(_check_slot("props.era_label", props.era_label, slots["era"]))
-        if props.era_label and not digits_grounded(props.era_label, full_transcript):
-            errors.append(
-                f"props.era_label: '{props.era_label}' contains digits not grounded in transcript"
-            )
+        if props.era_label:
+            if re.search(r"\bago\b", props.era_label, re.IGNORECASE) and not re.search(
+                r"\bago\b", full_transcript, re.IGNORECASE
+            ):
+                errors.append('props.era_label: "ago" is not in the narration')
+            if not digits_grounded(props.era_label, full_transcript):
+                errors.append(
+                    f"props.era_label: '{props.era_label}' "
+                    "contains digits not grounded in transcript"
+                )
 
     elif isinstance(props, SetPieceProps):
         if props.set_piece_id not in set_pieces_map:

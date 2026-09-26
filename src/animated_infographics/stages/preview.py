@@ -48,8 +48,16 @@ def run_preview_stage(job: Job, ctx: RunContext) -> None:
     # 2. Determine flagged scenes
     overflow_scene_ids = {entry["scene_id"] for entry in overflow_entries if "scene_id" in entry}
     fallback_scene_ids: set[str] = set()
+    critic_changed_scene_ids: set[str] = set()
+    critic_unavailable_scene_ids: set[str] = set()
     if plan_report:
         fallback_scene_ids = {s.id for s in plan_report.scenes if s.fallback_level == 2}
+        for s in plan_report.scenes:
+            if hasattr(s, "critic") and s.critic:
+                if s.critic.changed:
+                    critic_changed_scene_ids.add(s.id)
+                elif s.critic.status == "unavailable":
+                    critic_unavailable_scene_ids.add(s.id)
 
     flags_by_scene: dict[str, list[str]] = {}
     for sc in timeline.scenes:
@@ -58,6 +66,10 @@ def run_preview_stage(job: Job, ctx: RunContext) -> None:
             flags.append("overflow")
         if sc.id in fallback_scene_ids:
             flags.append("fallback")
+        if sc.id in critic_changed_scene_ids:
+            flags.append("critic changed")
+        if sc.id in critic_unavailable_scene_ids:
+            flags.append("critic unavailable")
         if flags:
             flags_by_scene[sc.id] = flags
 

@@ -8,6 +8,7 @@ from animated_infographics.contracts.models import (
     CastMember,
     CharacterIntroScene,
     KineticQuoteScene,
+    LocationScene,
     MapFocusScene,
     Place,
     RelationshipMapScene,
@@ -23,6 +24,7 @@ from animated_infographics.contracts.models import (
 from animated_infographics.contracts.templates import (
     CharacterIntroProps,
     KineticQuoteProps,
+    LocationProps,
     MapFocusProps,
     MapMarker,
     RelationshipEdge,
@@ -496,3 +498,104 @@ def test_validate_plan_rules() -> None:
     plan = Storyboard(schema_version=1, aspect="9:16", scenes=[s0, s1, s2])
     errs = validate_plan(ctx.bible, plan, ctx)
     assert any("character_intro for cast_id 'c1' appears more than once" in e for e in errs)
+
+
+def test_meaning_rules_currency_and_ago() -> None:
+    """Validate meaning rules per Issue 5 / Option A (design_planner.md §6 item 6)."""
+    ctx = _make_dummy_ctx()
+    # ctx.transcript sentences:
+    # s0: "The Great Molasses Flood struck in 1919."
+    # s1: "About 150 people were injured when the tank burst."
+    # (Neither sentence contains "ago")
+
+    # 1. stat_callout.suffix containing $, £, or €
+    scene_dollar = StatCalloutScene(
+        id="s001",
+        beat_i=1,
+        template="stat_callout",
+        props=StatCalloutProps(
+            value=150.0, decimals=0, display_scale="none", suffix="$", caption="Injured count"
+        ),
+    )
+    errs_dollar = validate_scene(scene_dollar, ctx)
+    assert any("props.suffix: currency symbols belong in prefix" in e for e in errs_dollar)
+
+    scene_pound = StatCalloutScene(
+        id="s001",
+        beat_i=1,
+        template="stat_callout",
+        props=StatCalloutProps(
+            value=150.0, decimals=0, display_scale="none", suffix="£", caption="Injured count"
+        ),
+    )
+    errs_pound = validate_scene(scene_pound, ctx)
+    assert any("props.suffix: currency symbols belong in prefix" in e for e in errs_pound)
+
+    scene_euro = StatCalloutScene(
+        id="s001",
+        beat_i=1,
+        template="stat_callout",
+        props=StatCalloutProps(
+            value=150.0, decimals=0, display_scale="none", suffix="€", caption="Injured count"
+        ),
+    )
+    errs_euro = validate_scene(scene_euro, ctx)
+    assert any("props.suffix: currency symbols belong in prefix" in e for e in errs_euro)
+
+    scene_dollars_word = StatCalloutScene(
+        id="s001",
+        beat_i=1,
+        template="stat_callout",
+        props=StatCalloutProps(
+            value=150.0,
+            decimals=0,
+            display_scale="none",
+            suffix="dollars",
+            caption="Injured count",
+        ),
+    )
+    errs_word = validate_scene(scene_dollars_word, ctx)
+    assert not any("currency symbols belong in prefix" in e for e in errs_word)
+
+    # 2. location.era_label containing whole word "ago" when transcript does not
+    loc_scene_ago = LocationScene(
+        id="s001",
+        beat_i=1,
+        template="location",
+        props=LocationProps(place_id="p1", caption=None, era_label="40 years ago"),
+    )
+    errs_ago = validate_scene(loc_scene_ago, ctx)
+    assert any('props.era_label: "ago" is not in the narration' in e for e in errs_ago)
+
+    # When transcript DOES contain "ago", era_label with "ago" is accepted
+    ago_text = "That happened 40 years ago."
+    ago_tokens = ago_text.split()
+    ago_words = [
+        TranscriptWord(i=i, text=tok, start_ms=i * 200, end_ms=(i + 1) * 200, sentence_i=0)
+        for i, tok in enumerate(ago_tokens)
+    ]
+    ctx_with_ago = PlanContext(
+        transcript=Transcript(
+            schema_version=1,
+            source="tts",
+            audio_path="test.wav",
+            duration_ms=1000,
+            words=ago_words,
+            sentences=[
+                TranscriptSentence(
+                    i=0,
+                    text=ago_text,
+                    start_ms=0,
+                    end_ms=1000,
+                    word_start=0,
+                    word_end=len(ago_tokens),
+                    paragraph_i=0,
+                    is_title=False,
+                )
+            ],
+        ),
+        bible=ctx.bible,
+        beats=ctx.beats,
+    )
+    errs_with_ago = validate_scene(loc_scene_ago, ctx_with_ago)
+    assert not any('"ago" is not in the narration' in e for e in errs_with_ago)

@@ -597,6 +597,14 @@ class Storyboard(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+class CriticReport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    status: Literal["not_applicable", "agree", "mismatch_retried", "unavailable"] = "not_applicable"
+    mismatches: list[str] = Field(default_factory=list)
+    changed: bool = False
+
+
 class PlanReportScene(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -607,6 +615,7 @@ class PlanReportScene(BaseModel):
     fallback_level: Literal[0, 1, 2]
     attempts: int
     errors: list[str] = Field(default_factory=list)
+    critic: CriticReport = Field(default_factory=CriticReport)
 
 
 class RuleRepair(BaseModel):

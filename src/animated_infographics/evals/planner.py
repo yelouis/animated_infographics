@@ -9,18 +9,35 @@ import sys
 import time
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from animated_infographics.audio.narrate import build_sentence_list
 from animated_infographics.contracts.models import (
+    AvatarConfig,
+    Beat,
+    Bible,
+    CastMember,
+    DialogueScene,
+    KineticQuoteScene,
+    Scene,
     Transcript,
     TranscriptSentence,
     TranscriptWord,
 )
+from animated_infographics.contracts.templates import (
+    DialogueLine,
+    DialogueProps,
+    KineticQuoteProps,
+)
 from animated_infographics.ingest import ingest
 from animated_infographics.planner.bible import plan_bible
+from animated_infographics.planner.critic import (
+    build_critic_request,
+    critic_mismatches,
+    validate_critic_answer,
+)
 from animated_infographics.planner.geo import Gazetteer, load_country_bboxes
-from animated_infographics.planner.llm import OllamaBackend
+from animated_infographics.planner.llm import LLMBackend, OllamaBackend, run_with_retries
 from animated_infographics.planner.props import plan_storyboard
 from animated_infographics.planner.segment import plan_beats
 from animated_infographics.planner.validate import PlanContext, validate_plan
@@ -79,6 +96,285 @@ def _make_transcript_from_script(script_path: Path) -> Transcript:
         words=words,
         sentences=transcript_sents,
     )
+
+
+def run_critic_regression_set(backend: LLMBackend) -> list[dict[str, Any]]:
+    """Run the 4-case critic regression set from design_planner.md §11."""
+    avatar = AvatarConfig(
+        skin=1,
+        hair_style="short",
+        hair_color="black",
+        facial_hair="none",
+        headwear="none",
+        glasses=False,
+        age="adult",
+    )
+    bible = Bible(
+        schema_version=1,
+        title="Recipe Box",
+        logline="Grandma's recipe box.",
+        genre="personal_story",
+        cast=[
+            CastMember(
+                id="c1",
+                name="Me",
+                role="narrator",
+                is_narrator=True,
+                color_slot=1,
+                avatar=avatar,
+            ),
+            CastMember(
+                id="c2",
+                name="Danny",
+                role="brother",
+                is_narrator=False,
+                color_slot=2,
+                avatar=avatar,
+            ),
+            CastMember(
+                id="c3",
+                name="Walt",
+                role="friend",
+                is_narrator=False,
+                color_slot=3,
+                avatar=avatar,
+            ),
+            CastMember(
+                id="c4",
+                name="Deb",
+                role="mom",
+                is_narrator=False,
+                color_slot=4,
+                avatar=avatar,
+            ),
+        ],
+    )
+
+    cases = [
+        {
+            "id": "A",
+            "name": "Danny's text 'Who is Walter Lindqvist…' as kinetic_quote",
+            "scene": KineticQuoteScene(
+                id="s012",
+                beat_i=12,
+                template="kinetic_quote",
+                props=KineticQuoteProps(
+                    text="Who is Walter Lindqvist and why did he write to Grandma 60 times?",
+                    emphasis=[],
+                    attribution_cast_id="c1",
+                ),
+            ),
+            "beat": Beat(
+                i=12,
+                text='"Who is Walter Lindqvist and why did he write to Grandma 60 times?"',
+                start_ms=60800,
+                end_ms=65800,
+                word_start=157,
+                word_end=170,
+            ),
+            "prev_beat": Beat(
+                i=11,
+                text=(
+                    "While clearing the attic, he found a shoebox of letters and texted me a photo:"
+                ),
+                start_ms=55925,
+                end_ms=60800,
+                word_start=142,
+                word_end=157,
+            ),
+            "next_beat": Beat(
+                i=13,
+                text=(
+                    "The return address was in Thunder Bay, Ontario, about 190 miles up the shore."
+                ),
+                start_ms=65800,
+                end_ms=72525,
+                word_start=170,
+                word_end=184,
+            ),
+            "expected": "mismatch",
+        },
+        {
+            "id": "B",
+            "name": "'Rose?' as dialogue line with angry tone",
+            "scene": DialogueScene(
+                id="s015",
+                beat_i=15,
+                template="dialogue",
+                props=DialogueProps(
+                    lines=[
+                        DialogueLine(cast_id="c1", text="Rose?", tone="angry"),
+                    ]
+                ),
+            ),
+            "beat": Beat(
+                i=15,
+                text=(
+                    "A man answered, and when I said Rose's name, "
+                    "he was quiet for a long time. Then he said,"
+                ),
+                start_ms=76425,
+                end_ms=82900,
+                word_start=193,
+                word_end=212,
+            ),
+            "prev_beat": Beat(
+                i=14,
+                text="I called the number I found online, expecting nothing.",
+                start_ms=72525,
+                end_ms=76425,
+                word_start=184,
+                word_end=193,
+            ),
+            "next_beat": Beat(
+                i=16,
+                text='"I\'ve been waiting for someone to call about the pie."',
+                start_ms=82900,
+                end_ms=86325,
+                word_start=212,
+                word_end=222,
+            ),
+            "expected": "mismatch",
+        },
+        {
+            "id": "B'",
+            "name": "'Rose?' as dialogue line with neutral tone",
+            "scene": DialogueScene(
+                id="s015",
+                beat_i=15,
+                template="dialogue",
+                props=DialogueProps(
+                    lines=[
+                        DialogueLine(cast_id="c1", text="Rose?", tone="neutral"),
+                    ]
+                ),
+            ),
+            "beat": Beat(
+                i=15,
+                text=(
+                    "A man answered, and when I said Rose's name, "
+                    "he was quiet for a long time. Then he said,"
+                ),
+                start_ms=76425,
+                end_ms=82900,
+                word_start=193,
+                word_end=212,
+            ),
+            "prev_beat": Beat(
+                i=14,
+                text="I called the number I found online, expecting nothing.",
+                start_ms=72525,
+                end_ms=76425,
+                word_start=184,
+                word_end=193,
+            ),
+            "next_beat": Beat(
+                i=16,
+                text='"I\'ve been waiting for someone to call about the pie."',
+                start_ms=82900,
+                end_ms=86325,
+                word_start=212,
+                word_end=222,
+            ),
+            "expected": "agree",
+        },
+        {
+            "id": "C",
+            "name": "'I\\'ve been waiting for someone to call about the pie.' with attribution c3",
+            "scene": KineticQuoteScene(
+                id="s016",
+                beat_i=16,
+                template="kinetic_quote",
+                props=KineticQuoteProps(
+                    text="I've been waiting for someone to call about the pie.",
+                    emphasis=[],
+                    attribution_cast_id="c3",
+                ),
+            ),
+            "beat": Beat(
+                i=16,
+                text='"I\'ve been waiting for someone to call about the pie."',
+                start_ms=82900,
+                end_ms=86325,
+                word_start=212,
+                word_end=222,
+            ),
+            "prev_beat": Beat(
+                i=15,
+                text=(
+                    "A man answered, and when I said Rose's name, "
+                    "he was quiet for a long time. Then he said,"
+                ),
+                start_ms=76425,
+                end_ms=82900,
+                word_start=193,
+                word_end=212,
+            ),
+            "next_beat": Beat(
+                i=17,
+                text="I drove up that weekend.",
+                start_ms=86325,
+                end_ms=88725,
+                word_start=222,
+                word_end=227,
+            ),
+            "expected": "agree",
+        },
+    ]
+
+    results: list[dict[str, Any]] = []
+    print("\n==================================================")
+    print("Running Critic Regression Set (§11)")
+    print("==================================================")
+
+    for c in cases:
+        scene = cast(Scene, c["scene"])
+        beat = cast(Beat, c["beat"])
+        prev_beat = cast(Beat | None, c["prev_beat"])
+        next_beat = cast(Beat | None, c["next_beat"])
+        system, user, schema = build_critic_request(scene, beat, prev_beat, next_beat, bible)
+
+        def validate_c(raw: dict[str, Any], sc: Scene = scene) -> tuple[dict[str, Any], list[str]]:
+            return validate_critic_answer(sc, raw)
+
+        raw_ans, _ = run_with_retries(
+            backend,
+            stage="critic",
+            system=system,
+            user=user,
+            schema=schema,
+            validate=validate_c,
+            max_attempts=3,
+            num_predict=256,
+            temperature=0.0,
+        )
+
+        if raw_ans is None:
+            actual = "unavailable"
+            mismatches: list[str] = []
+        else:
+            mismatches = critic_mismatches(scene, raw_ans, bible)
+            actual = "mismatch" if mismatches else "agree"
+
+        passed = actual == c["expected"]
+        status_tag = "PASS" if passed else "FAIL"
+        print(f"Case {c['id']}: {c['name']} -> {actual} (expected {c['expected']}) [{status_tag}]")
+        if mismatches:
+            print(f"  Mismatches: {mismatches}")
+
+        results.append(
+            {
+                "id": c["id"],
+                "name": c["name"],
+                "expected": c["expected"],
+                "actual": actual,
+                "mismatches": mismatches,
+                "raw_answer": raw_ans,
+                "passed": passed,
+            }
+        )
+
+    return results
 
 
 def run_eval(
@@ -194,6 +490,17 @@ def run_eval(
         if not fixture_pass:
             all_passed = False
 
+        critic_calls = 0
+        critic_mismatches = 0
+        critic_changed = 0
+        for s in report.scenes:
+            if s.critic is not None:
+                if s.critic.status in ("agree", "mismatch_retried", "unavailable"):
+                    critic_calls += 1
+                critic_mismatches += len(s.critic.mismatches)
+                if s.critic.changed:
+                    critic_changed += 1
+
         fix_res: dict[str, Any] = {
             "name": fix_name,
             "voice": voice.model_dump(),
@@ -213,6 +520,9 @@ def run_eval(
             "violations_pass": violations_pass,
             "repairs_by_rule": repairs_by_rule,
             "val_err_hist": val_err_hist,
+            "critic_calls": critic_calls,
+            "critic_mismatches": critic_mismatches,
+            "critic_changed": critic_changed,
             "llm_calls": report.llm_calls,
             "llm_cache_hits": report.llm_cache_hits,
             "wall_time": wall_time,
@@ -220,6 +530,12 @@ def run_eval(
             "passed": fixture_pass,
         }
         results.append(fix_res)
+
+    # 7. Run Critic Regression Set (§11)
+    eval_backend = OllamaBackend(no_cache=no_llm_cache)
+    regression_results = run_critic_regression_set(eval_backend)
+    if not all(cr["passed"] for cr in regression_results):
+        all_passed = False
 
     # Write Markdown report
     if out_dir is None:
@@ -287,6 +603,10 @@ def run_eval(
                 fb_line,
                 f"- **Rule Repairs**: {json.dumps(r['repairs_by_rule'])}",
                 f"- **Validation Violations**: {len(r['violations'])}",
+                (
+                    f"- **Critic**: {r['critic_calls']} calls, "
+                    f"{r['critic_mismatches']} mismatches, {r['critic_changed']} changed"
+                ),
                 f"- **LLM Calls**: {r['llm_calls']} (cache hits: {r['llm_cache_hits']})",
                 f"- **Wall Time**: {r['wall_time']:.1f}s",
                 "",
@@ -297,6 +617,25 @@ def run_eval(
             for v in r["violations"]:
                 md_lines.append(f"- `{v}`")
             md_lines.append("")
+
+    # Critic Regression Set section in report
+    reg_passed_count = sum(1 for cr in regression_results if cr["passed"])
+    md_lines.extend(
+        [
+            "## Critic Regression Set (§11)",
+            "",
+            f"- **Score**: {reg_passed_count}/{len(regression_results)} (Bar: 4/4)",
+            "",
+            "| Case | Name | Expected | Actual | Status |",
+            "|---|---|---|---|---|",
+        ]
+    )
+    for cr in regression_results:
+        st = "**PASS**" if cr["passed"] else "**FAIL**"
+        md_lines.append(
+            f"| `{cr['id']}` | {cr['name']} | `{cr['expected']}` | `{cr['actual']}` | {st} |"
+        )
+    md_lines.append("")
 
     report_content = "\n".join(md_lines) + "\n"
     report_file.write_text(report_content, encoding="utf-8")

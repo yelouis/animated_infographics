@@ -17,7 +17,7 @@
 - An **unreadable map** and **unreadable captions over light illustrations**. Both came from design values that were never measured as composited; the design is now corrected.
 - The **performance budget was never measured cold**.
 
-**Selected September 25, 2026, specced, not yet delivered:** Issues 3, 4 and 5 below, specced as **B10**, **B5** and **B6**. When the delivering item lands, its commit collapses the issue into one line in §3.
+**Selected September 25, 2026, specced, not yet delivered:** Issue 3 below, specced as **B10**. When the delivering item lands, its commit collapses the issue into one line in §3.
 
 ### Issue 3: Generated illustrations sometimes contain fake writing → specced as **B10**
 
@@ -36,63 +36,6 @@
   - *Cons*: Manual work in any video that hits it.
 
 Your selection: Proceed with Option A. Though, in the example provided, I think that text is fine if the description calls for text like a recipe.
-
----
-
-### Issue 4: Timeline "dates" that are not dates → specced as **B5**
-
-**Status**: ✅ Selected September 25, 2026 (Option A). The contract is `design_planner.md` §8 (the date-label row) and `design_templates.md` §2.16. Original finding: verified September 25, 2026 in the same job:
-- Scene `s023` is a `timeline` whose `date_label`s are "50+ Years", "No Record" and "Memory Only".
-- Scene `s001` has three events all labelled "2013".
-- Scene `s010` uses "Last Spring", "Present" and "Now".
-
-The date-grounding rule (`design_planner.md` §8) only checks digits that are present, so a label with no digits passes. Nothing requires labels to be distinct or in order.
-
-**Option A (recommended)**: **Digits or a closed list of relative-time phrases, distinct, in order** — every `date_label` must contain a grounded digit run **or** be one of a fixed list (Today, Now, Present day, That night, That weekend, The next day, Days later, Weeks later, Months later, Years later, Last spring/summer/fall/winter, Last year, Earlier, Later); labels must be pairwise distinct; years present must be non-decreasing.
-  - *Pros*: Keeps timelines usable for personal stories ("Last spring → That weekend → Months later") while rejecting nonsense like "No Record".
-  - *Cons*: A list to maintain; unusual valid phrasings are rejected and the scene falls back to its alternate template.
-
-**Option B**: **Strict: every label has a grounded digit**, plus distinct and non-decreasing.
-  - *Pros*: Simplest and fact-safe.
-  - *Cons*: Personal stories rarely have dated sequences, so `timeline` becomes effectively history-only.
-
-**Option C**: **Any short label, but distinct**.
-  - *Pros*: Most flexible.
-  - *Cons*: "No Record" / "Memory Only" still pass.
-
-Your selection: Proceed with Option A.
-
----
-
-### Issue 5: Meaning errors that no validator can see → specced as **B6**
-
-**Status**: ✅ Selected September 25, 2026 (Option A). The contract is `design_planner.md` §6 item 6 (deterministic rules) and §11 (the critic, with design-time measurements: 4/4 regression cases on seeds 7–9). Original finding: verified September 25, 2026: at least 4 of the 32 scenes in the `story_recipe_box` E2E job carry a meaning error while passing every schema, grounding and fit check.
-- `s012` attributes Danny's texted question to the narrator ("Me").
-- `s015` gives the narrator's "Rose?" an *angry* tone.
-- `s004` stamps the diner "40 years ago"; the text says it ran for forty years.
-- Across the fixtures, one `stat_callout` put `$` in `suffix`.
-
-These are semantic, not format, errors.
-
-**Option A (recommended)**: **Two cheap deterministic rules plus a targeted critic pass.**
-  1. Currency symbols (`$ £ €`) are allowed only in `prefix`; an `era_label` may contain "ago" only if the transcript does.
-  2. One extra local LLM call per *people* scene (`dialogue`, `text_thread`, `emotion_beat`, and `kinetic_quote` with an attribution): "in this beat, who says or feels this, and in what tone?". A mismatch with the props triggers one props retry.
-  - *Pros*: Aims directly at the observed failure classes; about +6–10 calls per video (~15 s at measured latency).
-  - *Cons*: The critic can itself be wrong; adds prompt surface to maintain.
-
-**Option B**: **Deterministic rules only** (part 1 of A).
-  - *Pros*: Zero runtime cost; fully predictable.
-  - *Cons*: Attribution and tone errors remain for the reviewer.
-
-**Option C**: **Rely on the review gate** (no change).
-  - *Pros*: Nothing to build; the gate exists for exactly this.
-  - *Cons*: The reviewer must catch meaning errors in every video.
-
-**Option D**: **Evaluate `qwen3.6:35b` as the planner** on the four fixtures with a hand-scored semantic rubric, and switch if it scores higher within the 240 s planner bar.
-  - *Pros*: May fix several classes at once.
-  - *Cons*: A 23 GB model, slower; needs a rubric and human scoring.
-
-Your selection: Option A
 
 ---
 
@@ -161,6 +104,7 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 - **Issue 1 — Narrator voice** — selected September 24, 2026: *"Proceed with Option A and B. If the story from reddit seems to be from a female's perspective then use af_heart, else use am_michael."* — delivered by A8 `9590fb7` + A9 `5824005`. Verified September 25: `voice.json` matched the expectation on 4 of 4 fixtures, in both the cold planner eval and the E2E (`af_heart` for `story_recipe_box` via evidence "As the only granddaughter, I"; `am_michael` for the other three); `--voice am_michael` makes 0 voice-stage LLM calls. The rule's permanent home is `design_planner.md` §10.
 - **Issue 2 — Illustration model** — selected September 24, 2026: *"Proceed with Option A."* — delivered by A21 `142b6a7`. Verified September 25: mflux runs with `--model flux2-klein-4b` only, 1024², 4 steps, q8; no Z-Image code path exists. The permanent home is `design_visual_direction.md` §7.
 - **Issue 4 — Timeline date labels** — selected September 25, 2026: *"Proceed with Option A."* — delivered by B5 git log --grep "(b5)". Verified: date_labels must contain a grounded digit run or match one of 17 relative time phrases; pairwise distinct; first four-digit years in event order non-decreasing. Wave A defects ("2013/2013/2013", "No Record", "Present") rejected; valid dates and relative phrases accepted. The rule's permanent home is `design_planner.md` §8.
+- **Issue 5 — Meaning rules + people-scene critic** — selected September 25, 2026: *"Option A"* — delivered by B6 git log --grep "(b6)". Verified: currency symbols rejected in stat_callout suffix; ungrounded 'ago' rejected in location era_label; blind local critic checks dialogue, text_thread, emotion_beat, and attributed kinetic_quote with at most 1 retry and 0 loops; regression set classifies 4/4 cases as expected with gemma4:26b. The rules' permanent home is `design_planner.md` §6 item 6 and §11.
 
 **Wave B:**
 
@@ -169,6 +113,7 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 - B3 — Planner crash containment — git log --grep "(b3)" — G1–G14 green bare, 180 passed (+5 tests); generate_json called only in llm.py; 5 run_with_retries call sites in planner; select and props recover on attempt 2 after malformed attempt 0; truncated replies complete with fallback_level 2.
 - B4 — Grounding scale words — git log --grep "(b4)" — G1–G14 green bare, 181 passed (+1 test); numbers("holding 2.3 million gallons") returns 2.3 and 2300000.0 without stray 1000000.0; spelled runs require small number or leading a/an.
 - B5 — Timeline date labels — git log --grep "(b5)" — G1–G14 green bare; timeline_label_errors rejects non-distinct, non-grounded, unapproved relative phrases, and decreasing years; template writing rules updated; schema sync G8 green.
+- B6 — Meaning rules + people-scene critic — git log --grep "(b6)" — G1–G14 green bare, 192 passed (+11 tests); stat_callout suffix currency errors rejected; location era_label ungrounded 'ago' rejected; critic runs blind on people scenes with 256 num_predict and temp 0; 1 props retry on mismatch, 0 further critic calls; regression set passes 4/4 on gemma4:26b; planner containment asserts 6 run_with_retries sites.
 
 ---
 

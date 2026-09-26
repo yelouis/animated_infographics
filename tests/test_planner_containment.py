@@ -43,7 +43,7 @@ def test_generate_json_only_in_llm_py() -> None:
 
 
 def test_run_with_retries_call_count() -> None:
-    """Verify run_with_retries call sites count in planner/ is exactly 5 after B3."""
+    """Verify run_with_retries call sites count in planner/ is exactly 6 after B6."""
     planner_dir = (
         Path(__file__).resolve().parent.parent / "src" / "animated_infographics" / "planner"
     )
@@ -57,8 +57,8 @@ def test_run_with_retries_call_count() -> None:
             if "run_with_retries(" in line:
                 call_sites.append(f"{py_path.name}:{idx}")
 
-    assert len(call_sites) == 5, (
-        f"Expected 5 run_with_retries call sites (voice, bible, segment, select, props), "
+    assert len(call_sites) == 6, (
+        f"Expected 6 run_with_retries call sites (voice, bible, segment, select, props, critic), "
         f"got {len(call_sites)}: {call_sites}"
     )
 
@@ -80,6 +80,7 @@ class MockFlakyBackend:
         user: str | None = None,
         schema: dict[str, Any],
         attempt: int,
+        **_kwargs: Any,
     ) -> dict[str, Any]:
         self.calls += 1
         if attempt == 0:
@@ -103,6 +104,7 @@ class MockFailingBackend:
         user: str | None = None,
         schema: dict[str, Any],
         attempt: int,
+        **_kwargs: Any,
     ) -> dict[str, Any]:
         self.calls += 1
         raise ValueError("Unrecoverable malformed JSON")
