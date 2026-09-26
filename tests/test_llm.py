@@ -9,6 +9,7 @@ import pytest
 
 from animated_infographics.errors import DependencyMissing
 from animated_infographics.planner.llm import (
+    LLMResponseError,
     OllamaBackend,
     run_with_retries,
 )
@@ -171,3 +172,77 @@ def test_ollama_down_raises_dependency_missing(tmp_path: Path) -> None:
 
     with pytest.raises(DependencyMissing, match="Ollama server is not running"):
         backend.generate_json(stage="test", messages=[], schema={}, attempt=0)
+
+
+def test_200_response_containing_not_found_is_accepted(tmp_path: Path) -> None:
+    """Verify a 200 response containing 'not found' in content is accepted as valid."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={"message": {"content": '{"caption": "the recipe card was not found"}'}},
+        )
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    backend = OllamaBackend(cache_dir=tmp_path, client=client, no_cache=True)
+
+    result = backend.generate_json(stage="test", messages=[], schema={}, attempt=0)
+    assert result == {"caption": "the recipe card was not found"}
+
+
+def test_500_raises_llm_response_error(tmp_path: Path) -> None:
+    """Verify HTTP 500 raises LLMResponseError."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(500, text="Internal Server Error")
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    backend = OllamaBackend(cache_dir=tmp_path, client=client, no_cache=True)
+
+    with pytest.raises(LLMResponseError, match="HTTP 500"):
+        backend.generate_json(stage="test", messages=[], schema={}, attempt=0)
+
+
+def test_500_with_missing_model_json_raises_dependency_missing(tmp_path: Path) -> None:
+    """Verify non-200 with JSON error naming missing model raises DependencyMissing."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(500, json={"error": "model 'gemma4:26b' not found"})
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    backend = OllamaBackend(model="gemma4:26b", cache_dir=tmp_path, client=client, no_cache=True)
+
+    with pytest.raises(DependencyMissing, match="gemma4:26b"):
+        backend.generate_json(stage="test", messages=[], schema={}, attempt=0)
+
+
+def test_run_with_retries_recovers_from_transient_500(tmp_path: Path) -> None:
+    """Verify run_with_retries treats LLMResponseError as a retryable attempt failure."""
+    calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return httpx.Response(500, text="Temporary upstream glitch")
+        return httpx.Response(200, json={"message": {"content": '{"status": "recovered"}'}})
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    backend = OllamaBackend(cache_dir=tmp_path, client=client, no_cache=True)
+
+    def validate(output: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+        return output, []
+
+    output, attempts = run_with_retries(
+        backend,
+        stage="test",
+        system="Sys",
+        user="Usr",
+        schema={"type": "object"},
+        validate=validate,
+        max_attempts=3,
+    )
+
+    assert output == {"status": "recovered"}
+    err0 = attempts[0].errors[0]
+    assert any(k in err0 for k in ("LLM", "parsing", "500"))

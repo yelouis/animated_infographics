@@ -18,6 +18,10 @@ DEFAULT_ENDPOINT: str = "http://127.0.0.1:11434/api/chat"
 DEFAULT_TIMEOUT_S: float = 300.0
 
 
+class LLMResponseError(ValueError):
+    """Raised when Ollama returns an unexpected HTTP response or error status."""
+
+
 class LLMBackend(Protocol):
     """Protocol for LLM backends."""
 
@@ -158,13 +162,27 @@ class OllamaBackend:
             if client is not self.client:
                 client.close()
 
-        if resp.status_code == 404 or "not found" in resp.text.lower():
+        if resp.status_code == 404:
             raise DependencyMissing(
                 f"Ollama model '{self.model}' not found. Run: ollama pull {self.model}"
             )
 
         if resp.status_code != 200:
-            raise DependencyMissing(f"Ollama returned HTTP {resp.status_code}: {resp.text}")
+            is_missing_model = False
+            try:
+                err_body = resp.json()
+                err_msg = str(err_body.get("error", "")).lower()
+                if "not found" in err_msg and ("model" in err_msg or self.model.lower() in err_msg):
+                    is_missing_model = True
+            except Exception:
+                pass
+
+            if is_missing_model:
+                raise DependencyMissing(
+                    f"Ollama model '{self.model}' not found. Run: ollama pull {self.model}"
+                )
+
+            raise LLMResponseError(f"Ollama returned HTTP {resp.status_code}: {resp.text}")
 
         elapsed_ms = int((time.time() - t0) * 1000)
         data = resp.json()
