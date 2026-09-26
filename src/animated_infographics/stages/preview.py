@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import time
 
 from animated_infographics.contracts.models import (
@@ -59,6 +60,30 @@ def run_preview_stage(job: Job, ctx: RunContext) -> None:
                 elif s.critic.status == "unavailable":
                     critic_unavailable_scene_ids.add(s.id)
 
+    manifest_path = job.dir / "assets" / "manifest.json"
+    failed_image_ids: set[str] = set()
+    if manifest_path.is_file():
+        try:
+            m_data = json.loads(manifest_path.read_text(encoding="utf-8"))
+            for ent in m_data.get("entities", []):
+                if ent.get("status") == "failed":
+                    failed_image_ids.add(ent.get("id", ""))
+        except Exception:
+            pass
+
+    image_failed_scene_ids: set[str] = set()
+    if failed_image_ids:
+        for sc in timeline.scenes:
+            props = sc.props
+            pid = getattr(props, "place_id", None) or (
+                props.get("place_id") if isinstance(props, dict) else None
+            )
+            spid = getattr(props, "set_piece_id", None) or (
+                props.get("set_piece_id") if isinstance(props, dict) else None
+            )
+            if (pid and pid in failed_image_ids) or (spid and spid in failed_image_ids):
+                image_failed_scene_ids.add(sc.id)
+
     flags_by_scene: dict[str, list[str]] = {}
     for sc in timeline.scenes:
         flags: list[str] = []
@@ -66,6 +91,8 @@ def run_preview_stage(job: Job, ctx: RunContext) -> None:
             flags.append("overflow")
         if sc.id in fallback_scene_ids:
             flags.append("fallback")
+        if sc.id in image_failed_scene_ids:
+            flags.append("image failed")
         if sc.id in critic_changed_scene_ids:
             flags.append("critic changed")
         if sc.id in critic_unavailable_scene_ids:
@@ -73,7 +100,7 @@ def run_preview_stage(job: Job, ctx: RunContext) -> None:
         if flags:
             flags_by_scene[sc.id] = flags
 
-    flagged_scenes = overflow_scene_ids | fallback_scene_ids
+    flagged_scenes = overflow_scene_ids | fallback_scene_ids | image_failed_scene_ids
 
     # 3. Generate contact sheet
     generate_contact_sheet(job.dir, timeline, flagged_scenes)

@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 
+import pytest
 from PIL import Image
 
 from animated_infographics.contracts.models import (
@@ -233,3 +234,109 @@ def test_generate_preview_report(tmp_path: Path) -> None:
     assert out_file.is_file()
     saved = json.loads(out_file.read_text(encoding="utf-8"))
     assert saved == rep
+
+
+def test_contact_sheet_and_storyboard_flag_failed_images(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from animated_infographics.contracts.models import Beats, TimelineSetPieceScene
+    from animated_infographics.contracts.templates import SetPieceProps
+    from animated_infographics.jobs import Job, RunContext
+    from animated_infographics.stages.preview import run_preview_stage
+
+    job_dir = tmp_path / "test_job"
+    job_dir.mkdir(parents=True)
+    (job_dir / "state.json").write_text(
+        json.dumps({"schema_version": 1, "status": "new"}), encoding="utf-8"
+    )
+    (job_dir / "bible.json").write_text("{}", encoding="utf-8")
+    (job_dir / "storyboard.json").write_text("{}", encoding="utf-8")
+    beats_obj = Beats(
+        beats=[
+            Beat(
+                i=0,
+                word_start=0,
+                word_end=2,
+                start_ms=0,
+                end_ms=2000,
+                text="The machine gun.",
+            )
+        ]
+    )
+    (job_dir / "beats.json").write_text(beats_obj.model_dump_json(), encoding="utf-8")
+    v_decision = VoiceDecision(schema_version=1, voice="am_michael", source="flag", reason="flag")
+    (job_dir / "voice.json").write_text(v_decision.model_dump_json(), encoding="utf-8")
+
+    # Manifest with v1 marked as failed and p1 as text_check unavailable
+    assets_dir = job_dir / "assets"
+    assets_dir.mkdir(parents=True)
+    manifest = {
+        "entities": [
+            {
+                "id": "v1",
+                "kind": "set_piece",
+                "status": "failed",
+                "error": "lettering detected in 3 attempts",
+            },
+            {
+                "id": "p1",
+                "kind": "place",
+                "status": "clean",
+                "text_check": "unavailable",
+            },
+        ]
+    }
+    (assets_dir / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+    # Timeline with s001 on set_piece v1
+    sc1 = TimelineSetPieceScene(
+        id="s001",
+        template="set_piece",
+        start_frame=0,
+        end_frame=60,
+        timing=TimelineSceneTiming(),
+        props=SetPieceProps(set_piece_id="v1", caption="Lewis Gun"),
+    )
+    timeline = Timeline(
+        duration_frames=60,
+        plan_sha256="sha60",
+        audio=TimelineAudio(narration=TimelineNarration(src="audio/narration.wav")),
+        captions=TimelineCaptions(pages=[]),
+        scenes=[sc1],
+    )
+    (job_dir / "timeline.json").write_text(timeline.model_dump_json(), encoding="utf-8")
+
+    # Mock render_stills so remotion isn't invoked, but create a dummy scene_s001.png
+    preview_dir = job_dir / "preview"
+    preview_dir.mkdir(parents=True)
+    dummy_still = Image.new("RGB", (270, 480), color=(50, 50, 50))
+    dummy_still.save(preview_dir / "scene_s001.png")
+
+    monkeypatch.setattr(
+        "animated_infographics.stages.preview.render_stills",
+        lambda *args, **kwargs: [],
+    )
+
+    job = Job(job_dir)
+    ctx = RunContext()
+    run_preview_stage(job, ctx)
+
+    # 1. Contact sheet label strip pixel is #FF6B8B (RGB 255, 107, 139)
+    cs_path = preview_dir / "contact_sheet.png"
+    assert cs_path.is_file()
+    with Image.open(cs_path) as im:
+        # Tile 0: x in [0, 270], label strip is y in [480, 524]
+        # Sample pixel at (10, 490)
+        pixel = im.getpixel((10, 490))
+        assert pixel == (255, 107, 139)
+
+    # 2. Storyboard markdown row for s001 contains "image failed"
+    sb_md = (preview_dir / "storyboard.md").read_text(encoding="utf-8")
+    assert "image failed" in sb_md
+
+    # 3. Report json contains failed_images ["v1"] and warnings ["p1"]
+    rep_path = preview_dir / "report.json"
+    assert rep_path.is_file()
+    rep = json.loads(rep_path.read_text(encoding="utf-8"))
+    assert rep["failed_images"] == ["v1"]
+    assert "p1" in rep.get("warnings", [])
