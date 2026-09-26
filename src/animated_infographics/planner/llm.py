@@ -1,5 +1,6 @@
 """Local LLM backend, response caching, and structured output retry protocol."""
 
+import base64
 import hashlib
 import json
 import os
@@ -7,7 +8,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Final, Protocol
 
 import httpx
 
@@ -16,6 +17,10 @@ from animated_infographics.errors import DependencyMissing
 DEFAULT_MODEL: str = "gemma4:26b"
 DEFAULT_ENDPOINT: str = "http://127.0.0.1:11434/api/chat"
 DEFAULT_TIMEOUT_S: float = 300.0
+
+STAGE_TIMEOUTS: Final[dict[str, float]] = {
+    "text_check": 60.0,
+}
 
 
 class LLMResponseError(ValueError):
@@ -32,13 +37,14 @@ class LLMBackend(Protocol):
         self,
         *,
         stage: str,
-        messages: list[dict[str, str]] | None = None,
+        messages: list[dict[str, Any]] | None = None,
         system: str | None = None,
         user: str | None = None,
         schema: dict[str, Any],
         attempt: int,
         num_predict: int | None = None,
         temperature: float = 0.3,
+        images: list[bytes] | None = None,
     ) -> dict[str, Any]:
         """Generate structured JSON conforming to schema."""
         ...
@@ -103,7 +109,7 @@ class OllamaBackend:
 
     def _canonical_cache_key(
         self,
-        messages: list[dict[str, str]],
+        messages: list[dict[str, Any]],
         schema: dict[str, Any],
         attempt: int,
         num_predict: int | None = None,
@@ -130,13 +136,14 @@ class OllamaBackend:
         self,
         *,
         stage: str,
-        messages: list[dict[str, str]] | None = None,
+        messages: list[dict[str, Any]] | None = None,
         system: str | None = None,
         user: str | None = None,
         schema: dict[str, Any],
         attempt: int,
         num_predict: int | None = None,
         temperature: float = 0.3,
+        images: list[bytes] | None = None,
     ) -> dict[str, Any]:
         """Generate structured JSON via Ollama or return cached response."""
         # calls counter is incremented at entry, before cache lookup
@@ -151,8 +158,29 @@ class OllamaBackend:
             if user:
                 messages.append({"role": "user", "content": user})
 
+        # Deep copy messages for cache_obj and payload
+        cache_messages: list[dict[str, Any]] = [dict(m) for m in messages]
+        payload_messages: list[dict[str, Any]] = [dict(m) for m in messages]
+
+        if images:
+            img_hashes = [hashlib.sha256(img).hexdigest() for img in images]
+            img_b64s = [base64.b64encode(img).decode("ascii") for img in images]
+            user_found = False
+            for m in cache_messages:
+                if m.get("role") == "user":
+                    m["images"] = img_hashes
+                    user_found = True
+                    break
+            for m in payload_messages:
+                if m.get("role") == "user":
+                    m["images"] = img_b64s
+                    break
+            if not user_found:
+                cache_messages.append({"role": "user", "content": "", "images": img_hashes})
+                payload_messages.append({"role": "user", "content": "", "images": img_b64s})
+
         key, cache_obj = self._canonical_cache_key(
-            messages, clean_schema, attempt, num_predict=num_predict, temperature=temperature
+            cache_messages, clean_schema, attempt, num_predict=num_predict, temperature=temperature
         )
         cache_file = self.cache_dir / f"{key}.json"
 
@@ -171,7 +199,7 @@ class OllamaBackend:
         effective_num_predict = num_predict if num_predict is not None else 2048
         payload = {
             "model": self.model,
-            "messages": messages,
+            "messages": payload_messages,
             "format": clean_schema,
             "think": False,
             "stream": False,
@@ -185,7 +213,8 @@ class OllamaBackend:
         }
 
         t0 = time.time()
-        client = self.client or httpx.Client(timeout=self.timeout_s)
+        timeout = STAGE_TIMEOUTS.get(stage, self.timeout_s)
+        client = self.client or httpx.Client(timeout=timeout)
         try:
             resp = client.post(self.endpoint, json=payload)
         except (httpx.ConnectError, httpx.ConnectTimeout) as exc:
@@ -256,12 +285,14 @@ def run_with_retries(
     max_attempts: int = 3,
     num_predict: int | None = None,
     temperature: float = 0.3,
+    images: list[bytes] | None = None,
+    attempt_offset: int = 0,
 ) -> tuple[dict[str, Any] | None, list[Attempt]]:
     """Run generation up to max_attempts, appending errors to conversation on failure."""
-    messages: list[dict[str, str]] = [
-        {"role": "system", "content": system},
-        {"role": "user", "content": user},
-    ]
+    messages: list[dict[str, Any]] = []
+    if system:
+        messages.append({"role": "system", "content": system})
+    messages.append({"role": "user", "content": user})
 
     attempts: list[Attempt] = []
 
@@ -272,13 +303,15 @@ def run_with_retries(
             extra_kwargs["num_predict"] = num_predict
         if temperature != 0.3:
             extra_kwargs["temperature"] = temperature
+        if images is not None:
+            extra_kwargs["images"] = images
 
         try:
             raw_output = backend.generate_json(
                 stage=stage,
                 messages=list(messages),
                 schema=schema,
-                attempt=attempt_idx,
+                attempt=attempt_idx + attempt_offset,
                 **extra_kwargs,
             )
             repaired_output, errors = validate(raw_output)

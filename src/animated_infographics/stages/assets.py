@@ -7,6 +7,7 @@ import time
 from animated_infographics.assets.illustrate import run_assets
 from animated_infographics.contracts.models import Bible
 from animated_infographics.jobs import Job, RunContext
+from animated_infographics.planner.llm import OllamaBackend
 
 
 def run_assets_stage(job: Job, ctx: RunContext) -> None:
@@ -18,17 +19,21 @@ def run_assets_stage(job: Job, ctx: RunContext) -> None:
         raise FileNotFoundError(f"Missing bible.json in {job.dir}")
     bible = Bible.model_validate_json(bible_path.read_text(encoding="utf-8"))
 
-    manifest = run_assets(bible, job)
+    backend = OllamaBackend(no_cache=ctx.no_llm_cache)
+    manifest = run_assets(bible, job, backend=backend)
 
     cache_hits = sum(1 for e in manifest.entities if e.status == "cached")
     generated = sum(1 for e in manifest.entities if e.status == "generated")
     failed = sum(1 for e in manifest.entities if e.status == "failed")
+    text_checks = sum(len(e.attempts) for e in manifest.entities)
+    regenerations = sum(max(0, len(e.attempts) - 1) for e in manifest.entities)
     elapsed_ms = int((time.perf_counter() - t0) * 1000)
 
     log_file = job.dir / "logs" / "assets.log"
     log_file.parent.mkdir(parents=True, exist_ok=True)
     log_file.write_text(
-        f"llm_calls=0 cache_hits={cache_hits} generated={generated} "
-        f"failed={failed} elapsed_ms={elapsed_ms}\n",
+        f"llm_calls={backend.calls} cache_hits={cache_hits} generated={generated} "
+        f"failed={failed} elapsed_ms={elapsed_ms} "
+        f"text_checks={text_checks} regenerations={regenerations}\n",
         encoding="utf-8",
     )

@@ -43,22 +43,22 @@ def test_generate_json_only_in_llm_py() -> None:
 
 
 def test_run_with_retries_call_count() -> None:
-    """Verify run_with_retries call sites count in planner/ is exactly 6 after B6."""
-    planner_dir = (
-        Path(__file__).resolve().parent.parent / "src" / "animated_infographics" / "planner"
-    )
+    """Verify run_with_retries call sites count is 7 after B10 (6 in planner/, 1 in assets/)."""
+    src_dir = Path(__file__).resolve().parent.parent / "src" / "animated_infographics"
     call_sites: list[str] = []
 
-    for py_path in sorted(planner_dir.glob("*.py")):
-        if py_path.name == "llm.py":
-            continue
-        lines = py_path.read_text(encoding="utf-8").splitlines()
-        for idx, line in enumerate(lines, start=1):
-            if "run_with_retries(" in line:
-                call_sites.append(f"{py_path.name}:{idx}")
+    for search_dir in [src_dir / "planner", src_dir / "assets"]:
+        for py_path in sorted(search_dir.glob("*.py")):
+            if py_path.name == "llm.py":
+                continue
+            lines = py_path.read_text(encoding="utf-8").splitlines()
+            for idx, line in enumerate(lines, start=1):
+                if "run_with_retries(" in line:
+                    call_sites.append(f"{py_path.name}:{idx}")
 
-    assert len(call_sites) == 6, (
-        f"Expected 6 run_with_retries call sites (voice, bible, segment, select, props, critic), "
+    assert len(call_sites) == 7, (
+        "Expected 7 run_with_retries call sites "
+        "(voice, bible, segment, select, props, critic, text_check), "
         f"got {len(call_sites)}: {call_sites}"
     )
 

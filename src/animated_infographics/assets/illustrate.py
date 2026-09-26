@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -16,8 +17,10 @@ from typing import Final, Literal
 from PIL import Image
 from pydantic import BaseModel, ConfigDict, Field
 
+from animated_infographics.assets.text_check import check_image_for_text
 from animated_infographics.contracts.models import Bible
 from animated_infographics.jobs import Job
+from animated_infographics.planner.llm import LLMBackend, OllamaBackend
 
 # ---------------------------------------------------------------------------
 # Constants per design_visual_direction.md §7
@@ -38,10 +41,124 @@ IMAGE_STEPS: Final[int] = 4
 IMAGE_QUANTIZE: Final[int] = 8
 DEFAULT_TIMEOUT_S: Final[int] = 180
 
+TEXT_EXPECTED_WORDS: Final[frozenset[str]] = frozenset(
+    {
+        "recipe",
+        "recipes",
+        "card",
+        "cards",
+        "letter",
+        "letters",
+        "note",
+        "notes",
+        "signpost",
+        "signposts",
+        "signage",
+        "newspaper",
+        "newspapers",
+        "headline",
+        "headlines",
+        "menu",
+        "menus",
+        "book",
+        "books",
+        "page",
+        "pages",
+        "label",
+        "labels",
+        "poster",
+        "posters",
+        "handwriting",
+        "handwritten",
+        "writing",
+        "written",
+        "text",
+        "texts",
+        "message",
+        "messages",
+        "document",
+        "documents",
+        "notebook",
+        "notebooks",
+        "diary",
+        "diaries",
+        "journal",
+        "journals",
+        "envelope",
+        "envelopes",
+        "receipt",
+        "receipts",
+        "invoice",
+        "invoices",
+        "certificate",
+        "certificates",
+        "ticket",
+        "tickets",
+        "banner",
+        "banners",
+        "billboard",
+        "billboards",
+        "plaque",
+        "plaques",
+        "scroll",
+        "scrolls",
+        "manuscript",
+        "manuscripts",
+        "telegram",
+        "telegrams",
+        "postcard",
+        "postcards",
+        "calendar",
+        "calendars",
+        "chalkboard",
+        "chalkboards",
+        "blackboard",
+        "blackboards",
+        "whiteboard",
+        "whiteboards",
+        "screen",
+        "screens",
+        "inscription",
+        "inscriptions",
+        "placard",
+        "placards",
+        "flyer",
+        "flyers",
+        "leaflet",
+        "leaflets",
+        "map",
+        "maps",
+    }
+)
+
+TEXT_EXPECTED_PHRASES: Final[frozenset[str]] = frozenset(
+    {
+        "street sign",
+        "street signs",
+        "shop sign",
+        "shop signs",
+        "road sign",
+        "road signs",
+        "neon sign",
+        "neon signs",
+        "store sign",
+        "store signs",
+    }
+)
+
 
 # ---------------------------------------------------------------------------
 # Data Models
 # ---------------------------------------------------------------------------
+
+
+class CheckAttempt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    seed: int
+    kind: str
+    sample: str
+    elapsed_ms: int
 
 
 class AssetEntity(BaseModel):
@@ -53,6 +170,9 @@ class AssetEntity(BaseModel):
     status: Literal["generated", "cached", "failed"]
     elapsed_ms: int
     error: str | None = None
+    text_expected: bool = False
+    text_check: Literal["skipped", "clean", "regenerated", "failed", "unavailable"] = "clean"
+    attempts: list[CheckAttempt] = Field(default_factory=list)
 
 
 class AssetManifest(BaseModel):
@@ -75,6 +195,18 @@ class ImageResult:
 # ---------------------------------------------------------------------------
 # Core Interface Functions
 # ---------------------------------------------------------------------------
+
+
+def text_expected(visual_description: str) -> bool:
+    """Determine if visual description calls for lettering per design_visual_direction.md §7.1."""
+    text = visual_description.casefold()
+    words = set(re.findall(r"\b\w+\b", text))
+    if words & TEXT_EXPECTED_WORDS:
+        return True
+    for phrase in TEXT_EXPECTED_PHRASES:
+        if re.search(r"\b" + re.escape(phrase) + r"\b", text):
+            return True
+    return False
 
 
 def image_prompt(kind: Literal["place", "set_piece"], visual_description: str) -> str:
@@ -303,45 +435,116 @@ def generate(
         )
 
 
-def run_assets(bible: Bible, job: Job) -> AssetManifest:
-    """Run illustration generation for all places and set pieces in bible."""
+def run_assets(bible: Bible, job: Job, backend: LLMBackend | None = None) -> AssetManifest:
+    llm_backend = backend or OllamaBackend()
     timeout_s = int(os.environ.get("INFOGRAPHICS_IMAGE_TIMEOUT_S", DEFAULT_TIMEOUT_S))
     images_dir = job.dir / "assets" / "images"
     images_dir.mkdir(parents=True, exist_ok=True)
+
+    def process_entity(
+        ent_id: str, kind: Literal["place", "set_piece"], visual_desc: str
+    ) -> AssetEntity:
+        prompt = image_prompt(kind, visual_desc)
+        out_path = images_dir / f"{ent_id}.png"
+        expected = text_expected(visual_desc)
+
+        if expected:
+            s0 = image_seed(prompt)
+            res = generate(prompt, out_path, seed=s0, timeout_s=timeout_s)
+            status: Literal["generated", "cached", "failed"] = res.status if res.ok else "failed"
+            return AssetEntity(
+                id=ent_id,
+                prompt=prompt,
+                cache_key=res.cache_key,
+                status=status,
+                elapsed_ms=res.elapsed_ms,
+                error=res.error,
+                text_expected=True,
+                text_check="skipped",
+                attempts=[],
+            )
+
+        # text_expected is False: check image with retry up to 2 regenerations (3 images total)
+        s0 = image_seed(prompt)
+        attempts: list[CheckAttempt] = []
+        entity_status: Literal["generated", "cached", "failed"] = "failed"
+        entity_error: str | None = None
+        entity_text_check: Literal["skipped", "clean", "regenerated", "failed", "unavailable"] = (
+            "clean"
+        )
+        final_key = ""
+        total_elapsed_ms = 0
+
+        for attempt_idx in range(3):
+            current_seed = s0 + attempt_idx
+            res = generate(prompt, out_path, seed=current_seed, timeout_s=timeout_s)
+            final_key = res.cache_key
+            total_elapsed_ms += res.elapsed_ms
+            if not res.ok:
+                entity_status = "failed"
+                entity_error = res.error
+                entity_text_check = "failed"
+                break
+
+            check_res = check_image_for_text(out_path, llm_backend)
+            if check_res is None:
+                # Check failed/unavailable -> keep image, text_check: unavailable
+                entity_status = res.status
+                entity_error = None
+                entity_text_check = "unavailable"
+                attempts.append(
+                    CheckAttempt(
+                        seed=current_seed,
+                        kind="none",
+                        sample="",
+                        elapsed_ms=0,
+                    )
+                )
+                break
+
+            attempts.append(
+                CheckAttempt(
+                    seed=current_seed,
+                    kind=check_res.kind,
+                    sample=check_res.sample,
+                    elapsed_ms=check_res.elapsed_ms,
+                )
+            )
+
+            if not check_res.has_text:
+                entity_status = res.status
+                entity_error = None
+                entity_text_check = "clean" if attempt_idx == 0 else "regenerated"
+                break
+            else:
+                if attempt_idx == 2:
+                    # 3 texty images -> failed with exact error
+                    entity_status = "failed"
+                    entity_error = "lettering detected in 3 attempts"
+                    entity_text_check = "failed"
+                    out_path.unlink(missing_ok=True)
+
+        return AssetEntity(
+            id=ent_id,
+            prompt=prompt,
+            cache_key=final_key,
+            status=entity_status,
+            elapsed_ms=total_elapsed_ms,
+            error=entity_error,
+            text_expected=False,
+            text_check=entity_text_check,
+            attempts=attempts,
+        )
 
     entities: list[AssetEntity] = []
 
     # Places: up to 4 per bible cap
     for p in bible.places[:4]:
-        prompt = image_prompt("place", p.visual_description)
-        out_path = images_dir / f"{p.id}.png"
-        res = generate(prompt, out_path, timeout_s=timeout_s)
-        entities.append(
-            AssetEntity(
-                id=p.id,
-                prompt=prompt,
-                cache_key=res.cache_key,
-                status=res.status,
-                elapsed_ms=res.elapsed_ms,
-                error=res.error,
-            )
-        )
+        entities.append(process_entity(p.id, "place", p.visual_description))
 
     # Set pieces: up to 3 per bible cap
     for s in bible.set_pieces[:3]:
-        prompt = image_prompt("set_piece", s.visual_description)
-        out_path = images_dir / f"{s.id}.png"
-        res = generate(prompt, out_path, timeout_s=timeout_s)
-        entities.append(
-            AssetEntity(
-                id=s.id,
-                prompt=prompt,
-                cache_key=res.cache_key,
-                status=res.status,
-                elapsed_ms=res.elapsed_ms,
-                error=res.error,
-            )
-        )
+        entities.append(process_entity(s.id, "set_piece", s.visual_description))
 
     manifest = AssetManifest(schema_version=1, entities=entities)
     manifest_path = job.dir / "assets" / "manifest.json"

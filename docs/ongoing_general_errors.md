@@ -17,28 +17,6 @@
 - An **unreadable map** and **unreadable captions over light illustrations**. Both came from design values that were never measured as composited; the design is now corrected.
 - The **performance budget was never measured cold**.
 
-**Selected September 25, 2026, specced, not yet delivered:** Issue 3 below, specced as **B10**. When the delivering item lands, its commit collapses the issue into one line in §3.
-
-### Issue 3: Generated illustrations sometimes contain fake writing → specced as **B10**
-
-**Status**: ✅ Selected September 25, 2026 (Option A, with the user's refinement that text is fine when the description calls for it). The contract, with its design-time measurements (7/7 correct on the labelled `fixtures/vision/` set with the final prompt; a naive yes/no prompt flagged 2 of 4 clean images), is `design_visual_direction.md` §7.1. Original finding: verified September 25, 2026 in the E2E job `story-recipe-box-20260925-180627`: set piece `v1` ("An old wooden box overflowing with hundreds of handwritten recipe cards") rendered pseudo-handwriting on the cards ("Peclpte De fonts ann) Rlondes."). The other two images reviewed (the blueberry pie, the Duluth waterfront) are clean, flat and on-palette. `STYLE` already says "No text, no letters, no words", but FLUX.2 [klein] 4B does not obey it for subjects that inherently carry writing. Today the reviewer can see it at the gate but has no way to regenerate a single image.
-
-**Option A (recommended)**: **Local vision check with an automatic retry** — after each generation, ask `gemma4:26b` (already installed, and it accepts images) a structured question: "does this image contain letters, words or text-like marks?". On *yes*, regenerate with seed + 1, up to 2 retries, then fall back to the icon and list it in `preview/report.json`.
-  - *Pros*: Automatic and fully local, using the model already loaded for planning; catches it before the reviewer ever sees it.
-  - *Cons*: About +3–5 s per image (up to 3× generation time on a retry); a vision model can miss faint scribbles or flag patterns as text, so it needs a small labelled eval set (the fixture images) to set expectations.
-
-**Option B**: **Steer subjects away from writing** — the bible prompt tells the model not to choose set pieces whose defining feature is writing (letters, cards, signs, books, newspapers, menus), and a validator rejects `visual_description`s containing those words.
-  - *Pros*: Zero extra compute; deterministic.
-  - *Cons*: Removes some story-critical objects. In `story_recipe_box` the recipe card *is* the story. A word list will always have gaps.
-
-**Option C**: **Rely on the review gate, plus a one-command regenerate** — add `infographics regenerate <job> <entity_id>` (next seed, then re-preview).
-  - *Pros*: Human judgement; cheap to build.
-  - *Cons*: Manual work in any video that hits it.
-
-Your selection: Proceed with Option A. Though, in the example provided, I think that text is fine if the description calls for text like a recipe.
-
----
-
 ## ⚠️ Unresolved Issues & Suggestions
 
 None awaiting a selection.
@@ -103,6 +81,7 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 **Issues:**
 - **Issue 1 — Narrator voice** — selected September 24, 2026: *"Proceed with Option A and B. If the story from reddit seems to be from a female's perspective then use af_heart, else use am_michael."* — delivered by A8 `9590fb7` + A9 `5824005`. Verified September 25: `voice.json` matched the expectation on 4 of 4 fixtures, in both the cold planner eval and the E2E (`af_heart` for `story_recipe_box` via evidence "As the only granddaughter, I"; `am_michael` for the other three); `--voice am_michael` makes 0 voice-stage LLM calls. The rule's permanent home is `design_planner.md` §10.
 - **Issue 2 — Illustration model** — selected September 24, 2026: *"Proceed with Option A."* — delivered by A21 `142b6a7`. Verified September 25: mflux runs with `--model flux2-klein-4b` only, 1024², 4 steps, q8; no Z-Image code path exists. The permanent home is `design_visual_direction.md` §7.
+- **Issue 3 — Generated illustrations fake writing** — selected September 25, 2026: *"Proceed with Option A. Though, in the example provided, I think that text is fine if the description calls for text like a recipe."* — delivered by B10 git log --grep "(b10)". Verified: vision check with gemma4:26b runs on generated illustrations not marked text_expected; transcription prompt with >= 3 alphanumeric rule classifies 7/7 fixture images on seeds 7 and 8; naive prompt falsified (flags waterfronts, scoring 5/7); recipe card entity v1 in story_recipe_box skipped as expected; text detected triggers up to 2 retries on seed+1, seed+2; 3 texty images marks failed and deletes image file; unavailable check keeps image as warning. The rules' permanent home is `design_visual_direction.md` §7.1.
 - **Issue 4 — Timeline date labels** — selected September 25, 2026: *"Proceed with Option A."* — delivered by B5 git log --grep "(b5)". Verified: date_labels must contain a grounded digit run or match one of 17 relative time phrases; pairwise distinct; first four-digit years in event order non-decreasing. Wave A defects ("2013/2013/2013", "No Record", "Present") rejected; valid dates and relative phrases accepted. The rule's permanent home is `design_planner.md` §8.
 - **Issue 5 — Meaning rules + people-scene critic** — selected September 25, 2026: *"Option A"* — delivered by B6 git log --grep "(b6)". Verified: currency symbols rejected in stat_callout suffix; ungrounded 'ago' rejected in location era_label; blind local critic checks dialogue, text_thread, emotion_beat, and attributed kinetic_quote with at most 1 retry and 0 loops; regression set classifies 4/4 cases as expected with gemma4:26b. The rules' permanent home is `design_planner.md` §6 item 6 and §11.
 
@@ -117,6 +96,7 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 - B7 — LLM-facing schemas without length limits; text completeness; planner eval re-run — git log --grep "(b7)" — G1–G14 green bare, 203 passed (+11 tests); llm_facing_schema strips length and pattern constraints inside generate_json; retry messages prompt shorter complete phrases; normalize_text collapses whitespace; text_complete_errors catches truncation fragments and punctuation issues; cold planner eval passes all §9 bars (0 newlines, 0 completeness failures, 0 timeline errors, critic 4/4); byte-identity determinism holds.
 - B8 — The contact sheet flags failed images — git log --grep "(b8)" — G1–G14 green bare, 204 passed (+1 test); flagged scenes includes overflow ∪ fallback_level 2 ∪ failed image entities; storyboard.md flags gain 'image failed'; report.json carries failed_images and warnings for text_check unavailable.
 - B9 — Invoke mflux directly; drop the symlink — git log --grep "(b9)" — G1–G14 green bare; TOOL_NAME set to mflux-generate-flux2; cache_key and generate support seed parameter and actual seed is included in canonical cache key; doctor asserts mflux-generate-flux2 on PATH and --help contains flux2-klein-4b (exit 4 otherwise); setup.sh removes legacy symlink; design docs updated.
+- B10 — Illustration text check with automatic retry — git log --grep "(b10)" — G1–G14 green bare, 211 passed (+7 unit tests); vision check with gemma4:26b evaluates illustrations not marked text_expected; text_expected handles whole words and phrases at word boundaries; retries on seed+1, seed+2; 3 texty failures mark entity failed and remove image; unavailable fallback preserves image as warning; fixtures/vision/ achieves 7/7 on seeds 7 and 8; naive prompt falsified at 5/7; run_with_retries count asserts 7 across planner/assets.
 
 ---
 

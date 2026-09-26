@@ -284,3 +284,76 @@ def test_story_recipe_box_assets_budget(tmp_path: Path) -> None:
     for ent in entities:
         print(f"  - {ent['id']}: status={ent['status']}, elapsed_ms={ent['elapsed_ms']}")
         assert ent["status"] in ("generated", "cached")
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("attempt_offset", [0, 1])
+def test_vision_fixtures_classify_7_of_7(attempt_offset: int) -> None:
+    """Validate fixtures/vision/ classifies 7/7 on seeds 7 and 8 per
+    design_testing_and_validation.md §1.4.
+    """
+    from animated_infographics.assets.text_check import check_image_for_text
+    from animated_infographics.planner.llm import OllamaBackend
+
+    backend = OllamaBackend()
+    vision_dir = Path("fixtures/vision")
+    labels_file = vision_dir / "labels.json"
+    labels_data = json.loads(labels_file.read_text(encoding="utf-8"))
+
+    correct = 0
+    total = len(labels_data["images"])
+
+    for item in labels_data["images"]:
+        img_path = vision_dir / item["file"]
+        expected_has_text = item["has_text"]
+        res = check_image_for_text(img_path, backend, attempt_offset=attempt_offset)
+        assert res is not None
+        if res.has_text == expected_has_text:
+            correct += 1
+        else:
+            print(
+                f"[MISMATCH] seed={7 + attempt_offset} file={item['file']}: "
+                f"expected {expected_has_text}, got {res.has_text} "
+                f"(kind={res.kind}, sample={res.sample!r})"
+            )
+
+    assert correct == total, (
+        f"Expected {total}/{total} correct, got {correct}/{total} on seed {7 + attempt_offset}"
+    )
+
+
+@pytest.mark.slow
+def test_vision_fixtures_rejected_naive_prompt_falsification() -> None:
+    """Falsification: rejected naive prompt produces false positives on waterfronts (5/7)."""
+    from animated_infographics.assets.text_check import (
+        REJECTED_NAIVE_PROMPT,
+        REJECTED_NAIVE_SCHEMA,
+        check_image_for_text,
+    )
+    from animated_infographics.planner.llm import OllamaBackend
+
+    backend = OllamaBackend()
+    vision_dir = Path("fixtures/vision")
+    labels_file = vision_dir / "labels.json"
+    labels_data = json.loads(labels_file.read_text(encoding="utf-8"))
+
+    correct = 0
+    total = len(labels_data["images"])
+
+    for item in labels_data["images"]:
+        img_path = vision_dir / item["file"]
+        expected_has_text = item["has_text"]
+        res = check_image_for_text(
+            img_path,
+            backend,
+            prompt=REJECTED_NAIVE_PROMPT,
+            schema=REJECTED_NAIVE_SCHEMA,
+            attempt_offset=0,
+        )
+        assert res is not None
+        if res.has_text == expected_has_text:
+            correct += 1
+
+    # Naive prompt fails the 7/7 bar; specifically measured at 5/7 due to waterfront false positives
+    assert correct < total, f"Expected naive prompt to fail 7/7 bar, but got {correct}/{total}"
+    assert correct == 5, f"Expected naive prompt to score 5/7, got {correct}/{total}"
