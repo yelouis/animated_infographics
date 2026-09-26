@@ -35,7 +35,7 @@ from animated_infographics.contracts.models import (
     Transcript,
 )
 from animated_infographics.contracts.templates import REGISTRY
-from animated_infographics.planner.llm import LLMBackend
+from animated_infographics.planner.llm import LLMBackend, run_with_retries
 from animated_infographics.planner.select import plan_template_selection
 from animated_infographics.planner.validate import PlanContext, validate_scene
 
@@ -215,33 +215,13 @@ def plan_single_template_props(
         "Generate concrete, grounded props for this infographic scene."
     )
 
-    error_history: list[str] = []
-    attempts = 0
-
     ctx = PlanContext(transcript=transcript, bible=bible, beat=beat)
 
-    for attempt in range(3):
-        attempts += 1
-        user_prompt = base_user_prompt
-        if attempt > 0 and error_history:
-            user_prompt += (
-                "\n\nYour previous JSON was rejected:\n"
-                + "\n".join(f"- {e}" for e in error_history[:20])
-                + "\nReturn corrected JSON only."
-            )
-
-        resp = backend.generate_json(
-            stage="props",
-            system=system,
-            user=user_prompt,
-            schema=narrowed_schema,
-            attempt=attempt,
-        )
-
+    def validate_props(raw: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
         try:
-            props_instance = spec.props_model.model_validate(resp)
+            props_instance = spec.props_model.model_validate(raw)
             scene_factory: Any = scene_cls
-            scene: Scene = scene_factory(
+            candidate_scene: Scene = scene_factory(
                 id=scene_id,
                 beat_i=beat_i,
                 template=template_name,
@@ -249,17 +229,38 @@ def plan_single_template_props(
                 mute_sfx=False,
                 rationale="llm planned",
             )
-            val_errors = validate_scene(scene, ctx)
-            if not val_errors:
-                return (scene, [], attempts)
-            else:
-                error_history = val_errors
+            val_errors = validate_scene(candidate_scene, ctx)
+            return (raw, val_errors)
         except ValidationError as e:
-            error_history = [str(err) for err in e.errors()]
+            return (raw, [str(err) for err in e.errors()])
         except Exception as e:
-            error_history = [f"Failed to instantiate scene: {e}"]
+            return (raw, [f"Failed to instantiate scene: {e}"])
 
-    return (None, error_history, attempts)
+    result, attempts = run_with_retries(
+        backend,
+        stage="props",
+        system=system,
+        user=base_user_prompt,
+        schema=narrowed_schema,
+        validate=validate_props,
+        max_attempts=3,
+    )
+
+    if result is not None:
+        props_instance = spec.props_model.model_validate(result)
+        scene_factory: Any = scene_cls
+        scene: Scene = scene_factory(
+            id=scene_id,
+            beat_i=beat_i,
+            template=template_name,
+            props=props_instance,
+            mute_sfx=False,
+            rationale="llm planned",
+        )
+        return (scene, [], len(attempts))
+
+    last_errors = attempts[-1].errors if attempts else ["All attempts failed"]
+    return (None, last_errors, len(attempts))
 
 
 def plan_storyboard(

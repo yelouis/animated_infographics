@@ -1,8 +1,9 @@
 """Template selection planning and deterministic rule repairs."""
 
 import math
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
@@ -13,7 +14,7 @@ from animated_infographics.contracts.models import (
     Transcript,
 )
 from animated_infographics.contracts.templates import REGISTRY
-from animated_infographics.planner.llm import LLMBackend
+from animated_infographics.planner.llm import LLMBackend, run_with_retries
 
 
 class Choice(BaseModel):
@@ -158,6 +159,38 @@ def _build_compact_bible(bible: Bible) -> str:
     return "\n\n".join(parts)
 
 
+def _make_validate_choices(
+    target_beats: Sequence[Beat], allowed: list[str]
+) -> Callable[[dict[str, Any]], tuple[dict[str, Any], list[str]]]:
+    def validate_choices(raw: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+        errs: list[str] = []
+        raw_choices = raw.get("choices")
+        if not isinstance(raw_choices, list):
+            return (raw, ["Missing or non-array 'choices' in response"])
+        if len(raw_choices) != len(target_beats):
+            return (raw, [f"Expected {len(target_beats)} choices, got {len(raw_choices)}"])
+
+        for idx, c in enumerate(raw_choices):
+            if not isinstance(c, dict):
+                errs.append(f"Choice {idx} is not an object")
+                continue
+            expected_beat_i = target_beats[idx].i
+            beat_i = c.get("beat_i")
+            prim = c.get("primary")
+            alt = c.get("alternate")
+            if beat_i != expected_beat_i:
+                errs.append(f"Choice {idx} beat_i={beat_i}, expected {expected_beat_i}")
+            if prim not in allowed:
+                errs.append(f"Choice {idx} primary '{prim}' not in allowed templates")
+            if alt not in allowed:
+                errs.append(f"Choice {idx} alternate '{alt}' not in allowed templates")
+            if prim == alt:
+                errs.append(f"Choice {idx} has primary == alternate ('{prim}'). They must differ.")
+        return (raw, errs)
+
+    return validate_choices
+
+
 def plan_template_selection(
     transcript: Transcript,
     beats: Sequence[Beat],
@@ -240,64 +273,28 @@ def plan_template_selection(
             "Select the best visual infographic templates for each narration beat."
         )
 
-        window_choices: list[Choice] | None = None
-        error_history: list[str] = []
+        result, attempts = run_with_retries(
+            backend,
+            stage="select",
+            system=system,
+            user=user_content,
+            schema=schema,
+            validate=_make_validate_choices(window_beats, allowed),
+            max_attempts=3,
+        )
+        total_calls += len(attempts)
 
-        for attempt in range(3):
-            total_calls += 1
-            call_user = user_content
-            if attempt > 0 and error_history:
-                call_user += (
-                    "\n\nYour previous JSON was rejected:\n"
-                    + "\n".join(f"- {e}" for e in error_history[:20])
-                    + "\nReturn corrected JSON only."
+        window_choices: list[Choice]
+        if result is not None:
+            window_choices = [
+                Choice(
+                    beat_i=window_beats[idx].i,
+                    primary=c["primary"],
+                    alternate=c["alternate"],
                 )
-
-            resp = backend.generate_json(
-                stage="select",
-                system=system,
-                user=call_user,
-                schema=schema,
-                attempt=attempt,
-            )
-
-            # Validate response
-            errs: list[str] = []
-            parsed_choices: list[Choice] = []
-            raw_choices = resp.get("choices")
-            if not isinstance(raw_choices, list):
-                errs.append("Missing or non-array 'choices' in response")
-            elif len(raw_choices) != len(window_beats):
-                errs.append(f"Expected {len(window_beats)} choices, got {len(raw_choices)}")
-            else:
-                for idx, c in enumerate(raw_choices):
-                    expected_beat_i = window_beats[idx].i
-                    beat_i = c.get("beat_i")
-                    prim = c.get("primary")
-                    alt = c.get("alternate")
-                    if beat_i != expected_beat_i:
-                        errs.append(f"Choice {idx} beat_i={beat_i}, expected {expected_beat_i}")
-                    if prim not in allowed:
-                        errs.append(f"Choice {idx} primary '{prim}' not in allowed templates")
-                    if alt not in allowed:
-                        errs.append(f"Choice {idx} alternate '{alt}' not in allowed templates")
-                    if prim == alt:
-                        errs.append(
-                            f"Choice {idx} has primary == alternate ('{prim}'). They must differ."
-                        )
-                    if not errs:
-                        parsed_choices.append(
-                            Choice(beat_i=expected_beat_i, primary=prim, alternate=alt)
-                        )
-
-            if not errs and len(parsed_choices) == len(window_beats):
-                window_choices = parsed_choices
-                break
-            else:
-                error_history = errs
-
-        # Fallback if all 3 attempts failed
-        if window_choices is None:
+                for idx, c in enumerate(result["choices"])
+            ]
+        else:
             window_choices = [
                 Choice(beat_i=b.i, primary="kinetic_quote", alternate="kinetic_quote")
                 for b in window_beats
