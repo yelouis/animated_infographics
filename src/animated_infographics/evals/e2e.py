@@ -42,7 +42,11 @@ def extract_pixel_luma(mp4_path: Path, frame: int, x: int = 24, y: int = 24) -> 
     return float(arr[0])
 
 
-def check_sync_probe(mp4_path: Path, timeline: Timeline) -> tuple[bool, int, list[str]]:
+def check_sync_probe(
+    mp4_path: Path,
+    timeline: Timeline,
+    skip_boundary: int | None = None,
+) -> tuple[bool, int, list[str]]:
     """Check that sync probe pixel (24, 24) flips at every scene boundary k >= 1.
 
     Even scene index: black (#000000, luma < 40)
@@ -53,6 +57,9 @@ def check_sync_probe(mp4_path: Path, timeline: Timeline) -> tuple[bool, int, lis
 
     scenes = timeline.scenes
     for k in range(1, len(scenes)):
+        if skip_boundary is not None and k == skip_boundary:
+            continue
+
         prev_sc = scenes[k - 1]
         curr_sc = scenes[k]
 
@@ -93,6 +100,69 @@ def check_sync_probe(mp4_path: Path, timeline: Timeline) -> tuple[bool, int, lis
         checked_count += 1
 
     return len(errors) == 0, checked_count, errors
+
+
+def get_media_duration(mp4_path: Path) -> float:
+    """Return media duration in seconds via ffprobe."""
+    cmd = [
+        "ffprobe",
+        "-v",
+        "error",
+        "-show_entries",
+        "format=duration",
+        "-of",
+        "default=noprint_wrappers=1:nokey=1",
+        str(mp4_path),
+    ]
+    proc = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    return float(proc.stdout.strip())
+
+
+def measure_audio_rms(
+    mp4_path: Path,
+    start_s: float | None = None,
+    end_s: float | None = None,
+) -> tuple[float, float, float, float]:
+    """Measure RMS audio level in dBFS between start_s and end_s using ffmpeg atrim + astats.
+
+    Returns (duration, start_s, end_s, rms_dbfs).
+    Defaults to [duration - 1.4 s, duration - 1.0 s] per design_testing_and_validation.md §4.
+    """
+    duration = get_media_duration(mp4_path)
+    if start_s is None:
+        start_s = max(0.0, duration - 1.4)
+    if end_s is None:
+        end_s = max(start_s, duration - 1.0)
+
+    cmd = [
+        "ffmpeg",
+        "-nostats",
+        "-vn",
+        "-i",
+        str(mp4_path),
+        "-af",
+        f"atrim=start={start_s}:end={end_s},astats=measure_overall=all:measure_perchannel=none",
+        "-f",
+        "null",
+        "-",
+    ]
+    proc = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    rms_dbfs: float | None = None
+    for line in proc.stderr.splitlines():
+        if "RMS level dB:" in line:
+            val_str = line.split("RMS level dB:")[1].strip()
+            if val_str == "-inf":
+                rms_dbfs = float("-inf")
+            else:
+                rms_dbfs = float(val_str)
+            break
+
+    if rms_dbfs is None:
+        raise RuntimeError(
+            f"Could not extract RMS level dB from ffmpeg astats output:\n{proc.stderr}"
+        )
+
+    return duration, start_s, end_s, rms_dbfs
 
 
 def compute_file_sha256(path: Path) -> str:
@@ -156,16 +226,48 @@ def main() -> None:
     sync_p = subparsers.add_parser("check-sync")
     sync_p.add_argument("--mp4", type=Path, required=True)
     sync_p.add_argument("--timeline", type=Path, required=True)
+    sync_p.add_argument(
+        "--skip-boundary",
+        type=int,
+        default=None,
+        help="Skip checking boundary at specific scene index (falsification)",
+    )
+
+    # measure-audio-rms
+    rms_p = subparsers.add_parser("measure-audio-rms")
+    rms_p.add_argument("--mp4", type=Path, required=True)
+    rms_p.add_argument("--start", type=float, default=None)
+    rms_p.add_argument("--end", type=float, default=None)
+    rms_p.add_argument("--min-rms", type=float, default=None)
 
     args = parser.parse_args()
     if args.command == "check-sync":
         timeline = Timeline.model_validate_json(args.timeline.read_text(encoding="utf-8"))
-        ok, count, errors = check_sync_probe(args.mp4, timeline)
-        print(f"Checked {count} scene boundaries. OK: {ok}")
-        if not ok:
-            for err in errors:
-                print(f"ERROR: {err}", file=sys.stderr)
+        ok, count, errors = check_sync_probe(args.mp4, timeline, skip_boundary=args.skip_boundary)
+        expected = len(timeline.scenes) - 1
+        result = {
+            "checked": count,
+            "expected": expected,
+            "failures": errors,
+        }
+        print(json.dumps(result))
+        if count != expected or not ok:
             sys.exit(1)
+        sys.exit(0)
+    elif args.command == "measure-audio-rms":
+        duration, start_s, end_s, rms_dbfs = measure_audio_rms(
+            args.mp4, start_s=args.start, end_s=args.end
+        )
+        res = {
+            "duration": round(duration, 4),
+            "start_s": round(start_s, 4),
+            "end_s": round(end_s, 4),
+            "rms_dbfs": round(rms_dbfs, 2) if rms_dbfs != float("-inf") else "-inf",
+        }
+        print(json.dumps(res))
+        if args.min_rms is not None:
+            if rms_dbfs <= args.min_rms:
+                sys.exit(1)
         sys.exit(0)
     else:
         parser.print_help()

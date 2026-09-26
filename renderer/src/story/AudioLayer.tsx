@@ -15,10 +15,10 @@ export const AudioLayer: React.FC<AudioLayerProps> = ({
 
   const musicVolumeCallback = (frame: number): number => {
     if (frame < 30) {
-      return (frame / 30) * baseMusicVolume;
+      return Math.max(0.001, (frame / 30) * baseMusicVolume);
     }
     if (frame >= durationFrames - 60) {
-      return Math.max(0, ((durationFrames - frame) / 60) * baseMusicVolume);
+      return Math.max(0.001, ((durationFrames - frame) / 60) * baseMusicVolume);
     }
     return baseMusicVolume;
   };

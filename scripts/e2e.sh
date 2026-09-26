@@ -69,12 +69,17 @@ assert v['reason'] == 'third_person', f'Expected third_person, got {v[\"reason\"
 CODE=$?
 [ "$CODE" -eq 0 ] || fail "Step 1 voice.json check failed with exit code $CODE"
 
-# 1e: preview/storyboard.md first line is voice line
-python3 -c "
+# 1e: preview/storyboard.md first line is voice line (read dynamically from voice.json)
+uv run python -c "
 from pathlib import Path
-lines = Path('$JOB_DIR/preview/storyboard.md').read_text().splitlines()
+from animated_infographics.contracts.models import VoiceDecision
+from animated_infographics.preview import format_voice_line
+
+v = VoiceDecision.model_validate_json(Path('$JOB_DIR/voice.json').read_text(encoding='utf-8'))
+expected_header = format_voice_line(v)
+lines = Path('$JOB_DIR/preview/storyboard.md').read_text(encoding='utf-8').splitlines()
 assert lines, 'storyboard.md empty'
-assert lines[0].startswith('Voice: am_michael — auto (third person)'), f'Invalid header: {lines[0]}'
+assert lines[0] == expected_header, f'Header mismatch: expected \"{expected_header}\", got \"{lines[0]}\"'
 "
 CODE=$?
 [ "$CODE" -eq 0 ] || fail "Step 1 storyboard.md header check failed with exit code $CODE"
@@ -156,6 +161,14 @@ assert len(sfx_files) >= 1, f'Step 4 audio/sfx/*.wav empty, found {sfx_files}'
 CODE=$?
 [ "$CODE" -eq 0 ] || fail "Step 4 verify.json and music/sfx checks failed"
 
+# Step 4b: Audible music check in final MP4 [duration - 1.4s, duration - 1.0s] > -60 dBFS
+log "Step 4: Measuring audio RMS in [duration - 1.4s, duration - 1.0s] for audible music..."
+RMS_OUT=$(uv run python -m animated_infographics.evals.e2e measure-audio-rms --mp4 "$JOB_DIR/out/final.mp4" --min-rms -60.0)
+CODE=$?
+echo "$RMS_OUT"
+[ "$CODE" -eq 0 ] || fail "Step 4 music RMS check failed (> -60 dBFS required): $RMS_OUT"
+echo "$RMS_OUT" > "$ARTIFACTS_DIR/step4_audio_rms.json"
+
 log "Step 4 passed."
 
 # ============================================================================
@@ -175,6 +188,17 @@ SYNC_CHECK_OUT=$(uv run python -m animated_infographics.evals.e2e check-sync --m
 CODE=$?
 echo "$SYNC_CHECK_OUT"
 [ "$CODE" -eq 0 ] || fail "Step 5 sync probe verification failed: $SYNC_CHECK_OUT"
+echo "$SYNC_CHECK_OUT" > "$ARTIFACTS_DIR/step5_sync_result.json"
+
+python3 -c "
+import json
+from pathlib import Path
+data = json.loads(Path('$ARTIFACTS_DIR/step5_sync_result.json').read_text(encoding='utf-8'))
+assert data['checked'] == data['expected'], f\"Checked {data['checked']} != expected {data['expected']}\"
+assert len(data['failures']) == 0, f\"Failures found: {data['failures']}\"
+"
+CODE=$?
+[ "$CODE" -eq 0 ] || fail "Step 5 sync probe result assertions failed"
 
 log "Step 5 passed."
 
@@ -388,10 +412,12 @@ log "Step 8 passed (bible, beats, storyboard byte-identical)."
 # Write Complete Evaluation Report
 # ============================================================================
 REPORT_PATH="$REPO_ROOT/docs/evals/e2e_$DATE_STR.md"
-python3 -c "
+uv run python -c "
 import hashlib
 import json
 from pathlib import Path
+from animated_infographics.contracts.models import VoiceDecision
+from animated_infographics.preview import format_voice_line
 
 def get_sha256(p: Path) -> str:
     h = hashlib.sha256()
@@ -424,6 +450,46 @@ sha_recipe = get_sha256(j_recipe / 'out/final.mp4')
 sha_room12 = get_sha256(j_room12 / 'out/final.mp4')
 sha_emu = get_sha256(j_emu / 'out/final.mp4')
 
+rms_step4 = load_json(Path('$ARTIFACTS_DIR/step4_audio_rms.json'))
+sync_res = load_json(Path('$ARTIFACTS_DIR/step5_sync_result.json'))
+
+def get_voice_line(j: Path) -> str:
+    p = j / 'voice.json'
+    if not p.exists():
+        return 'None (recorded audio input)'
+    v = VoiceDecision.model_validate(load_json(p))
+    return format_voice_line(v)
+
+def format_critic_summary(j: Path) -> str:
+    p = j / 'plan_report.json'
+    if not p.exists():
+        return 'N/A'
+    pr = load_json(p)
+    scenes = pr.get('scenes', [])
+    counts = {'agree': 0, 'mismatch_retried': 0, 'changed': 0, 'not_applicable': 0, 'unavailable': 0}
+    for sc in scenes:
+        c = sc.get('critic', {})
+        st = c.get('status', 'not_applicable')
+        if st in counts:
+            counts[st] += 1
+        if c.get('changed', False):
+            counts['changed'] += 1
+    total_eval = counts['agree'] + counts['mismatch_retried'] + counts['unavailable']
+    return f'{total_eval} people scenes evaluated ({counts[\"agree\"]} agree, {counts[\"mismatch_retried\"]} mismatch_retried, {counts[\"changed\"]} changed, {counts[\"unavailable\"]} unavailable, {counts[\"not_applicable\"]} not_applicable)'
+
+def format_text_check_summary(j: Path) -> str:
+    p = j / 'assets/manifest.json'
+    if not p.exists():
+        return 'N/A'
+    mf = load_json(p)
+    entities = mf.get('entities', [])
+    counts = {'clean': 0, 'regenerated': 0, 'skipped': 0, 'failed': 0, 'unavailable': 0}
+    for ent in entities:
+        st = ent.get('text_check', 'skipped')
+        if st in counts:
+            counts[st] += 1
+    return f'{len(entities)} entities ({counts[\"clean\"]} clean, {counts[\"regenerated\"]} regenerated, {counts[\"skipped\"]} skipped, {counts[\"failed\"]} failed, {counts[\"unavailable\"]} unavailable)'
+
 report = f'''# E2E Evaluation Report — $DATE_STR
 
 All steps 1–8 of design_testing_and_validation.md §4 verified.
@@ -449,6 +515,10 @@ All steps 1–8 of design_testing_and_validation.md §4 verified.
 ### 1. molasses_flood.txt (Text Pipeline)
 - Job ID: {j_text.name}
 - MP4 SHA-256: \`{sha_text}\`
+- Voice: {get_voice_line(j_text)}
+- Audible music RMS ([{rms_step4['start_s']}s, {rms_step4['end_s']}s]): \`{rms_step4['rms_dbfs']} dBFS\` (> -60.0 dBFS required)
+- Critic (B6): {format_critic_summary(j_text)}
+- Text checks (B10): {format_text_check_summary(j_text)}
 - Verify checks: all true
 \`\`\`json
 {json.dumps(v_text['details'], indent=2)}
@@ -461,6 +531,9 @@ All steps 1–8 of design_testing_and_validation.md §4 verified.
 ### 2. molasses_flood_say.m4a (Audio Pipeline)
 - Job ID: {j_audio.name}
 - MP4 SHA-256: \`{sha_audio}\`
+- Voice: {get_voice_line(j_audio)}
+- Critic (B6): {format_critic_summary(j_audio)}
+- Text checks (B10): {format_text_check_summary(j_audio)}
 - Verify checks: all true
 \`\`\`json
 {json.dumps(v_audio['details'], indent=2)}
@@ -469,7 +542,9 @@ All steps 1–8 of design_testing_and_validation.md §4 verified.
 ### 3. story_recipe_box.txt (Performance Budget Fixture)
 - Job ID: {j_recipe.name}
 - MP4 SHA-256: \`{sha_recipe}\`
-- Voice: \`af_heart\` (reason: \`llm\`, evidence contains \`granddaughter\`)
+- Voice: {get_voice_line(j_recipe)}
+- Critic (B6): {format_critic_summary(j_recipe)}
+- Text checks (B10): {format_text_check_summary(j_recipe)}
 - Verify checks: all true
 \`\`\`json
 {json.dumps(v_recipe['details'], indent=2)}
@@ -482,7 +557,9 @@ All steps 1–8 of design_testing_and_validation.md §4 verified.
 ### 4. story_room_12.txt (Inference Trap Fixture)
 - Job ID: {j_room12.name}
 - MP4 SHA-256: \`{sha_room12}\`
-- Voice: \`am_michael\` (reason: \`no_evidence\`)
+- Voice: {get_voice_line(j_room12)}
+- Critic (B6): {format_critic_summary(j_room12)}
+- Text checks (B10): {format_text_check_summary(j_room12)}
 - Verify checks: all true
 \`\`\`json
 {json.dumps(v_room12['details'], indent=2)}
@@ -495,7 +572,9 @@ All steps 1–8 of design_testing_and_validation.md §4 verified.
 ### 5. emu_war.txt (History Fixture)
 - Job ID: {j_emu.name}
 - MP4 SHA-256: \`{sha_emu}\`
-- Voice: \`am_michael\` (reason: \`third_person\`)
+- Voice: {get_voice_line(j_emu)}
+- Critic (B6): {format_critic_summary(j_emu)}
+- Text checks (B10): {format_text_check_summary(j_emu)}
 - Verify checks: all true
 \`\`\`json
 {json.dumps(v_emu['details'], indent=2)}
@@ -506,8 +585,8 @@ All steps 1–8 of design_testing_and_validation.md §4 verified.
 \`\`\`
 
 ### Sync Probe
-- Checked: 9 scene boundaries
-- Status: All black/white transitions aligned with frame accuracy
+- Checked: {sync_res['checked']} scene boundaries (expected: {sync_res['expected']})
+- Status: All black/white transitions aligned with frame accuracy ({len(sync_res['failures'])} failures)
 
 ### Determinism
 - Checked files: \`bible.json\`, \`beats.json\`, \`storyboard.json\`

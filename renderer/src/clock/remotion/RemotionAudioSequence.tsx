@@ -1,5 +1,5 @@
 import React from "react";
-import { Audio, Loop, Sequence, staticFile } from "remotion";
+import { Audio, Sequence, staticFile } from "remotion";
 
 export interface RemotionAudioCueProps {
   src: string;
@@ -22,9 +22,12 @@ export const RemotionAudioCue: React.FC<RemotionAudioCueProps> = ({
   if (loop && durationInFrames) {
     return (
       <Sequence from={startFrame} durationInFrames={durationInFrames} layout="none">
-        <Loop durationInFrames={durationInFrames}>
-          <Audio src={fileUrl} volume={volume} />
-        </Loop>
+        <Audio
+          src={fileUrl}
+          volume={volume}
+          loop
+          loopVolumeCurveBehavior="extend"
+        />
       </Sequence>
     );
   }
