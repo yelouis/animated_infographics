@@ -11,14 +11,11 @@ from animated_infographics.timing.frames import (
     scene_start_frames,
 )
 from animated_infographics.timing.items import count_frames, item_frames
-from animated_infographics.timing.sfx import SfxCue, SfxEvent, schedule_sfx
 
 __all__ = [
     "END_HOLD_MS",
     "FPS",
     "LEAD_MS",
-    "SfxCue",
-    "SfxEvent",
     "build_beats",
     "count_frames",
     "duration_frames",
@@ -26,5 +23,4 @@ __all__ = [
     "ms_to_frame",
     "paginate",
     "scene_start_frames",
-    "schedule_sfx",
 ]
