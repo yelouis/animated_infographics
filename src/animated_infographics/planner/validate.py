@@ -1,7 +1,9 @@
 """Validation for storyboard scenes and whole plans against contracts, bible, and grounding."""
 
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import Final
 
 from animated_infographics.contracts.models import (
     Beat,
@@ -26,13 +28,88 @@ from animated_infographics.contracts.models import (
     TitleCardProps,
     Transcript,
 )
-from animated_infographics.contracts.templates import REGISTRY, TextSlot
+from animated_infographics.contracts.templates import REGISTRY, TextSlot, TimelineEvent
 from animated_infographics.planner.grounding import (
     digits_grounded,
     is_kinetic_quote_grounded,
     is_stat_grounded,
 )
 from animated_infographics.textfit import fits
+
+RELATIVE_TIME_LABELS: Final[frozenset[str]] = frozenset(
+    {
+        "today",
+        "now",
+        "present day",
+        "that night",
+        "that weekend",
+        "the next day",
+        "days later",
+        "weeks later",
+        "months later",
+        "years later",
+        "last spring",
+        "last summer",
+        "last fall",
+        "last winter",
+        "last year",
+        "earlier",
+        "later",
+    }
+)
+
+
+def normalize_date_label(s: str) -> str:
+    """Normalize date label by casefolding, collapsing whitespace, and stripping punctuation."""
+    cleaned = re.sub(r"\s+", " ", s.casefold()).strip()
+    return cleaned.rstrip(".,!:")
+
+
+def timeline_label_errors(events: Sequence[TimelineEvent], transcript_text: str) -> list[str]:
+    """Validate timeline date_labels per Issue 4 / Option A (design_planner.md §8).
+
+    - (a) per label: must contain >= 1 digit run with digits_grounded true,
+          OR its normalised form must be in RELATIVE_TIME_LABELS.
+    - (b) normalised labels are pairwise distinct.
+    - (c) first four-digit year per label (\\b(1[0-9]{3}|20[0-9]{2})\\b), in event order,
+          is non-decreasing.
+    """
+    errors: list[str] = []
+
+    # (a) Per-label check
+    for idx, event in enumerate(events):
+        norm_label = normalize_date_label(event.date_label)
+        has_digits = bool(re.search(r"\d+", event.date_label))
+        is_grounded_date = has_digits and digits_grounded(event.date_label, transcript_text)
+        is_allowed_relative = norm_label in RELATIVE_TIME_LABELS
+
+        if not (is_grounded_date or is_allowed_relative):
+            errors.append(
+                f'props.events[{idx}].date_label: "{event.date_label}" '
+                "is not a date from the narration or an allowed phrase"
+            )
+
+    # (b) Pairwise distinct normalised labels
+    seen_labels: set[str] = set()
+    for event in events:
+        norm_label = normalize_date_label(event.date_label)
+        if norm_label in seen_labels:
+            errors.append(f'props.events: date labels repeat ("{norm_label}")')
+            break
+        seen_labels.add(norm_label)
+
+    # (c) First four-digit year per label is non-decreasing
+    prev_year: int | None = None
+    for event in events:
+        m = re.search(r"\b(1[0-9]{3}|20[0-9]{2})\b", event.date_label)
+        if m:
+            cur_year = int(m.group(1))
+            if prev_year is not None and cur_year < prev_year:
+                errors.append(f"props.events: years go backwards ({prev_year} → {cur_year})")
+                break
+            prev_year = cur_year
+
+    return errors
 
 
 @dataclass(frozen=True)
@@ -281,10 +358,8 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
                 _check_slot(f"props.events[{idx}].date_label", event.date_label, slots["date"])
             )
             errors.extend(_check_slot(f"props.events[{idx}].label", event.label, slots["label"]))
-            if not digits_grounded(event.date_label, full_transcript):
-                errors.append(
-                    f"props.events[{idx}].date_label: '{event.date_label}' digits not grounded"
-                )
+
+        errors.extend(timeline_label_errors(props.events, full_transcript))
 
     return errors
 

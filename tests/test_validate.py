@@ -345,7 +345,7 @@ def test_timeline_validation() -> None:
             events=[
                 TimelineEvent(date_label="1919", label="The Flood"),
                 TimelineEvent(date_label="Jan 1919", label="Cleanup"),
-                TimelineEvent(date_label="1919", label="Inquiry"),
+                TimelineEvent(date_label="Feb 1919", label="Inquiry"),
             ],
             highlight_index=0,
         ),
@@ -358,7 +358,7 @@ def test_timeline_validation() -> None:
             events=[
                 TimelineEvent(date_label="1919", label="The Flood"),
                 TimelineEvent(date_label="Jan 1919", label="Cleanup"),
-                TimelineEvent(date_label="1919", label="Inquiry"),
+                TimelineEvent(date_label="Feb 1919", label="Inquiry"),
             ],
             highlight_index=5,
         )
@@ -371,14 +371,107 @@ def test_timeline_validation() -> None:
         props=TimelineProps(
             events=[
                 TimelineEvent(date_label="2025", label="Future Event"),
-                TimelineEvent(date_label="1919", label="Cleanup"),
-                TimelineEvent(date_label="1919", label="Inquiry"),
+                TimelineEvent(date_label="Jan 1919", label="Cleanup"),
+                TimelineEvent(date_label="Feb 1919", label="Inquiry"),
             ],
             highlight_index=1,
         ),
     )
     errs = validate_scene(ungrounded, ctx)
-    assert any("not grounded" in e for e in errs)
+    assert any("not grounded" in e or "not a date" in e for e in errs)
+
+
+def test_timeline_labels_validation() -> None:
+    """Verify timeline date labels per Issue 4 / Option A (design_testing_and_validation.md)."""
+    # Context with 1932, 1934, 2013, Nov 2, 8, 10
+    transcript_text = (
+        "In 1932 and 1934, things changed. On Nov 2, Nov 8, and Dec 10, records were made. "
+        "In 2013, 50 years had passed."
+    )
+    words = []
+    t = 0
+    for idx, token in enumerate(transcript_text.split()):
+        words.append(TranscriptWord(i=idx, text=token, start_ms=t, end_ms=t + 200, sentence_i=0))
+        t += 250
+    transcript = Transcript(
+        schema_version=1,
+        source="tts",
+        audio_path="test.wav",
+        duration_ms=t + 500,
+        words=words,
+        sentences=[
+            TranscriptSentence(
+                i=0,
+                text=transcript_text,
+                start_ms=0,
+                end_ms=t,
+                word_start=0,
+                word_end=len(words),
+                paragraph_i=0,
+            )
+        ],
+    )
+    bible = Bible(
+        schema_version=1,
+        title="Timeline Test",
+        logline="Logline",
+        genre="history",
+        cast=[],
+        places=[],
+        set_pieces=[],
+    )
+    beat = Beat(i=1, word_start=0, word_end=len(words), start_ms=0, end_ms=t, text=transcript_text)
+    ctx = PlanContext(transcript=transcript, bible=bible, beat=beat)
+
+    def _make_timeline_scene(labels: list[str]) -> TimelineSceneModel:
+        return TimelineSceneModel(
+            id="s001",
+            beat_i=1,
+            template="timeline",
+            props=TimelineProps(
+                events=[
+                    TimelineEvent(date_label=lbl, label=f"Event {i}")
+                    for i, lbl in enumerate(labels)
+                ],
+                highlight_index=0,
+            ),
+        )
+
+    # Wave A defect 1: ["2013", "2013", "2013"] -> rejected (not distinct)
+    errs = validate_scene(_make_timeline_scene(["2013", "2013", "2013"]), ctx)
+    assert any('date labels repeat ("2013")' in e for e in errs)
+
+    # Wave A defect 2: ["50+ Years", "No Record", "Memory Only"] -> rejected ("No Record")
+    errs = validate_scene(_make_timeline_scene(["50+ Years", "No Record", "Memory Only"]), ctx)
+    assert any(
+        '"No Record" is not a date from the narration or an allowed phrase' in e for e in errs
+    )
+
+    # Wave A defect 3: ["Last Spring", "Present", "Now"] -> rejected ("Present")
+    errs = validate_scene(_make_timeline_scene(["Last Spring", "Present", "Now"]), ctx)
+    assert any('"Present" is not a date from the narration or an allowed phrase' in e for e in errs)
+
+    # Years backwards: ["1934", "1932", "Today"] -> rejected
+    errs = validate_scene(_make_timeline_scene(["1934", "1932", "Today"]), ctx)
+    assert any("years go backwards (1934 → 1932)" in e for e in errs)
+
+    # Ungrounded digit: ["Nov 2", "June 5", "Dec 10"] ("5" not in transcript) -> rejected
+    errs = validate_scene(_make_timeline_scene(["Nov 2", "June 5", "Dec 10"]), ctx)
+    assert any('"June 5" is not a date from the narration or an allowed phrase' in e for e in errs)
+
+    # Accepted: ["Nov 2", "Nov 8", "Dec 10"]
+    assert len(validate_scene(_make_timeline_scene(["Nov 2", "Nov 8", "Dec 10"]), ctx)) == 0
+
+    # Accepted: ["1932", "1934", "Today"]
+    assert len(validate_scene(_make_timeline_scene(["1932", "1934", "Today"]), ctx)) == 0
+
+    # Accepted: ["Last spring", "That weekend", "Months later"]
+    scene_rel = _make_timeline_scene(["Last spring", "That weekend", "Months later"])
+    assert len(validate_scene(scene_rel, ctx)) == 0
+
+    # Accepted: ["Present day.", "Years later", "Now"] (normalised trailing punctuation)
+    scene_norm = _make_timeline_scene(["Present day.", "Years later", "Now"])
+    assert len(validate_scene(scene_norm, ctx)) == 0
 
 
 def test_validate_plan_rules() -> None:

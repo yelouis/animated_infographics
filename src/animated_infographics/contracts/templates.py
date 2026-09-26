@@ -616,6 +616,13 @@ REGISTRY: dict[str, TemplateSpec] = {
             "0 <= highlight_index < len(events)",
             "date_label <= 14 chars",
             "label <= 28 chars",
+            (
+                "date_label is a date or year said in the narration, or exactly one of: "
+                "Today, Now, Present day, That night, That weekend, The next day, "
+                "Days later, Weeks later, Months later, Years later, "
+                "Last spring, Last summer, Last fall, Last winter, Last year, Earlier, Later"
+            ),
+            "labels all differ and run forward in time",
         ],
         slots={
             "date": TextSlot(
