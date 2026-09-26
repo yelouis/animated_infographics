@@ -304,3 +304,109 @@ def test_sfx_round_robin_files(tmp_path: Path) -> None:
         "job/audio/sfx/pop_0.wav",
     ]
     assert sfx_srcs == expected_srcs
+
+
+def test_music_and_sfx_survive_review_journey(tmp_path: Path) -> None:
+    import json
+    import shutil
+    from datetime import UTC, datetime
+
+    from animated_infographics.jobs import Job, RunContext
+    from animated_infographics.stages.compile import run_compile_stage
+
+    job = Job.create(Path("story.txt"), tmp_path, datetime.now(UTC))
+    job_dir = job.dir
+    (job_dir / "input").mkdir(exist_ok=True)
+    (job_dir / "input" / "sfx").mkdir(exist_ok=True)
+    shutil.copy2("fixtures/music/test_bed.wav", job_dir / "input" / "test_bed.wav")
+    shutil.copy2("fixtures/sfx/pop_test.wav", job_dir / "input" / "sfx" / "pop_test.wav")
+
+    # Ingest record with job-local relative paths
+    ingest_json = {
+        "schema_version": 1,
+        "kind": "text",
+        "source": "input/story.txt",
+        "title": "Title",
+        "paragraphs": ["The Title", "Second sentence", "Third sentence"],
+        "word_count": 6,
+        "music": "input/test_bed.wav",
+        "sfx_dir": "input/sfx",
+    }
+    (job_dir / "ingest.json").write_text(json.dumps(ingest_json), encoding="utf-8")
+
+    transcript = _make_dummy_transcript()
+    (job_dir / "transcript.json").write_text(transcript.model_dump_json(indent=2), encoding="utf-8")
+    bible = _make_dummy_bible()
+    (job_dir / "bible.json").write_text(bible.model_dump_json(indent=2), encoding="utf-8")
+    beats = [
+        Beat(i=0, text="The Title", start_ms=0, end_ms=1000, word_start=0, word_end=2),
+        Beat(i=1, text="Second sentence", start_ms=1000, end_ms=2500, word_start=2, word_end=4),
+        Beat(i=2, text="Third sentence", start_ms=2500, end_ms=3200, word_start=4, word_end=6),
+    ]
+    from animated_infographics.contracts.models import Beats
+
+    (job_dir / "beats.json").write_text(
+        Beats(schema_version=1, beats=beats).model_dump_json(indent=2), encoding="utf-8"
+    )
+    from animated_infographics.contracts.models import CharacterIntroProps, CharacterIntroScene
+
+    scenes = [
+        TitleCardScene(
+            id="s000",
+            beat_i=0,
+            template="title_card",
+            props=TitleCardProps(title="The Title"),
+        ),
+        CharacterIntroScene(
+            id="s001",
+            beat_i=1,
+            template="character_intro",
+            props=CharacterIntroProps(cast_id="c1", descriptor="Hero"),
+        ),
+        KineticQuoteScene(
+            id="s002",
+            beat_i=2,
+            template="kinetic_quote",
+            props=KineticQuoteProps(text="Third sentence"),
+        ),
+    ]
+    storyboard = Storyboard(schema_version=1, aspect="9:16", scenes=scenes)
+    (job_dir / "storyboard.json").write_text(storyboard.model_dump_json(indent=2), encoding="utf-8")
+
+    job = Job(job_dir)
+    # 1. First compile with bare RunContext (like preview or recompile)
+    run_compile_stage(job, RunContext())
+    assert (job_dir / "timeline.json").is_file()
+
+    # 2. Invalidate after storyboard (as an edit would do)
+    job.invalidate_after("storyboard")
+    assert not (job_dir / "timeline.json").exists()
+    assert not (job_dir / "audio" / "music.wav").exists()
+    assert len(list((job_dir / "audio" / "sfx").iterdir())) == 0
+
+    # 3. Re-compile with bare RunContext (as preview/rerun does)
+    run_compile_stage(job, RunContext())
+
+    timeline_data = json.loads((job_dir / "timeline.json").read_text(encoding="utf-8"))
+    assert timeline_data["audio"]["music"] is not None
+    assert len(timeline_data["audio"]["sfx"]) > 0
+
+
+def test_no_forbidden_runcontext_music_sfx_reads() -> None:
+    import re
+
+    src_dir = Path("src/animated_infographics")
+    allowed_files = {"cli.py", "stages/ingest.py"}
+    pattern = re.compile(r"\bctx\.(music_path|sfx_dir)\b")
+
+    violations: list[str] = []
+    for py_file in src_dir.rglob("*.py"):
+        rel_path = py_file.relative_to(src_dir).as_posix()
+        if rel_path in allowed_files:
+            continue
+        content = py_file.read_text(encoding="utf-8")
+        for line_no, line in enumerate(content.splitlines(), start=1):
+            if pattern.search(line):
+                violations.append(f"{rel_path}:{line_no}: {line.strip()}")
+
+    assert not violations, "Forbidden RunContext music/sfx reads found:\n" + "\n".join(violations)

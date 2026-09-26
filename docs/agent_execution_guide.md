@@ -66,7 +66,7 @@ All three designs were **measured before being specced** (numbers in §1.4).
 | G1 | `uv run ruff check .` | exit 0 |
 | G2 | `uv run ruff format --check .` | exit 0 · 99 files |
 | G3 | `uv run mypy src` | exit 0 · 53 source files |
-| G4 | `uv run pytest -q -m "not slow"` | exit 0 · **169 passed** |
+| G4 | `uv run pytest -q -m "not slow"` | exit 0 · **171 passed** |
 | G5 | `npm --prefix renderer run typecheck` | exit 0 |
 | G6 | `npm --prefix renderer run lint` | exit 0 |
 | G7 | `npm --prefix renderer test` | exit 0 · **15 passed** (4 files) |

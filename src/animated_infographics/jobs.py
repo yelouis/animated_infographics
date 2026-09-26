@@ -52,7 +52,7 @@ STAGE_INPUT_DEPENDENCIES: dict[str, list[str]] = {
     "segment": ["transcript.json", "bible.json"],
     "storyboard": ["beats.json", "bible.json"],
     "assets": ["storyboard.json", "bible.json"],
-    "compile": ["storyboard.json", "bible.json", "beats.json"],
+    "compile": ["storyboard.json", "bible.json", "beats.json", "ingest.json"],
     "preview": ["timeline.json"],
     "render": ["timeline.json"],
 }

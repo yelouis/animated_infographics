@@ -30,7 +30,15 @@ def run_ingest_stage(job: Job, ctx: RunContext) -> None:
     text_candidates = [f for f in candidates if f.suffix.lower() == ".txt"]
     primary_input = text_candidates[0] if text_candidates else candidates[0]
 
-    record = ingest(primary_input, title_override=ctx.title)
+    music_rel = f"input/{ctx.music_path.name}" if ctx.music_path else None
+    sfx_rel = "input/sfx" if ctx.sfx_dir else None
+
+    record = ingest(
+        primary_input,
+        title_override=ctx.title,
+        music=music_rel,
+        sfx_dir=sfx_rel,
+    )
 
     out_file = job.dir / "ingest.json"
     with open(out_file, "w", encoding="utf-8") as f:

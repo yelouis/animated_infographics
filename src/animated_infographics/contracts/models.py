@@ -132,6 +132,8 @@ class IngestRecord(BaseModel):
     title: str | None = None
     paragraphs: list[str] | None = None
     word_count: int | None = None
+    music: str | None = None
+    sfx_dir: str | None = None
 
 
 class SentenceOffset(BaseModel):

@@ -161,7 +161,9 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 - **Issue 1 — Narrator voice** — selected September 24, 2026: *"Proceed with Option A and B. If the story from reddit seems to be from a female's perspective then use af_heart, else use am_michael."* — delivered by A8 `9590fb7` + A9 `5824005`. Verified September 25: `voice.json` matched the expectation on 4 of 4 fixtures, in both the cold planner eval and the E2E (`af_heart` for `story_recipe_box` via evidence "As the only granddaughter, I"; `am_michael` for the other three); `--voice am_michael` makes 0 voice-stage LLM calls. The rule's permanent home is `design_planner.md` §10.
 - **Issue 2 — Illustration model** — selected September 24, 2026: *"Proceed with Option A."* — delivered by A21 `142b6a7`. Verified September 25: mflux runs with `--model flux2-klein-4b` only, 1024², 4 steps, q8; no Z-Image code path exists. The permanent home is `design_visual_direction.md` §7.
 
-**Wave B:** *(empty; items land here as they are delivered)*
+**Wave B:**
+
+- B1 — Music and SFX survive the review journey — git log --grep "(b1)" — G1–G14 green bare, 171 passed (+2 tests); ingest records job-relative music/sfx; compile reads ingest.json on every run; review journey test verifies music and sfx survive edit and invalidation; e2e step 4 asserts music and sfx present in timeline and files.
 
 ---
 

@@ -32,7 +32,12 @@ def normalize_text(raw: str) -> str:
     return "\n".join(lines)
 
 
-def ingest(input_path: Path, title_override: str | None) -> IngestRecord:
+def ingest(
+    input_path: Path,
+    title_override: str | None,
+    music: str | None = None,
+    sfx_dir: str | None = None,
+) -> IngestRecord:
     """Ingest and validate an input text or audio file."""
     ext = input_path.suffix.lower()
 
@@ -44,6 +49,8 @@ def ingest(input_path: Path, title_override: str | None) -> IngestRecord:
             title=title_override,
             paragraphs=None,
             word_count=None,
+            music=music,
+            sfx_dir=sfx_dir,
         )
 
     if ext != ".txt":
@@ -85,4 +92,6 @@ def ingest(input_path: Path, title_override: str | None) -> IngestRecord:
         title=title,
         paragraphs=paragraphs,
         word_count=word_count,
+        music=music,
+        sfx_dir=sfx_dir,
     )

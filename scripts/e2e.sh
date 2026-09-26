@@ -145,9 +145,16 @@ v = json.loads(Path('$JOB_DIR/out/verify.json').read_text())
 checks = ['video_stream', 'frame_count', 'audio_stream', 'av_duration', 'loudness', 'non_blank']
 for c in checks:
     assert v.get(c) is True, f'Check {c} failed: {v.get(\"details\")}'
+
+t = json.loads(Path('$JOB_DIR/timeline.json').read_text())
+assert t.get('audio', {}).get('music') is not None, 'Step 4 timeline.audio.music is null'
+assert len(t.get('audio', {}).get('sfx', [])) > 0, 'Step 4 timeline.audio.sfx is empty'
+assert (Path('$JOB_DIR/audio/music.wav')).is_file(), 'Step 4 audio/music.wav missing'
+sfx_files = list(Path('$JOB_DIR/audio/sfx').glob('*.wav'))
+assert len(sfx_files) >= 1, f'Step 4 audio/sfx/*.wav empty, found {sfx_files}'
 "
 CODE=$?
-[ "$CODE" -eq 0 ] || fail "Step 4 verify.json checks failed"
+[ "$CODE" -eq 0 ] || fail "Step 4 verify.json and music/sfx checks failed"
 
 log "Step 4 passed."
 
