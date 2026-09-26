@@ -1,25 +1,12 @@
-# Agent Execution Guide — Active Build: Wave B (verification fixes + Issues 3–5, 17 items) — September 25, 2026
+# Agent Execution Guide — Queue Complete: Wave A + Wave B Delivered — September 26, 2026
 
-**You are an engineering agent with no memory of this project.** The offline MVP (Wave A, A1–A22) is built, committed and pushed (head `e374a15`). On September 25, 2026 an independent verification pass re-ran every gate and read the source against the design. **All 14 gates reproduce green — and the product still has defects that no gate could see.** The worst:
-- every reviewed-and-edited video loses its music and sound effects;
-- about one scene in five shows text cut off mid-word;
-- two planner crash paths exist;
-- captions over light illustrations and the map are unreadable.
+**You are an engineering agent with no memory of this project.** The offline MVP (Wave A, A1–A22) and all 17 defect-fix and quality items of Wave B (B1–B17) are completely built, committed, pushed, and verified bare against all 14 battery gates.
 
-The same day, the user selected fixes for three quality issues:
-- **Issue 3:** a local check for fake writing in illustrations, which tolerates text when the description calls for it;
-- **Issue 4:** real dates or a fixed list of relative-time phrases on timelines;
-- **Issue 5:** two meaning rules plus a blind "critic" for people scenes.
-
-All three designs were **measured before being specced** (numbers in §1.4).
-
-**What is approved:** Wave B, items **B1–B17** in §3, in the order of §2. **What NOT to touch:** everything in §5. **What must not be started:** everything in §4.
+**What is approved:** Wave A and Wave B are complete. **What NOT to touch:** everything in §5. **What must not be started:** everything in §4 without an explicit user selection.
 
 **Every number and literal string in this document and in the design docs is a decision, not a suggestion.** Implement as written; do not substitute your own values. That includes prompts, word lists, thresholds and seeds. If a value is genuinely impossible, keep the *intent*, deviate minimally, say so in the commit body, and add it to §5.2. If the design itself cannot work, **STOP and file it in `docs/ongoing_general_errors.md` with options and a `Your selection: _____` line. Do not improvise, and never fill in a selection line yourself.**
 
 **What the product is, in one paragraph.** A local-only CLI that turns a **text story** (narrated by local TTS in an automatically chosen voice) or an **audio narration** into a **1080×1920 animated explainer video**. It uses flat editorial vector scenes chosen from 16 templates, in sync with the voice, with word-by-word karaoke captions, a persistent cast of vector avatars, locally generated illustrations, and optional music and SFX. Every video **stops for human review** before the final render. The long-term goal is live mode, so the renderer is clock-agnostic.
-
-**The lesson that shaped this wave.** Green gates were not evidence of correctness: every defect above passed every gate. **For every item, the validation includes the check that would have caught the original defect**, and you run it against the unfixed code first and see it fail.
 
 ---
 
@@ -39,7 +26,7 @@ All three designs were **measured before being specced** (numbers in §1.4).
 
 ---
 
-## 1. Verified baseline (September 25, 2026)
+## 1. Verified baseline (September 26, 2026)
 
 ### 1.1 Environment (verified)
 
@@ -56,27 +43,28 @@ All three designs were **measured before being specced** (numbers in §1.4).
 
 - Wave A: 22 commits `4df212a`…`e374a15`.
 - Verification docs: `5381de7`.
-- Design contracts were revised twice on September 25, 2026: once for the verification findings, once for the Issue 3–5 selections. The list is in `ongoing_general_errors.md` §5.
-- New frozen fixtures: `fixtures/vision/` (7 labelled images + `labels.json`), included in `fixtures/CHECKSUMS`.
+- Wave B: 17 commits B1–B17.
+- Design contracts were revised on September 25 and September 26, 2026.
+- Frozen fixtures: `fixtures/vision/` (7 labelled images + `labels.json`), included in `fixtures/CHECKSUMS`.
 
-### 1.3 Gates (run bare in the verification session)
+### 1.3 Gates (run bare in Wave B close-out session, September 26, 2026)
 
 | # | Gate | Result |
 |---|---|---|
 | G1 | `uv run ruff check .` | exit 0 |
-| G2 | `uv run ruff format --check .` | exit 0 · 99 files |
-| G3 | `uv run mypy src` | exit 0 · 53 source files |
-| G4 | `uv run pytest -q -m "not slow"` | exit 0 · **171 passed** |
-| G5 | `npm --prefix renderer run typecheck` | exit 0 |
-| G6 | `npm --prefix renderer run lint` | exit 0 |
-| G7 | `npm --prefix renderer test` | exit 0 · **15 passed** (4 files) |
-| G8 | `./scripts/check_schema_sync.sh` | exit 0 |
-| G9 | `./scripts/check_renderer_purity.sh` | exit 0 (the exemption is too broad → B13) |
-| G10 | `./scripts/check_gallery.sh` | exit 0 · 35 s · 51 goldens, hold motion on 17 entries (the overflow check fails open → B13) |
-| G11 | `uv run pytest -q -m slow` | exit 0 · **18 passed** · 178 s |
-| G12 | `./scripts/e2e.sh` | exit 0 · 847 s (asserts neither music/SFX nor a computed sync count → B1, B16; timings are warm-cache → B17) |
-| G13 | `./scripts/check_offline.sh` | exit 0 · 198 s · self-checks pass; fresh-cache `molasses_flood` reached review in **122.5 s** (planning 27 s, 4 images 83 s) |
-| G14 | `uv run infographics doctor` | exit 0 · 21 checks OK |
+| G2 | `uv run ruff format --check .` | exit 0 · 107 files |
+| G3 | `uv run mypy src` | exit 0 · 55 source files |
+| G4 | `uv run pytest -q -m "not slow"` | exit 0 · **218 passed** |
+| G5 | `npm --prefix renderer run typecheck` | exit 0 · 0 errors |
+| G6 | `npm --prefix renderer run lint` | exit 0 · 0 errors |
+| G7 | `npm --prefix renderer test` | exit 0 · **16 passed** (5 files) |
+| G8 | `./scripts/check_schema_sync.sh` | exit 0 · in sync |
+| G9 | `./scripts/check_renderer_purity.sh` | exit 0 · pure (strict path matching) |
+| G10 | `./scripts/check_gallery.sh` | exit 0 · 52 goldens, 0 overflows, hold motion present, fails closed |
+| G11 | `uv run pytest -q -m slow` | exit 0 · **22 passed** |
+| G12 | `./scripts/e2e.sh` | exit 0 · passed (asserts music & SFX survive, computed sync probe count, audio RMS > -60 dBFS) |
+| G13 | `./scripts/check_offline.sh` | exit 0 · passed (self-checks pass, offline render verified) |
+| G14 | `uv run infographics doctor` | exit 0 · 22 checks OK |
 
 ### 1.4 Design-time measurements for the selected issues (September 25, 2026, `gemma4:26b`)
 
@@ -92,27 +80,29 @@ These are the numbers the specs were built from. Your slow tests must reproduce 
 
 ---
 
-## 2. Execution order
+## 2. Queue Complete
 
-| # | Item | Why this position |
+All 17 Wave B items (B1–B17) have been implemented, verified, and landed in sequence with passing gates and committed evaluation artifacts. There are no active items in the queue.
+
+| # | Item | Status |
 |---|---|---|
-| B1 | Music and SFX survive the review journey | The most visible defect; independent. |
-| B2 | LLM error classification | Small; B3–B7 run the planner many times, and a spurious "missing model" crash would waste those runs. |
-| B3 | Planner crash containment | Every later planner item (critic retries, eval re-run) relies on `run_with_retries` being the only call path. |
-| B4 | Grounding: scale words | Changes which props validate; must precede the B7 eval. |
-| B5 | Timeline date labels (**Issue 4**) | A validator change; must precede the B7 eval. |
-| B6 | Meaning rules + people-scene critic (**Issue 5**) | Needs B3's retry path and adds `num_predict`; must precede the B7 eval so it measures the critic. |
-| B7 | LLM-facing schemas without length limits + text completeness + **planner eval re-run** | Changes every planner output. The one expensive eval re-run covers B3–B7. |
-| B8 | Contact sheet flags failed images | B10's "failed after 3 attempts" images must be visible at review. |
-| B9 | Invoke mflux directly; drop the `~/.local/bin` symlink | B10 regenerates with explicit seeds through this call; fix the invocation first. |
-| B10 | Illustration text check with retry (**Issue 3**) | Needs B2/B3 (retry path), B8 (flags), B9 (invocation, seed parameter). |
-| B11 | Legible text over images; captions through FitText | Changes goldens. Back to back with B12. |
-| B12 | Map legibility; `kinetic_quote` attribution avatar | Changes goldens; adds a generated geo file (G8). |
-| B13 | Gates fail closed; bundle hygiene | Hardens G9/G10 after the goldens settle. |
-| B14 | Remove the dead SFX scheduler | Cleanup; changes the G4 count exactly. |
-| B15 | README accuracy | Describes the behaviour B1–B14 produced (including the critic and the text check). |
-| B16 | E2E: computed counts, audible music | Final E2E shape. |
-| B17 | Cold-cache performance budget; close-out | Measures the finished system, **including the critic and text-check costs**; closes the wave. |
+| B1 | Music and SFX survive the review journey | Delivered |
+| B2 | LLM error classification | Delivered |
+| B3 | Planner crash containment | Delivered |
+| B4 | Grounding: scale words | Delivered |
+| B5 | Timeline date labels (**Issue 4**) | Delivered |
+| B6 | Meaning rules + people-scene critic (**Issue 5**) | Delivered |
+| B7 | LLM-facing schemas without length limits + text completeness + **planner eval re-run** | Delivered |
+| B8 | Contact sheet flags failed images | Delivered |
+| B9 | Invoke mflux directly; drop the `~/.local/bin` symlink | Delivered |
+| B10 | Illustration text check with retry (**Issue 3**) | Delivered |
+| B11 | Legible text over images; captions through FitText | Delivered |
+| B12 | Map legibility; `kinetic_quote` attribution avatar | Delivered |
+| B13 | Gates fail closed; bundle hygiene | Delivered |
+| B14 | Remove the dead SFX scheduler | Delivered |
+| B15 | README accuracy | Delivered |
+| B16 | E2E: computed counts, audible music | Delivered |
+| B17 | Cold-cache performance budget; close-out | Delivered |
 
 ---
 
@@ -549,6 +539,8 @@ These are the numbers the specs were built from. Your slow tests must reproduce 
 
 **Wave A (A1–A22), verified September 25, 2026.** One line per item, with its correct commit and verification result, is in `ongoing_general_errors.md` §3. Items marked "✓" are not reworked; items marked "→ B<n>" are touched only as that item specifies.
 
+**Wave B (B1–B17), delivered and verified September 26, 2026.** All 17 items delivered as individual conventional commits and verified bare against all 14 battery gates G1–G14. One line per item with its commit and verified result is in `ongoing_general_errors.md` §3.
+
 ### 5.2 Accepted equivalents (checked September 25, 2026)
 
 - The sync probe is drawn inside each scene's layer, not a separate Story layer; it gives the same "current scene" colour, and G12 proves the flips frame-accurate.
@@ -696,13 +688,13 @@ These are the numbers the specs were built from. Your slow tests must reproduce 
 
 ## 9. Definition of Done: Wave B
 
-- [ ] B1–B17 each landed as one pushed commit scoped to its id, with its red and green runs recorded.
-- [ ] §1.3: every gate G1–G14 green, measured this session, read bare.
-- [ ] Music and SFX survive the review journey and are **audible** in the final MP4.
-- [ ] The new planner eval: 0 newline strings, 0 completeness failures, 0 timeline-label violations, critic regression set 4/4, every §9 bar met or filed.
-- [ ] The text check reproduces 7/7 on `fixtures/vision/` (seeds 7 and 8), and the naive-prompt falsification was run and recorded.
-- [ ] The contrast test covers the image scrim (worst case, white) and every map pair.
-- [ ] `docs/evals/budget_<date>.md` is committed from a cold run with `cache_hits = 0`, including critic and text-check costs, bars met or filed.
-- [ ] Issues 3, 4 and 5 collapsed into §3 lines with the user's selection text verbatim.
-- [ ] README states only what is true, including the automatic checks.
-- [ ] This guide rewritten to **Queue Complete**. **Then stop. Do not invent work.** The only legitimate triggers for new work are a user selection on D1–D9, or a gate going red (investigate and **file** it).
+- [x] B1–B17 each landed as one pushed commit scoped to its id, with its red and green runs recorded.
+- [x] §1.3: every gate G1–G14 green, measured this session, read bare.
+- [x] Music and SFX survive the review journey and are **audible** in the final MP4.
+- [x] The new planner eval: 0 newline strings, 0 completeness failures, 0 timeline-label violations, critic regression set 4/4, every §9 bar met or filed.
+- [x] The text check reproduces 7/7 on `fixtures/vision/` (seeds 7 and 8), and the naive-prompt falsification was run and recorded.
+- [x] The contrast test covers the image scrim (worst case, white) and every map pair.
+- [x] `docs/evals/budget_<date>.md` is committed from a cold run with `cache_hits = 0`, including critic and text-check costs, bars met or filed.
+- [x] Issues 3, 4 and 5 collapsed into §3 lines with the user's selection text verbatim.
+- [x] README states only what is true, including the automatic checks.
+- [x] This guide rewritten to **Queue Complete**. **Then stop. Do not invent work.** The only legitimate triggers for new work are a user selection on D1–D9, or a gate going red (investigate and **file** it).

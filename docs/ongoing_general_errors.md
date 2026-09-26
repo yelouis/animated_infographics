@@ -8,14 +8,9 @@
 
 ## 1. Open & in-flight
 
-**Wave A (Offline MVP, A1–A22) was delivered as 22 commits ending at `e374a15`, and independently verified on September 25, 2026.** Every gate G1–G14 was re-run bare in a separate session and reproduced green (numbers in `agent_execution_guide.md` §1). The voice rule (Issue 1) and the image model (Issue 2) are implemented as specced (§3).
+**Wave A (Offline MVP, A1–A22) and Wave B (Verification fixes + Quality issues, B1–B17) are completely delivered and verified against all 14 battery gates.** All defects found during Wave A verification have been repaired and verified, all three user selections (Issues 3–5) are implemented, and the cold-cache performance budget has been measured and verified within bars on the longest fixture (`story_recipe_box.txt`).
 
-**Verification also found defects that no gate could see. They are specced as Wave B in `agent_execution_guide.md`, now B1–B17 including the three selections below.** The defect fixes restore behaviour the user already approved. The largest:
-- Music and SFX are **silently dropped** from every video that goes through the edit → `preview` → `approve` → `render` review journey (reproduced in the implementing agent's runs and in the verification run).
-- About **one scene in five shows truncated text** ("Rescuers wade through waist-"), because length limits were sent to the model as hard grammar constraints.
-- Two **crash paths** in the planner.
-- An **unreadable map** and **unreadable captions over light illustrations**. Both came from design values that were never measured as composited; the design is now corrected.
-- The **performance budget was never measured cold**.
+There are currently no open or in-flight items. Work on deferred features D1–D9 must await explicit user selection.
 
 ## ⚠️ Unresolved Issues & Suggestions
 
@@ -103,6 +98,7 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 - B14 — Remove the dead SFX scheduler — git log --grep "(b14)" — G1–G14 green bare, 214 passed (-3 tests); timing/sfx.py, its exports from timing/__init__.py, and tests/test_timing_sfx.py deleted; grep asserts zero references in src and tests; test_compile.py SFX tests pass.
 - B15 — README accuracy — git log --grep "(b15)" — G1–G14 green bare; README updated with Wave B in progress status, accurate audio mix specs (-16 LUFS, -18 dB / volume 0.126, 1s fade-in, 2s fade-out, no ducking), template-accurate SFX role mappings, font credits restricted to Poppins and Inter, Natural Earth lakes dataset credited, and automatic checks section added; banned terms grep returns 0 matches.
 - B16 — E2E: computed counts, audible music — git log --grep "(b16)" — G1–G14 green bare, 218 passed (+4 tests); check-sync outputs JSON {"checked", "expected", "failures"} and asserts equality to len(scenes) - 1 with 0 failures (falsified by --skip-boundary 1 -> exit 1); voice lines read dynamically from voice.json across all fixtures; step 4 final MP4 audio RMS in [duration - 1.4s, duration - 1.0s] measured at -39.85 dBFS (> -60.0 dBFS required; falsified on music-less re-render at -91.16 dBFS -> exit 1); Remotion AudioLayer audio volume clamped to >= 0.001 to prevent unregistering render asset, and RemotionAudioCue passes loop and loopVolumeCurveBehavior="extend" to Audio; report lists critic counts and text_check statuses per fixture.
+- B17 — Cold-cache performance budget; close-out — git log --grep "(b17)" — G1–G14 green bare; scripts/measure_budget.sh created and verified on story_recipe_box (~3 min story); cold new->awaiting_review 252.29 s (<= 390 s), render 197.01 s (<= 210 s), total 449.30 s (<= 600 s), warm preview 15.25 s (<= 60 s); verified 0 cache hits; critic 10 calls, text checks 4 calls, 5 images generated; docs/evals/budget_2026-09-26.md generated and committed; full battery G1–G14 exits 0 bare.
 
 
 ---
