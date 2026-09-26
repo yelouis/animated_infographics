@@ -40,6 +40,7 @@ done
 OUT_DIR="$REPO_ROOT/artifacts/gallery/current"
 MOTION_DIR="$REPO_ROOT/artifacts/gallery/motion"
 GOLDENS_DIR="$REPO_ROOT/renderer/goldens"
+rm -rf "$OUT_DIR" "$MOTION_DIR"
 mkdir -p "$OUT_DIR"
 mkdir -p "$MOTION_DIR"
 
@@ -50,32 +51,33 @@ npx --prefix renderer tsx renderer/scripts/render.ts gallery \
 RENDER_CODE=$?
 [ "$RENDER_CODE" -eq 0 ] || fail "Gallery render failed with exit code $RENDER_CODE"
 
-# (a) Check overflow.json
-OVERFLOW_FILE="$REPO_ROOT/artifacts/gallery/current/overflow.json"
+# (a) Check overflow.json - must fail closed if missing or unparseable
+OVERFLOW_FILE="$OUT_DIR/overflow.json"
 if [ ! -f "$OVERFLOW_FILE" ]; then
-  # check renderer logs directory as well
-  OVERFLOW_FILE="$REPO_ROOT/renderer/logs/overflow.json"
+  fail "Missing overflow.json at $OVERFLOW_FILE"
 fi
 
-if [ -f "$OVERFLOW_FILE" ]; then
-  OVERFLOW_COUNT=$(python3 -c "
+OVERFLOW_COUNT=$(python3 -c "
 import json, sys
 from pathlib import Path
 p = Path('$OVERFLOW_FILE')
-if not p.is_file():
-    print(0)
-    sys.exit(0)
 try:
-    data = json.loads(p.read_text())
+    content = p.read_text().strip()
+    if not content:
+        raise ValueError('overflow.json is empty')
+    data = json.loads(content)
+    if not isinstance(data, list):
+        raise ValueError('overflow.json must contain a JSON array')
     print(len(data))
-except Exception:
-    print(0)
-")
-  if [ "$OVERFLOW_COUNT" -gt 0 ]; then
-    fail "Overflow detected in gallery fixtures: $OVERFLOW_COUNT overflows recorded in $OVERFLOW_FILE"
-  fi
-  log "Overflow check passed: 0 overflows."
+except Exception as e:
+    print(f'Invalid overflow.json: {e}', file=sys.stderr)
+    sys.exit(1)
+") || fail "Unparseable or invalid overflow.json at $OVERFLOW_FILE"
+
+if [ "$OVERFLOW_COUNT" -gt 0 ]; then
+  fail "Overflow detected in gallery fixtures: $OVERFLOW_COUNT overflows recorded in $OVERFLOW_FILE"
 fi
+log "Overflow check passed: 0 overflows."
 
 # If --update, copy to goldens directory
 if [ "$UPDATE_GOLDENS" = true ]; then

@@ -10,7 +10,7 @@
   },
   "audio": {
     "narration": {
-      "src": "fixtures/music/test_bed.wav"
+      "src": "job/audio/narration.wav"
     },
     "music": null,
     "sfx": []

@@ -71,14 +71,6 @@ function assemblePublicDir(jobDir: string): string {
     });
   }
 
-  // 3. Copy fixtures if available (for test beds / smoke runs)
-  const repoFixtures = path.resolve(__dirname, "../../fixtures");
-  if (fs.existsSync(repoFixtures)) {
-    fs.cpSync(repoFixtures, path.join(renderPublicDir, "fixtures"), {
-      recursive: true,
-    });
-  }
-
   return renderPublicDir;
 }
 
@@ -356,6 +348,14 @@ async function main() {
     // Write overflow.json
     const overflows = Array.from(overflowMap.values());
     fs.writeFileSync(overflowJsonPath, JSON.stringify(overflows, null, 2));
+
+    if (mode === "gallery" && options["out-dir"]) {
+      const outDir = path.resolve(String(options["out-dir"]));
+      fs.writeFileSync(
+        path.join(outDir, "overflow.json"),
+        JSON.stringify(overflows, null, 2)
+      );
+    }
 
     if (mode === "gallery" && overflows.length > 0) {
       console.error(

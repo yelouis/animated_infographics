@@ -5,8 +5,10 @@ set -euo pipefail
 # Asserts that no Remotion time hooks, sequences, non-deterministic calls,
 # or network requests exist in renderer/src/ outside src/clock/remotion/.
 
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$REPO_ROOT"
+
 matches=$(grep -rnF \
-  --exclude-dir="remotion" \
   --include="*.ts" \
   --include="*.tsx" \
   -e "useCurrentFrame" \
@@ -20,7 +22,7 @@ matches=$(grep -rnF \
   -e "fetch(" \
   -e "http://" \
   -e "https://" \
-  renderer/src/ || true)
+  renderer/src/ 2>/dev/null | grep -v "^renderer/src/clock/remotion/" || true)
 
 if [ -n "$matches" ]; then
   echo "ERROR: Forbidden impure pattern found in renderer/src/ outside src/clock/remotion/:" >&2

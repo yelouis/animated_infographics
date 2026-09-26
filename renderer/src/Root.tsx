@@ -24,7 +24,7 @@ const DEFAULT_TIMELINE: Timeline = {
   duration_frames: 150,
   plan_sha256: "0000000000000000000000000000000000000000000000000000000000000000",
   audio: {
-    narration: { src: "fixtures/music/test_bed.wav" },
+    narration: { src: "job/audio/narration.wav" },
     music: null,
     sfx: [],
   },
