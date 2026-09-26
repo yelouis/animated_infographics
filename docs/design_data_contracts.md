@@ -150,11 +150,14 @@ Written by the planner; read by `status`, the planner eval and `preview/storyboa
 ```json
 {"schema_version": 1, "model": "gemma4:26b", "llm_calls": 31, "llm_cache_hits": 0,
  "scenes": [{"id": "s004", "primary": "stat_callout", "alternate": "kinetic_quote",
-             "final_template": "stat_callout", "fallback_level": 0, "attempts": 1, "errors": []}],
+             "final_template": "stat_callout", "fallback_level": 0, "attempts": 1, "errors": [],
+             "critic": {"status": "not_applicable", "mismatches": [], "changed": false}}],
  "rule_repairs": [{"rule": "R2", "scene": "s009", "from": "dialogue", "to": "emotion_beat"}]}
 ```
 
 `fallback_level`: `0` primary template accepted · `1` alternate template used · `2` deterministic `kinetic_quote` fallback.
+
+`critic` (added September 25, 2026, Issue 5): `status` ∈ `not_applicable` · `agree` · `mismatch_retried` · `unavailable`; `mismatches` lists `"<field>: <props value> vs <critic value>"`; `changed` is true iff the retry replaced the scene. Rules: `design_planner.md` §11.
 
 ---
 

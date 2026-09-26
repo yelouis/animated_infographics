@@ -249,7 +249,7 @@ The exact versions actually installed are recorded in the execution guide's §1 
 
 | Role | Choice | Licence | Notes |
 |---|---|---|---|
-| Planner LLM | **Ollama `gemma4:26b`** (MoE, 3.8 B active, 19 GB) | Apache-2.0 | Runs through Ollama structured outputs. Escalation candidate: `qwen3.6:35b` (see `design_planner.md` §2). |
+| Planner LLM | **Ollama `gemma4:26b`** (MoE, 3.8 B active, 19 GB) | Apache-2.0 | Runs through Ollama structured outputs. Escalation candidate: `qwen3.6:35b` (see `design_planner.md` §2). **The same model** also runs the people-scene critic (`design_planner.md` §11) and the illustration text check (image input; `design_visual_direction.md` §7.1), so no extra model is pulled. |
 | TTS | **Kokoro-82M** via `kokoro>=0.9.4`, voices **`af_heart`** and **`am_michael`** (auto-selected per story, Issue 1) | Apache-2.0 | Gives word timestamps. Needs `espeak-ng` (Homebrew). |
 | ASR | **`mlx-whisper`**, model `mlx-community/whisper-large-v3-turbo` | MIT | `word_timestamps=True`. |
 | Image generation | **mflux** (`uv tool install mflux`), **FLUX.2 [klein] 4B** | Apache-2.0 (4B only; the 9B is non-commercial and must not be used) | Invoked as a subprocess. **Selected September 24, 2026 (Issue 2 → Option A).** |

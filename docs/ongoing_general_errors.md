@@ -10,22 +10,18 @@
 
 **Wave A (Offline MVP, A1–A22) was delivered as 22 commits ending at `e374a15`, and independently verified on September 25, 2026.** Every gate G1–G14 was re-run bare in a separate session and reproduced green (numbers in `agent_execution_guide.md` §1). The voice rule (Issue 1) and the image model (Issue 2) are implemented as specced (§3).
 
-**Verification also found defects that no gate could see. They are specced as Wave B (B1–B13) in `agent_execution_guide.md`.** Wave B restores behaviour the user already approved, so it needs no selection. The largest:
+**Verification also found defects that no gate could see. They are specced as Wave B in `agent_execution_guide.md`, now B1–B17 including the three selections below.** The defect fixes restore behaviour the user already approved. The largest:
 - Music and SFX are **silently dropped** from every video that goes through the edit → `preview` → `approve` → `render` review journey (reproduced in the implementing agent's runs and in the verification run).
 - About **one scene in five shows truncated text** ("Rescuers wade through waist-"), because length limits were sent to the model as hard grammar constraints.
 - Two **crash paths** in the planner.
 - An **unreadable map** and **unreadable captions over light illustrations**. Both came from design values that were never measured as composited; the design is now corrected.
 - The **performance budget was never measured cold**.
 
-**Three questions need the user** (Issues 3–5 below). They are not blocking Wave B.
+**Selected September 25, 2026, specced, not yet delivered:** Issues 3, 4 and 5 below, specced as **B10**, **B5** and **B6**. When the delivering item lands, its commit collapses the issue into one line in §3.
 
----
+### Issue 3: Generated illustrations sometimes contain fake writing → specced as **B10**
 
-## ⚠️ Unresolved Issues & Suggestions
-
-### Issue 3: Generated illustrations sometimes contain fake writing
-
-**Status**: ⚠️ Confirmed Unresolved — Verified September 25, 2026 in the E2E job `story-recipe-box-20260925-180627`: set piece `v1` ("An old wooden box overflowing with hundreds of handwritten recipe cards") rendered pseudo-handwriting on the cards ("Peclpte De fonts ann) Rlondes."). The other two images reviewed (the blueberry pie, the Duluth waterfront) are clean, flat and on-palette. `STYLE` already says "No text, no letters, no words", but FLUX.2 [klein] 4B does not obey it for subjects that inherently carry writing. Today the reviewer can see it at the gate but has no way to regenerate a single image.
+**Status**: ✅ Selected September 25, 2026 (Option A, with the user's refinement that text is fine when the description calls for it). The contract, with its design-time measurements (7/7 correct on the labelled `fixtures/vision/` set with the final prompt; a naive yes/no prompt flagged 2 of 4 clean images), is `design_visual_direction.md` §7.1. Original finding: verified September 25, 2026 in the E2E job `story-recipe-box-20260925-180627`: set piece `v1` ("An old wooden box overflowing with hundreds of handwritten recipe cards") rendered pseudo-handwriting on the cards ("Peclpte De fonts ann) Rlondes."). The other two images reviewed (the blueberry pie, the Duluth waterfront) are clean, flat and on-palette. `STYLE` already says "No text, no letters, no words", but FLUX.2 [klein] 4B does not obey it for subjects that inherently carry writing. Today the reviewer can see it at the gate but has no way to regenerate a single image.
 
 **Option A (recommended)**: **Local vision check with an automatic retry** — after each generation, ask `gemma4:26b` (already installed, and it accepts images) a structured question: "does this image contain letters, words or text-like marks?". On *yes*, regenerate with seed + 1, up to 2 retries, then fall back to the icon and list it in `preview/report.json`.
   - *Pros*: Automatic and fully local, using the model already loaded for planning; catches it before the reviewer ever sees it.
@@ -39,13 +35,13 @@
   - *Pros*: Human judgement; cheap to build.
   - *Cons*: Manual work in any video that hits it.
 
-Your selection: _____
+Your selection: Proceed with Option A. Though, in the example provided, I think that text is fine if the description calls for text like a recipe.
 
 ---
 
-### Issue 4: Timeline "dates" that are not dates
+### Issue 4: Timeline "dates" that are not dates → specced as **B5**
 
-**Status**: ⚠️ Confirmed Unresolved — Verified September 25, 2026 in the same job:
+**Status**: ✅ Selected September 25, 2026 (Option A). The contract is `design_planner.md` §8 (the date-label row) and `design_templates.md` §2.16. Original finding: verified September 25, 2026 in the same job:
 - Scene `s023` is a `timeline` whose `date_label`s are "50+ Years", "No Record" and "Memory Only".
 - Scene `s001` has three events all labelled "2013".
 - Scene `s010` uses "Last Spring", "Present" and "Now".
@@ -64,13 +60,13 @@ The date-grounding rule (`design_planner.md` §8) only checks digits that are pr
   - *Pros*: Most flexible.
   - *Cons*: "No Record" / "Memory Only" still pass.
 
-Your selection: _____
+Your selection: Proceed with Option A.
 
 ---
 
-### Issue 5: Meaning errors that no validator can see
+### Issue 5: Meaning errors that no validator can see → specced as **B6**
 
-**Status**: ⚠️ Confirmed Unresolved — Verified September 25, 2026: at least 4 of the 32 scenes in the `story_recipe_box` E2E job carry a meaning error while passing every schema, grounding and fit check.
+**Status**: ✅ Selected September 25, 2026 (Option A). The contract is `design_planner.md` §6 item 6 (deterministic rules) and §11 (the critic, with design-time measurements: 4/4 regression cases on seeds 7–9). Original finding: verified September 25, 2026: at least 4 of the 32 scenes in the `story_recipe_box` E2E job carry a meaning error while passing every schema, grounding and fit check.
 - `s012` attributes Danny's texted question to the narrator ("Me").
 - `s015` gives the narrator's "Rose?" an *angry* tone.
 - `s004` stamps the diner "40 years ago"; the text says it ran for forty years.
@@ -96,7 +92,13 @@ These are semantic, not format, errors.
   - *Pros*: May fix several classes at once.
   - *Cons*: A 23 GB model, slower; needs a rubric and human scoring.
 
-Your selection: _____
+Your selection: Option A
+
+---
+
+## ⚠️ Unresolved Issues & Suggestions
+
+None awaiting a selection.
 
 ---
 
@@ -133,27 +135,27 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 **Wave A — delivered; verified September 25, 2026.** "✓" = matches its spec. "→ B<n>" = delivered, but verification found a defect specced in Wave B.
 
 - A1 — Bootstrap — `4df212a` — ✓ toolchains, battery; G1–G7 reproduce.
-- A2 — Setup + doctor — `927d076` — ✓ doctor 21 checks OK; → B11 (the README's credits are inaccurate).
+- A2 — Setup + doctor — `927d076` — ✓ doctor 21 checks OK; → B15 (the README's credits are inaccurate).
 - A3 — Fixtures — `66c11a9` — ✓ the four story SHA-256 values match; `CHECKSUMS` verifies from `fixtures/` (accepted equivalent, see guide §5.2).
 - A4 — Contracts + schema sync — `5ad59ba` — ✓ G8 reproduces.
 - A5 — Job store, CLI, review gate — `617e569` — ✓ gate logic correct (state + approval hash + timeline hash; no bypass); → B1 (music/SFX lost across `preview`/`rerun`).
-- A6 — Timing core — `10dd3a2` — ✓ round-half-up, lead, beats, captions; → B10 (`timing/sfx.py` is dead duplicate code).
+- A6 — Timing core — `10dd3a2` — ✓ round-half-up, lead, beats, captions; → B14 (`timing/sfx.py` is dead duplicate code).
 - A7 — LLM backend — `7186803` — ✓ entry-point counter, cache key, retries; → B2 ("not found" in a 200 body crashes as a missing model).
 - A8 — Narrator voice selection — `9590fb7` — ✓ five steps in order, four named sub-rules, 23 evidence cases.
 - A9 — Narration (Kokoro) — `5824005` — ✓ slow suite green.
 - A10 — Transcription (Whisper) — `bc78bf8` — ✓ slow suite green (WER and timing bars per the agent's report).
-- A11 — Renderer foundation — `92dbcd3` — ✓ clock, spans, sync probe; → B9 (purity-gate exemption too broad; fixtures copied into every render).
+- A11 — Renderer foundation — `92dbcd3` — ✓ clock, spans, sync probe; → B13 (purity-gate exemption too broad; fixtures copied into every render).
 - A12 — Bible + geo — `1eb9146` — ✓ repairs 1–5, gazetteer; antimeridian handling accepted (guide §5.2).
 - A13 — Segmentation — `f8210b7` — ✓.
-- A14 — Storyboard + planner eval — `3bc92d5` — → B3 (select/props crash on malformed JSON), B4 (scale-word grounding leak), B5 (truncation via `maxLength`).
-- A15 — Compile + preview — `4d7bf6c` — → B1 (music/SFX), B6 (failed images not flagged on the contact sheet).
-- A16 — Final render + E2E — `0a73878` — ✓ `verify.json` is a real gate; → B12 (E2E asserts neither music/SFX nor a computed sync count).
-- A17 — Visual primitives + gallery gate — `346ba96` — ✓ 51 goldens compared, hold motion; → B9 (overflow check fails open; stale output dirs).
+- A14 — Storyboard + planner eval — `3bc92d5` — → B3 (select/props crash on malformed JSON), B4 (scale-word grounding leak), B7 (truncation via `maxLength`).
+- A15 — Compile + preview — `4d7bf6c` — → B1 (music/SFX), B8 (failed images not flagged on the contact sheet).
+- A16 — Final render + E2E — `0a73878` — ✓ `verify.json` is a real gate; → B16 (E2E asserts neither music/SFX nor a computed sync count).
+- A17 — Visual primitives + gallery gate — `346ba96` — ✓ 51 goldens compared, hold motion; → B13 (overflow check fails open; stale output dirs).
 - A18 — Templates: statement set — `ca735c5` — ✓.
-- A19 — Templates: people set — `b205b77` — → B8 (`kinetic_quote` attribution is a monogram, not the avatar).
-- A20 — Templates: place & time set — `9cddf93` — → B7 (caption scrim), B8 (map legibility); both are spec defects, now corrected in the design.
-- A21 — Illustrations — `142b6a7` — ✓ 4B only, `STYLE` byte-identical, seed/cache per design; fake writing in one image → Issue 3.
-- A22 — E2E, offline, budget, README — `e374a15` — ✓ G13 offline gate real (self-check + fresh cache); → B13 (budget never measured cold), B11 (README).
+- A19 — Templates: people set — `b205b77` — → B12 (`kinetic_quote` attribution is a monogram, not the avatar).
+- A20 — Templates: place & time set — `9cddf93` — → B11 (caption scrim), B12 (map legibility); both are spec defects, now corrected in the design.
+- A21 — Illustrations — `142b6a7` — ✓ 4B only, `STYLE` byte-identical, seed/cache per design; → B9 (mflux invoked through a symlink in `~/.local/bin`); fake writing in one image → Issue 3 → B10.
+- A22 — E2E, offline, budget, README — `e374a15` — ✓ G13 offline gate real (self-check + fresh cache); → B17 (budget never measured cold), B15 (README).
 
 **Issues:**
 - **Issue 1 — Narrator voice** — selected September 24, 2026: *"Proceed with Option A and B. If the story from reddit seems to be from a female's perspective then use af_heart, else use am_michael."* — delivered by A8 `9590fb7` + A9 `5824005`. Verified September 25: `voice.json` matched the expectation on 4 of 4 fixtures, in both the cold planner eval and the E2E (`af_heart` for `story_recipe_box` via evidence "As the only granddaughter, I"; `am_michael` for the other three); `--voice am_michael` makes 0 voice-stage LLM calls. The rule's permanent home is `design_planner.md` §10.
@@ -197,3 +199,14 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 - fail-closed gallery gate, an exact purity exemption, E2E music/SFX assertions, cold-budget procedure (`design_testing_and_validation.md`).
 
 Three questions filed for the user (Issues 3–5).
+
+**September 25, 2026: selections (user).**
+- Issue 3 → Option A: *"Proceed with Option A. Though, in the example provided, I think that text is fine if the description calls for text like a recipe."*
+- Issue 4 → Option A: *"Proceed with Option A."*
+- Issue 5 → Option A: *"Option A"*.
+
+**September 25, 2026: consequences (designer, measured before specifying):**
+- The text check uses a transcription-style prompt with `num_predict` 96 and a ≥ 3-alphanumeric rule, because a yes/no prompt produced 2 false positives on 4 clean images and an uncapped request hung past 300 s.
+- "Description calls for text" is a deterministic word/phrase list; bare "sign" is excluded (it matched "signs of structural weakness").
+- The critic is blind, and a speaker it reads as "unknown" never counts as a mismatch, but an unsupported strong tone does. That exact combination is what separated the real errors from correct scenes on seeds 7–9.
+- Wave B grows to 17 items, reordered so a single planner-eval re-run covers every planner change and the cold budget run measures the finished system.

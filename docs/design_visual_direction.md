@@ -165,6 +165,57 @@ STYLE     = "Flat vector editorial illustration, bold simple geometric shapes, s
 
 **Model choice is decided** (user, September 24, 2026, Issue 2 → Option A): **FLUX.2 [klein] 4B only.** Z-Image-Turbo is not installed, benchmarked or offered as a fallback.
 
+### 7.1 Text check with automatic retry (Issue 3 → Option A, selected September 25, 2026)
+
+**The user's selection, verbatim:** *"Proceed with Option A. Though, in the example provided, I think that text is fine if the description calls for text like a recipe."*
+
+**So there are two parts:** (1) when the entity's description calls for writing, lettering is allowed and **no check runs**; (2) otherwise every generated image is checked locally, and an image with lettering is regenerated.
+
+**(1) Does the description call for text?** Deterministic, in `assets/illustrate.py`: casefold `visual_description`, then `text_expected = True` iff any whole word is in `TEXT_EXPECTED_WORDS` or any phrase in `TEXT_EXPECTED_PHRASES` occurs at word boundaries.
+
+- `TEXT_EXPECTED_WORDS` = {recipe, recipes, card, cards, letter, letters, note, notes, signpost, signposts, signage, newspaper, newspapers, headline, headlines, menu, menus, book, books, page, pages, label, labels, poster, posters, handwriting, handwritten, writing, written, text, texts, message, messages, document, documents, notebook, notebooks, diary, diaries, journal, journals, envelope, envelopes, receipt, receipts, invoice, invoices, certificate, certificates, ticket, tickets, banner, banners, billboard, billboards, plaque, plaques, scroll, scrolls, manuscript, manuscripts, telegram, telegrams, postcard, postcards, calendar, calendars, chalkboard, chalkboards, blackboard, blackboards, whiteboard, whiteboards, screen, screens, inscription, inscriptions, placard, placards, flyer, flyers, leaflet, leaflets, map, maps}
+- `TEXT_EXPECTED_PHRASES` = {street sign(s), shop sign(s), road sign(s), neon sign(s), store sign(s)}. Bare "sign"/"signs" is deliberately **not** in the word list: measured over the 145 descriptions produced in Wave A's E2E runs, it matched "showing **signs** of structural weakness" (a figurative use), which would have exempted the molasses tank from the check.
+- Measured on those 145 descriptions: exempt = recipe cards, a handwritten note, an envelope with a photograph, a crossword book; everything else (cities, pie, diner, fields, fence, machine gun, wave, motel room) is checked.
+- `STYLE` is **unchanged** for text-expected subjects; it still says "No text". The exemption means lettering is *tolerated*, not requested.
+
+**(2) The check** (`text_expected == False` only):
+
+| Setting | Value |
+|---|---|
+| Model | the planner model, `gemma4:26b` (already loaded; it accepts images), via `run_with_retries(stage="text_check", images=[...])` |
+| Image sent | the generated PNG resized to **512 × 512** (Lanczos), PNG, base64 in the message's `images` |
+| `options` | `temperature` **0**, `seed` 7 + attempt, **`num_predict` 96** |
+| HTTP timeout | **60 s** |
+| Schema | `{"kind": "letters_or_words" \| "none", "sample": string}` |
+
+Prompt, verbatim (one line in code):
+
+```
+You are checking an illustration for unwanted lettering. List marks that look like a LETTER, WORD or NUMBER (real or fake/illegible handwriting or lettering, e.g. on signs, cards, paper, screens). Do NOT count windows, bricks, stripes, textures, patterns, reflections, lines, arrows or single abstract symbols. Return JSON: kind = "letters_or_words" if any such marks exist, else "none"; sample = up to 20 characters of your best reading of the marks (gibberish allowed), empty if none.
+```
+
+**Decision:** `has_text = (kind == "letters_or_words") and count of [A-Za-z0-9] in sample ≥ 3`.
+
+**The rejected naive prompt**, kept verbatim **only** for B10's falsification test. Schema `{"has_text": boolean, "evidence": string}`, same model and options, `has_text` read directly:
+
+```
+Look at this illustration. Does it contain any letters, words, numbers or text-like marks, including illegible pseudo-handwriting or fake lettering on signs, cards or paper? Answer JSON: has_text (boolean) and evidence (where the marks are, or empty).
+```
+
+**Why this exact design (measured September 25, 2026 on `fixtures/vision/`, 7 human-labelled images):**
+- A plain yes/no question ("does it contain text-like marks?") flagged **2 of the 4 clean place images**, citing an abstract "symbol".
+- Without an output cap, one request ran past a 300 s timeout.
+- The prompt above, with `num_predict` 96 and the ≥ 3-character rule, classified **7 of 7 correctly on seeds 7 and 8**. That includes Wave A's real pseudo-handwriting ("Pecipte De Fanti m") and a synthetic "OPEN" sign. Latency was ≤ 0.9 s per image.
+
+**(3) Retry:** if `has_text`, regenerate with **seed + 1** (a new cache key), then check again. At most **2 regenerations** (3 images total). If the third image still has text, the entity gets `status: "failed"` with `error: "lettering detected in 3 attempts"`, and the template draws its icon fallback. If the check itself fails (all `run_with_retries` attempts fail or time out), the image is **kept** with `text_check: "unavailable"` and listed as a warning in `preview/report.json` (never silently).
+
+**(4) Records:**
+- `assets/manifest.json` gains, per entity: `text_expected: bool`, `text_check: "skipped" | "clean" | "regenerated" | "failed" | "unavailable"`, and `attempts: [{seed, kind, sample, elapsed_ms}]`.
+- The chosen image's final seed goes into its cache key as before.
+- Check verdicts are cached at `cache/text_check/<sha256(png bytes + model + prompt)>.json`, so re-runs of `assets` and `preview` do not re-ask.
+
+**Budget:** at most +1 s per image when clean, +1 generation (~20 s) and +1 check per retry. Measured as part of the cold budget run (`design_testing_and_validation.md` §5).
+
 ---
 
 ## 8. Captions

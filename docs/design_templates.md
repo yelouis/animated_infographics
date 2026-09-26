@@ -35,7 +35,7 @@ Notation: `str≤N` = 1..N characters; `?` = nullable; `[a..b]` = list length bo
 - **Layout:** text centred in the stage, block centre y 660. Attribution (if any): the cast member's **`Avatar` component at 120 px** (the same parametric avatar used everywhere, expression `neutral`, not a letter monogram), with a name chip in the cast colour directly below it, the pair centred 40 px below the text block. *(Clarified September 25, 2026: the first implementation drew a one-letter monogram, which breaks "the same person looks the same everywhere".)*
 - **Slots:** text display 800 84→56 · 5 · 920 | attribution name body 700 36→28 · 1 · 600
 - **Motion:** words stagger 2 frames; emphasis words in `highlight` at 1.15 scale. Hold: gentle 6 px float, period 90 frames.
-- **Validators:** verbatim-span grounding of `text`; each emphasis word is a whole word of `text` (`design_planner.md` §8).
+- **Validators:** verbatim-span grounding of `text`; each emphasis word is a whole word of `text` (`design_planner.md` §8). **With an attribution, the scene also goes through the people-scene critic** (`design_planner.md` §11).
 - **SFX:** none.
 
 ### 2.3 `stat_callout` (statement)
@@ -45,7 +45,7 @@ Notation: `str≤N` = 1..N characters; `?` = nullable; `[a..b]` = list length bo
 - **Layout:** icon 160 px centred at (540, 330); value line centred at y 560; suffix 16 px below in `highlight`; caption 32 px below that in `inkMuted`.
 - **Slots:** value display 800 200→110 · 1 · 940 | suffix display 700 64→44 · 1 · 900 | caption body 600 44→32 · 3 · 860
 - **Motion:** count-up from 0 to `value` over `count_frames = min(24, floor(0.4 × scene_frames))` with ease-out-cubic, displayed at `decimals` throughout. Hold: value scales 1.00→1.04.
-- **Validators:** number grounding of `value × scale`.
+- **Validators:** number grounding of `value × scale`; **`suffix` contains no `$`, `£` or `€`** (currency belongs in `prefix`; Issue 5, `design_planner.md` §6 item 6).
 - **SFX:** `ding` at `count_end`.
 
 ### 2.4 `icon_list` (statement)
@@ -98,6 +98,7 @@ Notation: `str≤N` = 1..N characters; `?` = nullable; `[a..b]` = list length bo
 - **Slots:** line body 700 44→32 · 4 · 628
 - **Motion:** lines at `item_frames` (`spread 0.6`); bubbles scale 0.9→1 from the tail. Hold: the latest speaker's avatar mouth animates (open/closed every 6 frames) until the next line appears.
 - **SFX:** `pop` at each `item`.
+- **Critic:** every accepted scene goes through the people-scene critic (`design_planner.md` §11): who says or feels it, and in what tone, read blind from the beat.
 
 ### 2.10 `text_thread` (people)
 - **Use when:** text messages, DMs, chats.
@@ -106,6 +107,7 @@ Notation: `str≤N` = 1..N characters; `?` = nullable; `[a..b]` = list length bo
 - **Slots:** contact body 700 40→30 · 1 · 560 | message body 600 38→30 · 4 · 476
 - **Motion:** messages at `item_frames` (`spread 0.7`); each "them" message is preceded by a 12-frame typing indicator (three dots) that ends at its item frame. Hold: the phone floats 6 px, period 90 frames.
 - **SFX:** `pop` at each `item`.
+- **Critic:** every accepted scene goes through the people-scene critic (`design_planner.md` §11): who sent each message (the narrator or the contact), read blind from the beat.
 
 ### 2.11 `emotion_beat` (people)
 - **Use when:** a reaction or feeling is the point.
@@ -114,6 +116,7 @@ Notation: `str≤N` = 1..N characters; `?` = nullable; `[a..b]` = list length bo
 - **Slots:** caption display 800 64→44 · 2 · 900
 - **Motion:** avatar springs in; glyph bobs 8 px, period 36 frames. Hold: angry → 2 px shake; sad → slow 10 px sink; others → gentle float.
 - **SFX:** none.
+- **Critic:** every accepted scene goes through the people-scene critic (`design_planner.md` §11): who says or feels it, and what emotion, read blind from the beat.
 
 ### 2.12 `relationship_map` (people)
 - **Use when:** how 2–5 people relate (family, alliances, betrayals).
@@ -130,7 +133,7 @@ Notation: `str≤N` = 1..N characters; `?` = nullable; `[a..b]` = list length bo
 - **Layout:** image 960×960 at (60, 160), radius 32, `object-fit: cover`. **Scrim (revised September 25, 2026):** a vertical gradient of `bg` over the image from y 640 to y 1120 with stops **0% alpha at y 640 → 85% at y 800 → 92% at y 1120**. Place name bottom-aligned at y 1080, left x 100; caption 12 px above the name, `inkMuted`. With both at their line maxima the text block's top is y 807, so **every glyph sits where the scrim is ≥ 85%**. Worst case, over a pure-white image pixel, that measures `ink` 9.15 : 1 and `inkMuted` 5.57 : 1 (`design_visual_direction.md` §2.1). The original 320 px 0→85% scrim put the caption where the scrim was only ~53%: `inkMuted` measured **1.95 : 1** over white, and was unreadable on the light illustrations FLUX.2 klein produces. Era stamp: `highlight` text on a `bgDeep` pill, rotated −6°, centred at (880, 220). **No image:** the place icon at 360 px in a 560 px `bgRaised` circle centred at (540, 560), with name and caption as above.
 - **Slots:** name display 800 72→48 · 2 · 880 | caption body 600 40→30 · 2 · 880 | era display 800 44→32 · 1 · 240
 - **Motion:** image fades in 12 frames. Hold: Ken Burns scale 1.00→1.08 and pan x −20→+20 px across the scene. Name slides up at frame 8.
-- **Validators:** `era_label` digit grounding.
+- **Validators:** `era_label` digit grounding; **"ago" in `era_label` only if the transcript says "ago"** (Issue 5, `design_planner.md` §6 item 6).
 - **SFX:** `whoosh` at `start`.
 
 ### 2.14 `set_piece` (place_time)
@@ -155,7 +158,7 @@ Notation: `str≤N` = 1..N characters; `?` = nullable; `[a..b]` = list length bo
 - **Layout:** vertical axis at x 160 from y 220 to 1120, 6 px `inkMuted`. Events evenly spaced along it. Dot r 18 (the highlighted event r 26 in `highlight` with a soft glow). Date label left edge x 220 (the highlighted one in `highlight`, others `ink`); event label directly below its date in `inkMuted`.
 - **Slots:** date display 800 44→32 · 1 · 760 | label body 600 40→28 · 2 · 760
 - **Motion:** the axis draws top-down over 12 frames; events at `item_frames` (`spread 0.6`). Hold: the highlighted dot's glow pulses.
-- **Validators:** `0 ≤ highlight_index < len(events)`; date-label digit grounding.
+- **Validators:** `0 ≤ highlight_index < len(events)`; **the date-label rule of `design_planner.md` §8 (Issue 4)**: each label is a grounded date/number or one of 17 relative-time phrases; labels are distinct; years are non-decreasing. Examples from Wave A that are now rejected: `2013 / 2013 / 2013` (not distinct); `50+ Years / No Record / Memory Only` ("No Record" is neither); `Last Spring / Present / Now` ("Present" alone is not on the list; "Present day" is).
 - **SFX:** `pop` at each `item`.
 
 ---

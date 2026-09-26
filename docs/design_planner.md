@@ -34,7 +34,9 @@ The response's `message.content` is parsed with `json.loads`. A parse failure co
 
 **Error classification (added September 25, 2026).** `DependencyMissing` (exit 4) is raised **only** for a connection failure, or for a **non-200** response whose error body names a missing model. A 200 response is never inspected for words like "not found": the first implementation did that, so any caption containing "not found" crashed the job as a "missing model".
 
-**Every planner LLM call goes through `run_with_retries`** (voice, bible, segment, select, props). No stage may call `generate_json` directly. `run_with_retries` is the only place that converts parse failures, validation failures and truncated JSON into retries, and then into the stage's deterministic fallback. Two stages that bypassed it (select, props) crashed the storyboard stage on a single malformed reply.
+**Images and per-call output caps (added September 25, 2026).** `generate_json` and `run_with_retries` accept `images: list[bytes] | None` (PNG bytes, sent base64 in the user message's `images` field) and `num_predict: int | None` (overrides the default 2048 for that call). The cache key includes each image's **SHA-256**, never the base64 text, plus the effective `num_predict`. The text check (`design_visual_direction.md` §7.1) uses both; the critic (§11) uses `num_predict` 256. Because LLM-facing schemas carry no length limits, **`num_predict` is the only thing that bounds a free-text field's length.** A call that asks for a short answer must set it.
+
+**Every planner LLM call goes through `run_with_retries`** (voice, bible, segment, select, props, critic, text_check). No stage may call `generate_json` directly. `run_with_retries` is the only place that converts parse failures, validation failures and truncated JSON into retries, and then into the stage's deterministic fallback. Two stages that bypassed it (select, props) crashed the storyboard stage on a single malformed reply.
 
 **LLM-facing schemas carry no length constraints (added September 25, 2026).** The schema passed as `format` is the Pydantic schema with **every `maxLength`, `minLength`, `maxItems`, `minItems` and `pattern` removed**; `enum`, `type`, `required` and `additionalProperties` stay. Limits are stated in the prompt instead, and enforced afterwards by Pydantic and the validators, with the retry message naming the field and its limit (`props.caption: 61 characters, limit 48 — rewrite it shorter as a complete phrase`). **Why:** Ollama's constrained decoding enforces `maxLength` by force-closing the string at the limit. It does not make the model write something shorter. Wave A's storyboards had **34 of 701 strings cut mid-word** ("Rescuers wade through waist-", "Modern Era ("), all of which passed validation. That is also why the planner eval reported a 0.0% fallback rate: truncation made every answer valid.
 
@@ -169,7 +171,11 @@ The **same functions** run on LLM output (inside the ladder) and on human edits 
 3. **Text fit (§7).**
 4. **Grounding (§8)** where the template declares it (`design_templates.md`).
 5. **Template-specific rules** listed per template in `design_templates.md` (e.g. `highlight_index` in range, edge endpoints distinct).
-6. **Text completeness (added September 25, 2026)**, for every free-text string field (not ids, enums, `prefix`, or `date_label`/`era_label`):
+6. **Meaning rules that code can decide (Issue 5 → Option A, part 1; selected September 25, 2026):**
+   - `stat_callout.suffix` must not contain `$`, `£` or `€`. Error: `props.suffix: currency symbols belong in prefix`.
+   - `location.era_label` may contain the whole word "ago" (casefolded) only if the whole transcript does. Error: `props.era_label: "ago" is not in the narration`.
+   - `timeline.events[].date_label`: see §8 (Issue 4).
+7. **Text completeness (added September 25, 2026)**, for every free-text string field (not ids, enums, `prefix`, or `date_label`/`era_label`):
    - **Repair (not an error):** runs of whitespace, including `\n`, collapse to one space; strip the ends.
    - **Errors:** the string contains no letter or digit (`"..."`, `"—"`); it ends with `-`, `(`, `[`, `,`, `:` or `/`; its `(`/`)`, `[`/`]` or `"` characters are unbalanced; its last word is a truncation fragment (a single **lowercase** letter other than `a`, e.g. "…crowds at p"; a capital like "Plan B" is legitimate). Error format: `props.caption: looks cut off ("…crowds at p")`.
 
@@ -198,7 +204,8 @@ The renderer independently detects overflow in the DOM (`design_rendering.md` §
 | Template field | Grounded iff |
 |---|---|
 | `stat_callout`: `N = value × scale(display_scale)` | some `n ∈ numbers(beat.text)` with `|n − N| ≤ 0.005 × max(|N|, 1)` |
-| `timeline.events[].date_label`, `location.era_label` | every maximal digit run in the label appears as a digit run in the **whole transcript**, or equals a spelled number found there |
+| `location.era_label` | every maximal digit run in the label appears as a digit run in the **whole transcript**, or equals a spelled number found there |
+| `timeline.events[].date_label` (**Issue 4 → Option A, selected September 25, 2026**) | **each** label either (a) contains ≥ 1 digit run, and every digit run is grounded as above; or (b) after normalisation (casefold, collapse whitespace, strip trailing `. , ! :`) is exactly one of: `today`, `now`, `present day`, `that night`, `that weekend`, `the next day`, `days later`, `weeks later`, `months later`, `years later`, `last spring`, `last summer`, `last fall`, `last winter`, `last year`, `earlier`, `later`. **And** the normalised labels are pairwise distinct. **And** the four-digit years (`\b(1[0-9]{3}\|20[0-9]{2})\b`, first per label) are non-decreasing in event order. |
 | `kinetic_quote.text` | `norm(text without a trailing "…")` is a substring of `norm(beat.text)` **starting and ending at word boundaries** |
 | `kinetic_quote.emphasis[]` | each `norm(word)` is a whole word of `norm(text)` |
 
@@ -219,6 +226,8 @@ The renderer independently detects overflow in the DOM (`design_rendering.md` §
 | Grounding / reference / fit violations in the **final** storyboard | **0**, re-verified by running §6 over the saved `storyboard.json` as an independent pass |
 | Planner wall time for `story_recipe_box`, the longest fixture (cold LLM cache, model already loaded) | ≤ **240 s** |
 | Voice decision matches `fixtures/expected/<name>.json` (`voice` and `reason`) | **4 of 4** fixtures |
+| Critic regression set (§11) | **4 of 4** cases classified as expected |
+| Critic cost | reported per fixture: critic calls, mismatches, props changed (no bar; the cold budget run bounds the time) |
 
 A bar that fails is **filed, not tuned away**. Do not raise the fallback threshold, drop a validator, or loosen grounding to pass. Prompt changes are legitimate; each one re-runs the full eval and the report records the prompt files' SHA-256.
 
@@ -325,3 +334,53 @@ Runs after `ingest` and **before** `narrate`, because the voice must be known be
 | `story_recipe_box` | first_person | female | llm | af_heart |
 
 `story_room_12` is the **inference trap**: the narrator knits and texts "my wife", and "a woman walked in" is someone else. Nothing in the text is a self-identification, so any guess, female *or* male, must be rejected by rule c. `story_recipe_box` has one genuine self-identification ("As the only granddaughter, I got…") surrounded by gendered words about other people ("Grandma Rose", "My mom", "his mother").
+
+---
+
+## 11. The people-scene critic (Issue 5 → Option A, part 2; selected September 25, 2026)
+
+**The user's selection:** *"Option A."* Part 1 (the deterministic rules) is §6 item 6. Part 2 is this section: one extra local LLM call per *people* scene, asking **blind** who says or feels what, and one props retry when that reading disagrees with the props.
+
+**Which scenes:** `dialogue`, `text_thread`, `emotion_beat`, and `kinetic_quote` **with** a non-null `attribution_cast_id`. Never the deterministic fallback scenes.
+
+**When:** inside props planning, after a candidate scene has passed `validate_scene` (fallback level 0 or 1), before it is accepted.
+
+**Call:** `run_with_retries(stage="critic", num_predict=256)`, `temperature` 0.
+- **System:** `You check who says or feels what in a story beat. Answer only from the text. Output JSON matching the schema.`
+- **User:** the cast list (`- <id>: <name> (<role>)`, plus ` [narrator]` for the narrator), the previous beat (labelled "context only"), this beat, the next beat (labelled "context only"), and the template's question.
+- **Blind:** the question gives the scene's *texts* but **never** the proposed speaker, sender, tone or emotion.
+
+| Template | Question (the quoted texts come from the props) | Schema |
+|---|---|---|
+| `kinetic_quote` | `Who wrote or said these quoted words: "<text>" Answer a cast id, "narration" if they are the narrator telling the story, or "unknown".` | `{"speaker": <cast ids> \| "narration" \| "unknown"}` |
+| `dialogue` | `The scene shows these lines in order: 1. "<text>" 2. "<text>" … For each line, who says it (cast id or "unknown") and in what tone?` | `{"lines": [{"speaker": <cast ids> \| "unknown", "tone": neutral\|angry\|happy\|sad\|shocked\|sarcastic\|unknown}]}`, the same length as `props.lines` (a length mismatch is a failed attempt) |
+| `text_thread` | `The phone belongs to the narrator. Messages in order: 1. "<text>" … For each, was it sent by the narrator ("me") or the other person ("them")?` | `{"messages": [{"sender": "me"\|"them"\|"unknown"}]}`, the same length as `props.messages` |
+| `emotion_beat` | `Which cast member feels something in this beat, and what is the main feeling?` | `{"cast_id": <cast ids> \| "unknown", "emotion": happy\|sad\|angry\|shocked\|confused\|smug\|nervous\|unknown}` |
+
+**Mismatch rules (deterministic, `planner/critic.py`):**
+- **Who** (speaker, sender, `cast_id`): a mismatch iff the critic's value is not `unknown` **and** differs from the props. For `kinetic_quote`, `narration` agrees only with the narrator's cast id. A speaker the critic cannot resolve (`unknown`) is **never** a mismatch.
+- **Dialogue tone:** a mismatch iff (the critic's tone is not `unknown` and differs from the props) **or** (the critic's tone is `unknown` and the props' tone is not `neutral`). A strong tone the text does not show is an error.
+- **Emotion** (`emotion_beat`): a mismatch iff the critic's value is not `unknown` and differs from the props.
+
+**On mismatch:** exactly **one** props retry for the same template, with an added user message:
+
+```
+A second, independent reading of this beat disagrees:
+- <field>: you said <x>; the reading says <y>
+Fix the props if that reading fits the beat text better; otherwise keep yours.
+```
+
+The retry result must pass `validate_scene`. If it does, it replaces the scene, **with no second critic call** (no loops). If it does not, the original validated scene stands. If the critic call fails entirely, the scene is accepted with critic status `unavailable`.
+
+**Recorded** in `plan_report.json` per scene: `critic: {"status": "not_applicable"|"agree"|"mismatch_retried"|"unavailable", "mismatches": ["lines[0].tone: angry vs unknown"], "changed": bool}` (`design_data_contracts.md` §6).
+
+**Measured September 25, 2026** with `gemma4:26b`, seeds 7, 8 and 9, all consistent. These four cases are the **critic regression set**, run as slow tests with the cast `c1 Me (narrator)`, `c2 Danny`, `c3 Walt`, `c4 Deb`:
+
+| Case (from Wave A's real output) | Props | Critic said | Rule result | Expected |
+|---|---|---|---|---|
+| A: Danny's text "Who is Walter Lindqvist…" as a `kinetic_quote` | attribution `c1` | `c2` | mismatch | mismatch ✓ |
+| B: "Rose?" as a `dialogue` line | `c1`, tone `angry` | `c1`, `unknown` | mismatch (tone) | mismatch ✓ |
+| B′: the same line with tone `neutral` | `c1`, `neutral` | `c1`, `unknown` | agree | agree ✓ |
+| C: "I've been waiting for someone to call about the pie." | attribution `c3` | `unknown` | agree | agree ✓ |
+
+Latency was ~0.5 s per call. Case C is why "unknown" must never count as a mismatch for *who*: the critic could not resolve "he said" from the beat alone, and the props were right.

@@ -49,8 +49,12 @@
 **Goal:** the full battery green, the offline guarantee enforced, the performance budget measured, the README complete.
 
 ## Wave B: verification fixes (approved September 25, 2026)
-Wave A was delivered and independently verified: all gates green, but with defects the gates could not see. Among them: music/SFX dropped after a review edit, text truncated by constrained decoding, two planner crash paths, and an illegible map and image captions. Wave B (B1–B13) fixes them and measures the performance budget cold. The item-by-item spec is `agent_execution_guide.md`.
+Wave A was delivered and independently verified: all gates green, but with defects the gates could not see. Among them: music/SFX dropped after a review edit, text truncated by constrained decoding, two planner crash paths, and an illegible map and image captions. Wave B (B1–B17) fixes them, adds the three user-selected quality checks, and measures the performance budget cold. The checks are:
+- a local check for stray lettering in illustrations, with automatic regeneration, skipped when the description calls for writing;
+- timeline labels that are real dates or fixed relative-time phrases;
+- two meaning rules plus a blind critic for people scenes.
+
+The item-by-item spec is `agent_execution_guide.md`.
 
 ## After Wave B (deferred; each needs a user selection)
-Issues 3–5 in `ongoing_general_errors.md` (fake writing in illustrations, timeline labels, semantic planner errors), then:
 Video input with picture-in-picture · 16:9 output · **live mode** (streaming ASR → incremental planning → the same templates on a live clock, webcam in a corner) · multi-voice narration · Reddit URL fetch · public-domain photos · historical borders · a web review editor. See `ongoing_general_errors.md` §4.

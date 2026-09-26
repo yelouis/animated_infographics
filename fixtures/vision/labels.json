@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "note": "Labelled by a human on 2026-09-25 (verification pass). has_text = contains letter/word-like marks, real or fake.",
+  "images": [
+    {
+      "file": "recipe_box_pseudotext.png",
+      "has_text": true,
+      "visual_description": "An old wooden box overflowing with hundreds of handwritten recipe cards",
+      "source": "FLUX.2 klein 4B, E2E job story-recipe-box-20260925-180627"
+    },
+    {
+      "file": "blueberry_pie.png",
+      "has_text": false,
+      "visual_description": "A golden-crusted blueberry pie with deep purple fruit filling",
+      "source": "FLUX.2 klein 4B, E2E job story-recipe-box-20260925-180627"
+    },
+    {
+      "file": "duluth_waterfront.png",
+      "has_text": false,
+      "visual_description": "A lakeside city with historic houses and a view of the water",
+      "source": "FLUX.2 klein 4B, E2E job story-recipe-box-20260925-180627"
+    },
+    {
+      "file": "thunder_bay_skyline.png",
+      "has_text": false,
+      "visual_description": "A northern city near the shores of Lake Superior",
+      "source": "FLUX.2 klein 4B, E2E job story-recipe-box-20260925-180627"
+    },
+    {
+      "file": "small_town_diner.png",
+      "has_text": false,
+      "visual_description": "A cozy, nostalgic small-town diner with a counter and warm lighting",
+      "source": "FLUX.2 klein 4B, E2E job story-recipe-box-20260925-180627"
+    },
+    {
+      "file": "synthetic_open_sign.png",
+      "has_text": true,
+      "visual_description": "Synthetic control: flat shapes with the word OPEN rendered in Poppins ExtraBold",
+      "source": "Pillow, drawn for this fixture set"
+    },
+    {
+      "file": "synthetic_shapes.png",
+      "has_text": false,
+      "visual_description": "Synthetic control: flat circle, triangle and bar, no lettering",
+      "source": "Pillow, drawn for this fixture set"
+    }
+  ]
+}
