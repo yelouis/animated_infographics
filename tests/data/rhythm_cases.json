@@ -1,0 +1,423 @@
+{
+  "source": "Wave B E2E run 20260926_140601 (real beats and bibles, frozen September 27, 2026)",
+  "cases": [
+    {
+      "case": "R7-a",
+      "job": "story-recipe-box-20260926-211008",
+      "beat_i": 2,
+      "beat": "My brother Danny got her house in Duluth, and honestly, I think I got the better deal.",
+      "entities": {
+        "cast": [
+          {
+            "id": "c1",
+            "name": "Me",
+            "is_narrator": true
+          },
+          {
+            "id": "c2",
+            "name": "Grandma Rose",
+            "is_narrator": false
+          },
+          {
+            "id": "c3",
+            "name": "Danny",
+            "is_narrator": false
+          },
+          {
+            "id": "c4",
+            "name": "Walt",
+            "is_narrator": false
+          }
+        ],
+        "places": [
+          {
+            "id": "p1",
+            "name": "Duluth"
+          },
+          {
+            "id": "p2",
+            "name": "Thunder Bay"
+          }
+        ],
+        "set_pieces": [
+          {
+            "id": "v1",
+            "name": "The Recipe Box"
+          },
+          {
+            "id": "v2",
+            "name": "The Blueberry Pie"
+          },
+          {
+            "id": "v3",
+            "name": "The Diner"
+          }
+        ]
+      },
+      "template_before": "comparison",
+      "prev_template": "kinetic_quote",
+      "next_template": "kinetic_quote",
+      "expected": {
+        "template": "emotion_beat",
+        "id": "c1"
+      },
+      "why": "first person outside quotes -> the narrator's reaction shot (Danny is also named; in a first-person beat the narrator wins)"
+    },
+    {
+      "case": "R7-b",
+      "job": "story-recipe-box-20260926-211008",
+      "beat_i": 16,
+      "beat": "\"I've been waiting for someone to call about the pie.\"",
+      "entities": {
+        "cast": [
+          {
+            "id": "c1",
+            "name": "Me",
+            "is_narrator": true
+          },
+          {
+            "id": "c2",
+            "name": "Grandma Rose",
+            "is_narrator": false
+          },
+          {
+            "id": "c3",
+            "name": "Danny",
+            "is_narrator": false
+          },
+          {
+            "id": "c4",
+            "name": "Walt",
+            "is_narrator": false
+          }
+        ],
+        "places": [
+          {
+            "id": "p1",
+            "name": "Duluth"
+          },
+          {
+            "id": "p2",
+            "name": "Thunder Bay"
+          }
+        ],
+        "set_pieces": [
+          {
+            "id": "v1",
+            "name": "The Recipe Box"
+          },
+          {
+            "id": "v2",
+            "name": "The Blueberry Pie"
+          },
+          {
+            "id": "v3",
+            "name": "The Diner"
+          }
+        ]
+      },
+      "template_before": "kinetic_quote",
+      "prev_template": "kinetic_quote",
+      "next_template": "kinetic_quote",
+      "expected": {
+        "template": "set_piece",
+        "id": "v2"
+      },
+      "why": "the only first-person words are inside the quote (Walt speaking), so no narrator; 'pie' names set piece v2"
+    },
+    {
+      "case": "R7-c",
+      "job": "emu-war-20260926-211645",
+      "beat_i": 4,
+      "beat": "Then the Great Depression hit, wheat prices collapsed,",
+      "entities": {
+        "cast": [
+          {
+            "id": "c1",
+            "name": "Major Meredith",
+            "is_narrator": false
+          },
+          {
+            "id": "c2",
+            "name": "The Soldiers",
+            "is_narrator": false
+          },
+          {
+            "id": "c3",
+            "name": "The Farmers",
+            "is_narrator": false
+          },
+          {
+            "id": "c4",
+            "name": "The Emus",
+            "is_narrator": false
+          }
+        ],
+        "places": [
+          {
+            "id": "p1",
+            "name": "Western Australia"
+          },
+          {
+            "id": "p2",
+            "name": "Campion"
+          }
+        ],
+        "set_pieces": [
+          {
+            "id": "v1",
+            "name": "Lewis Machine Gun"
+          },
+          {
+            "id": "v2",
+            "name": "Wheat Field"
+          },
+          {
+            "id": "v3",
+            "name": "Barrier Fence"
+          }
+        ]
+      },
+      "template_before": "cause_effect",
+      "prev_template": "kinetic_quote",
+      "next_template": "kinetic_quote",
+      "expected": {
+        "template": "set_piece",
+        "id": "v2"
+      },
+      "why": "no first person and no cast named; 'wheat' names set piece v2 (Wheat Field)"
+    },
+    {
+      "case": "R7-d",
+      "job": "story-recipe-box-20260926-211008",
+      "beat_i": 13,
+      "beat": "The return address was in Thunder Bay, Ontario, about 190 miles up the shore.",
+      "entities": {
+        "cast": [
+          {
+            "id": "c1",
+            "name": "Me",
+            "is_narrator": true
+          },
+          {
+            "id": "c2",
+            "name": "Grandma Rose",
+            "is_narrator": false
+          },
+          {
+            "id": "c3",
+            "name": "Danny",
+            "is_narrator": false
+          },
+          {
+            "id": "c4",
+            "name": "Walt",
+            "is_narrator": false
+          }
+        ],
+        "places": [
+          {
+            "id": "p1",
+            "name": "Duluth"
+          },
+          {
+            "id": "p2",
+            "name": "Thunder Bay"
+          }
+        ],
+        "set_pieces": [
+          {
+            "id": "v1",
+            "name": "The Recipe Box"
+          },
+          {
+            "id": "v2",
+            "name": "The Blueberry Pie"
+          },
+          {
+            "id": "v3",
+            "name": "The Diner"
+          }
+        ]
+      },
+      "template_before": "map_focus",
+      "prev_template": "kinetic_quote",
+      "next_template": "kinetic_quote",
+      "expected": null,
+      "why": "map_focus is a picture template: never replaced"
+    },
+    {
+      "case": "R7-e",
+      "job": "story-room-12-20260926-211326",
+      "beat_i": 18,
+      "beat": "She wrote back: \"Keep the room. He's never missed one.\"",
+      "entities": {
+        "cast": [
+          {
+            "id": "c1",
+            "name": "Me",
+            "is_narrator": true
+          },
+          {
+            "id": "c2",
+            "name": "Mr. Alvarez",
+            "is_narrator": false
+          },
+          {
+            "id": "c3",
+            "name": "Deb",
+            "is_narrator": false
+          },
+          {
+            "id": "c4",
+            "name": "Sofia",
+            "is_narrator": false
+          }
+        ],
+        "places": [
+          {
+            "id": "p1",
+            "name": "Amarillo"
+          }
+        ],
+        "set_pieces": [
+          {
+            "id": "v1",
+            "name": "Room 12"
+          },
+          {
+            "id": "v2",
+            "name": "The Night Desk"
+          },
+          {
+            "id": "v3",
+            "name": "The Envelope"
+          }
+        ]
+      },
+      "template_before": "text_thread",
+      "prev_template": "kinetic_quote",
+      "next_template": "kinetic_quote",
+      "expected": null,
+      "why": "text_thread carries story speech: never replaced"
+    },
+    {
+      "case": "R7-f",
+      "job": "emu-war-20260926-211645",
+      "beat_i": 8,
+      "beat": "Major G. P. W. Meredith of the Royal Australian Artillery arrived in the Campion district with two soldiers,",
+      "entities": {
+        "cast": [
+          {
+            "id": "c1",
+            "name": "Major Meredith",
+            "is_narrator": false
+          },
+          {
+            "id": "c2",
+            "name": "The Soldiers",
+            "is_narrator": false
+          },
+          {
+            "id": "c3",
+            "name": "The Farmers",
+            "is_narrator": false
+          },
+          {
+            "id": "c4",
+            "name": "The Emus",
+            "is_narrator": false
+          }
+        ],
+        "places": [
+          {
+            "id": "p1",
+            "name": "Western Australia"
+          },
+          {
+            "id": "p2",
+            "name": "Campion"
+          }
+        ],
+        "set_pieces": [
+          {
+            "id": "v1",
+            "name": "Lewis Machine Gun"
+          },
+          {
+            "id": "v2",
+            "name": "Wheat Field"
+          },
+          {
+            "id": "v3",
+            "name": "Barrier Fence"
+          }
+        ]
+      },
+      "template_before": "character_intro",
+      "prev_template": "kinetic_quote",
+      "next_template": "kinetic_quote",
+      "expected": null,
+      "why": "character_intro is a first appearance: never replaced"
+    },
+    {
+      "case": "R7-g",
+      "job": "story-recipe-box-20260926-211008",
+      "beat_i": 20,
+      "beat": "until his family moved north and the engagement fell apart.",
+      "entities": {
+        "cast": [
+          {
+            "id": "c1",
+            "name": "Me",
+            "is_narrator": true
+          },
+          {
+            "id": "c2",
+            "name": "Grandma Rose",
+            "is_narrator": false
+          },
+          {
+            "id": "c3",
+            "name": "Danny",
+            "is_narrator": false
+          },
+          {
+            "id": "c4",
+            "name": "Walt",
+            "is_narrator": false
+          }
+        ],
+        "places": [
+          {
+            "id": "p1",
+            "name": "Duluth"
+          },
+          {
+            "id": "p2",
+            "name": "Thunder Bay"
+          }
+        ],
+        "set_pieces": [
+          {
+            "id": "v1",
+            "name": "The Recipe Box"
+          },
+          {
+            "id": "v2",
+            "name": "The Blueberry Pie"
+          },
+          {
+            "id": "v3",
+            "name": "The Diner"
+          }
+        ]
+      },
+      "template_before": "cause_effect",
+      "prev_template": "kinetic_quote",
+      "next_template": "kinetic_quote",
+      "expected": null,
+      "why": "a replaceable template, but no first person and no cast member, set piece or place named: no target, the rule waits"
+    }
+  ]
+}

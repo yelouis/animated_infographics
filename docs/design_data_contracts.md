@@ -138,6 +138,7 @@ Beats **tile** the narration: `beats[0].start_ms == 0`, `beats[k].end_ms == beat
 - `template` ∈ the 16 names in `design_templates.md`; `props` must validate against **that template's** props model (a discriminated union on `template`).
 - `mute_sfx` suppresses that scene's SFX cues.
 - `rationale` 0–140 chars: why the planner chose this template. It is shown in `preview/storyboard.md` and ignored by the renderer.
+- **Props shapes changed September 27, 2026 (Issue 7 → Option A):** five `caption` fields and `character_intro.traits` were removed, list maxima were lowered, and `emotion_beat.emotion` gained `neutral` (`design_templates.md` §5). A storyboard written before that no longer validates; re-plan it with `rerun <job> --from storyboard`.
 - `aspect` is the literal `"9:16"` in the MVP.
 
 **What a human may change:** `template` (with matching `props`), any `props` value, `mute_sfx`, `rationale`, and anything in `bible.json`. **What they may not:** `id`, `beat_i`, scene count, scene order. `preview` rejects those with exit 2.
@@ -158,6 +159,8 @@ Written by the planner; read by `status`, the planner eval and `preview/storyboa
 ```
 
 `fallback_level`: `0` primary template accepted · `1` alternate template used · `2` deterministic `kinetic_quote` fallback.
+
+`rule_repairs[].rule` ∈ `R1`…`R7` (R6 and R7 added September 27, 2026; `design_planner.md` §4). A scene R7 turned into a picture has `primary` = the picture template, `alternate` = the replaced template, `fallback_level` 0, `attempts` 0 and critic `not_applicable`. Its storyboard `rationale` is `"rhythm picture"`.
 
 `critic` (added September 25, 2026, Issue 5): `status` ∈ `not_applicable` · `agree` · `mismatch_retried` · `unavailable`; `mismatches` lists `"<field>: <props value> vs <critic value>"` (for a `text_thread` contact, `"contact: <contact_name> vs <cast name> (<cast id>)"`, added September 27, 2026); `changed` is true iff the final props **differ** from the original. `repair` is `"tone_neutral"` or null. `retry_errors` holds the critic-triggered retry's validation errors when it failed (added September 26, 2026). Rules: `design_planner.md` §11.
 

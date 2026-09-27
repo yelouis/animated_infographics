@@ -1,0 +1,179 @@
+{
+  "source": "Wave B E2E storyboards, run 20260926_140601 (removed fields dropped); frozen September 27, 2026",
+  "cases": [
+    {
+      "job": "molasses-flood-say-20260926-210902",
+      "scene_id": "s001",
+      "template": "timeline",
+      "props": {
+        "events": [
+          {
+            "date_label": "Jan 15, 1919",
+            "label": "The Great Molasses Flood"
+          },
+          {
+            "date_label": "Later",
+            "label": "The Tank Bursts"
+          },
+          {
+            "date_label": "That night",
+            "label": "Rescue Efforts"
+          }
+        ],
+        "highlight_index": 0
+      },
+      "expected_errors": [
+        "props.events[0].label: 4 words, limit 3 — rewrite it shorter as a complete phrase"
+      ]
+    },
+    {
+      "job": "molasses-flood-say-20260926-210902",
+      "scene_id": "s004",
+      "template": "character_intro",
+      "props": {
+        "cast_id": "c1",
+        "descriptor": "Laborers caught in the surge"
+      },
+      "expected_errors": [
+        "props.descriptor: 5 words, limit 4 — rewrite it shorter as a complete phrase"
+      ]
+    },
+    {
+      "job": "molasses-flood-say-20260926-210902",
+      "scene_id": "s006",
+      "template": "icon_list",
+      "props": {
+        "heading": null,
+        "items": [
+          {
+            "icon": "Wrench",
+            "label": "Rescuers wading through waste"
+          },
+          {
+            "icon": "WaveSine",
+            "label": "Brown harbor until summer"
+          }
+        ]
+      },
+      "expected_errors": [
+        "props.items[0].label: 4 words, limit 3 — rewrite it shorter as a complete phrase",
+        "props.items[1].label: 4 words, limit 3 — rewrite it shorter as a complete phrase"
+      ]
+    },
+    {
+      "job": "molasses-flood-say-20260926-210902",
+      "scene_id": "s007",
+      "template": "cause_effect",
+      "props": {
+        "nodes": [
+          {
+            "label": "Built in a hurry",
+            "icon": "Armchair"
+          },
+          {
+            "label": "Never properly tested",
+            "icon": "MagnifyingGlass"
+          }
+        ]
+      },
+      "expected_errors": [
+        "props.nodes[0].label: 4 words, limit 3 — rewrite it shorter as a complete phrase"
+      ]
+    },
+    {
+      "job": "emu-war-20260926-211645",
+      "scene_id": "s017",
+      "template": "comparison",
+      "props": {
+        "a": {
+          "heading": "The Cost of Combat",
+          "cast_id": null,
+          "icon": null,
+          "points": [
+            "9,860 rounds fired",
+            "986 emus killed",
+            "10 bullets per bird"
+          ]
+        },
+        "b": {
+          "heading": "Efficiency Ratio",
+          "cast_id": null,
+          "icon": null,
+          "points": [
+            "High ammunition usage",
+            "Low bird casualty rate"
+          ]
+        }
+      },
+      "expected_errors": [
+        "props.a.heading: 4 words, limit 3 — rewrite it shorter as a complete phrase",
+        "props.a.points[2]: 4 words, limit 3 — rewrite it shorter as a complete phrase",
+        "props.b.points[1]: 4 words, limit 3 — rewrite it shorter as a complete phrase"
+      ]
+    },
+    {
+      "job": "emu-war-20260926-211645",
+      "scene_id": "s019",
+      "template": "dialogue",
+      "props": {
+        "lines": [
+          {
+            "cast_id": "c1",
+            "text": "\"If we had a division with the bullet-carrying capacity of these birds...\"",
+            "tone": "angry"
+          }
+        ]
+      },
+      "expected_errors": [
+        "props.lines[0].text: 12 words, limit 10 — rewrite it shorter as a complete phrase"
+      ]
+    },
+    {
+      "job": "story-recipe-box-20260926-211932",
+      "scene_id": "s005",
+      "template": "reveal",
+      "props": {
+        "kicker": "THE SEARCH",
+        "text": "Every card was there. Except one missing recipe."
+      },
+      "expected_errors": [
+        "props.text: 8 words, limit 6 — rewrite it shorter as a complete phrase"
+      ]
+    },
+    {
+      "job": "story-recipe-box-20260926-211932",
+      "scene_id": "s012",
+      "template": "text_thread",
+      "props": {
+        "contact_name": "Danny",
+        "contact_cast_id": null,
+        "messages": [
+          {
+            "from": "them",
+            "text": "Found this in the attic while clearing out."
+          },
+          {
+            "from": "them",
+            "text": "[Photo Attachment: A worn shoebox overflowing with handwritten letters]"
+          }
+        ]
+      },
+      "expected_errors": [
+        "props.messages[1].text: 9 words, limit 8 — rewrite it shorter as a complete phrase"
+      ]
+    },
+    {
+      "job": "story-recipe-box-20260926-211008",
+      "scene_id": "s012",
+      "template": "kinetic_quote",
+      "props": {
+        "text": "Who is Walter Lindqvist and why did he write to Grandma 60 times?",
+        "emphasis": [],
+        "attribution_cast_id": "c1"
+      },
+      "expected_errors": [
+        "props.text: 13 words, limit 12 — rewrite it shorter as a complete phrase"
+      ]
+    }
+  ]
+}

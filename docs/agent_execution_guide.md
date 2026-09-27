@@ -1,4 +1,4 @@
-# Agent Execution Guide — Active Build: Wave C (verification fixes, 8 items) — September 27, 2026
+# Agent Execution Guide — Active Build: Wave C (verification fixes, 8 items) then Wave D (picture-first stories, 5 items) — September 27, 2026
 
 **You are an engineering agent with no memory of this project.** The offline MVP (Wave A, A1–A22) and the verification-fix wave (Wave B, B1–B17) are built, committed and pushed (head `beb4c4f`). On September 26, 2026 an independent pass re-ran every gate, read every Wave B item against its spec, **and inspected real output**. All 14 gates reproduce green, and all 17 Wave B items do what their specs say. But real output showed problems the specs had not anticipated:
 - **The people-scene critic (Issue 5) misses the error it was chosen to catch.** In a real `story_recipe_box` run it *agreed* that Danny's text "Who is Walter Lindqvist…" was the narrator's. The beat splitter had cut the quote away from "…he texted me a photo:", and the critic treated that neighbouring beat as "context only".
@@ -7,9 +7,17 @@
 - **Highlighted caption words collide with their neighbours** ("theengagementfell").
 - **A text thread shows the wrong contact** (added September 27, 2026). Deb's reply "Keep the room. He's never missed one." appears under "Sofia", and the critic cannot see it because it asks only "me or them" per message. While measuring this, the passage framing for C2 turned out to make the model **collapse consecutive same-sender messages into one answer**: 3 of 8 real threads would end unchecked. C2 now asks for one answer per message; C8 adds the contact.
 
-Wave C fixes these. **It is the only approved work.** Issue 6 was decided on September 27, 2026: paraphrased dialogue is fine, so there is nothing to build. **Issue 7 (fewer words on screen) awaits the user and must not be started.**
+Wave C fixes these. Issue 6 was decided on September 27, 2026: paraphrased dialogue is fine, so there is nothing to build.
 
-**What is approved:** Wave C, items **C1–C8** in §3, in the order of §2 (C8 runs third, straight after C2). **What NOT to touch:** everything in §5. **What must not be started:** everything in §4.
+**Then Wave D: picture-first stories (Issue 7 → Option A, selected by the user: *"Proceed with Option A."*).**
+- **The problem:** the story videos put ≈ 4.5 words/s on screen (every narration word as a caption, plus 1.1–1.9 graphic words/s), while the narrator speaks 2.6 words/s. Half the scenes carried ≥ 10 words. The user's reference, Casually Explained, shows no words in half its frames.
+- **Wave D does three things, and keeps karaoke captions:**
+  - removes the text fields that restated the narration;
+  - caps every remaining field in words;
+  - adds two selection rules: at most one timeline and one comparison per video (R6), and a reaction-shot rhythm (R7).
+- **Measured on the real Wave B storyboards before specifying:** the model met the caps on 93 of 94 scenes, and graphic words fell to 0.52–0.89 per second, with 39–56% of scenes nearly wordless (§1.4).
+
+**What is approved:** Wave C, items **C1–C8**, then Wave D, items **D1–D5**, all in §3, in the order of §2 (C8 runs third, straight after C2). **Nothing else.** **What NOT to touch:** everything in §5. **What must not be started:** everything in §4.
 
 **Every number and literal string in this document and in the design docs is a decision, not a suggestion.** Implement as written; that includes prompts, header lines, thresholds, seeds and error strings. If a value is genuinely impossible, keep the *intent*, deviate minimally, say so in the commit body, and add it to §5.2. If the design itself cannot work, **STOP and file it in `docs/ongoing_general_errors.md` with options and a `Your selection: _____` line. Do not improvise, and never fill in a selection line yourself.**
 
@@ -29,7 +37,7 @@ Wave C fixes these. **It is the only approved work.** Issue 6 was decided on Sep
 6. **The planner never crashes the pipeline and never shows an ungrounded, truncated or id-bearing text. Every LLM call goes through `run_with_retries`.**
 7. **Red first, on real inputs.** Before fixing, run the item's falsifying check against the *current* code using the frozen real case, and record the failure.
 8. **One item = one Conventional Commit, scope = item id** (`fix(c1): …`). WHY plus red and green runs in the body. **Push after every item.** **Never amend a pushed commit.**
-9. **Record the resolution in the same commit:** one line under "Wave C" in `ongoing_general_errors.md` §3, in the form `C<n> — <title> — git log --grep "(c<n>)" — <measured result>`, never a hash.
+9. **Record the resolution in the same commit:** one line under "Wave C" or "Wave D" in `ongoing_general_errors.md` §3, in the form `C<n> — <title> — git log --grep "(c<n>)" — <measured result>` (or `D<n>` / `(d<n>)`), never a hash.
 10. **When this guide and a design doc disagree, stop and file it.**
 11. Every stage log ends in `llm_calls=<n> cache_hits=<m> elapsed_ms=<t>`; the call counter is incremented at the backend's entry point.
 
@@ -50,7 +58,11 @@ Unchanged from Wave B and re-verified by `doctor` (22 checks OK):
 - Design contracts revised September 26, 2026 for Wave C (list in `ongoing_general_errors.md` §5).
 - New frozen test data:
   - `tests/data/quote_sentence.json`: the real 9,625 ms quoted sentence and its word timings;
-  - `tests/data/critic_text_thread_cases.json` (September 27): real `text_thread` scenes F, G and H, each with cast, the four passage beats, props and expected result.
+  - `tests/data/critic_text_thread_cases.json` (September 27): real `text_thread` scenes F, G and H, each with cast, the four passage beats, props and expected result;
+  - `tests/data/word_cap_cases.json` (September 27, Wave D): 9 real Wave B props objects, one per template that breaks a cap, with the exact expected error strings (40 of the Wave B scenes break at least one cap);
+  - `tests/data/rhythm_cases.json` (September 27, Wave D): seven real beats R7-a…g with their entities and the expected R7 target;
+  - `tests/data/recipe_choices.json` (September 27, Wave D): the real `story_recipe_box` choices (3 timelines, 2 comparisons), beats and entities, with the exact expected output of the new rule pass;
+  - `tests/data/word_caps_live_cases.json` (September 27, Wave D): five real beats (bible, sentence texts, neighbouring beats, Wave B props, probe props) for D2's slow test.
 
 ### 1.3 Gates (run bare in the verification session)
 
@@ -72,7 +84,7 @@ Unchanged from Wave B and re-verified by `doctor` (22 checks OK):
 | G14 | `uv run infographics doctor` | exit 0 · 22 checks OK |
 | Budget | `./scripts/measure_budget.sh` (cold, `story_recipe_box`) | exit 0 · cold, **0 cache hits** · `new`→review **241.2 s** (≤ 390) · render **198.1 s** (≤ 210, only 12 s of headroom) · total **439.3 s** (≤ 600) · 70 LLM calls, 10 critic calls, 4 text checks, 5 images |
 
-### 1.4 Measurements that shaped Wave C (September 26–27, 2026, `gemma4:26b`)
+### 1.4 Measurements that shaped Waves C and D (September 26–27, 2026, `gemma4:26b`)
 
 | What | Result |
 |---|---|
@@ -86,6 +98,12 @@ Unchanged from Wave B and re-verified by `doctor` (22 checks OK):
 | **(Sept 27)** `text_thread` critic with passage framing and the **array** schema, 8 real threads × seeds 7–9 | **3 of 8** threads (room12 s018, recipe s011, recipe run 2 s012; all with consecutive "them" messages) returned **1 element** on every seed: a failed attempt each time → `unavailable` |
 | **(Sept 27)** Same, with **keyed** answers (`message_1…message_n`) | **24/24** complete; the senders match the array answers wherever those were complete |
 | **(Sept 27)** `dialogue` critic, array schema, passage framing, 13 real scenes × 3 seeds | **39/39** complete: dialogue keeps its array |
+| **(Sept 27, Wave D)** Props stage with the D2 caps, writing rules and `props.md`, **94 real scenes** (every non-title scene of the four text fixtures' Wave B storyboards), normal 3-attempt retries | **93 pass** (73 on attempt 1). **118 attempts**, versus 147 for the same scenes in Wave B. Retry causes: word caps 13, list maxima 7. The one failure: the 13-word Walter quote as `kinetic_quote` (no ≤ 12-word verbatim span exists), so the ladder moves it to its alternate |
+| **(Sept 27, Wave D)** Graphic words/s and scenes with ≤ 2 graphic words: Wave B → the probe's real outputs + R6 + R7 | `molasses_flood` 1.11 → **0.52**, 1/10 → **50%** · `emu_war` 1.51 → **0.63**, 3/25 → **56%** · `story_recipe_box` 1.91 → **0.89**, 3/32 → **44%** · `story_room_12` 1.76 → **0.86**, 1/33 → **39%** |
+| **(Sept 27, Wave D)** The same without R6/R7 | `story_recipe_box` **1.13/s and 31%**: fails both bars. Both rules are needed |
+| **(Sept 27, Wave D)** `character_intro` descriptor rule without / with "not their name", 6 real intros | without: one retry produced "Major Meredith", repeating the name the template already draws, and Sofia's became "Mr. Alvarez's daughter, Sofia". With: **6/6 pass**, "The military leader", "Mr. Alvarez's daughter" |
+| **(Sept 27, Wave D)** LLM-written reaction shots (R7 beats, `neutral` offered) | The props model invented feelings for plain beats: "smug" for "…I think I got the better deal.", "confused" for "I asked if he minded me using it.", "angry" for "Meredith was impressed by his opponent." The critic's readings differed from the props on 6 of 9 beats; a neutral-leaning question answered `neutral` 27/27. → R7 pictures are **deterministic**, with a `neutral` face |
+| **(Sept 27, Wave D)** R7 replacing any worded scene | It turned Major Meredith's `character_intro` into a reaction shot and Deb's reply (a `text_thread`) into a picture of Room 12 → the **kept** class (`design_templates.md` §5.4) |
 | **(Sept 27)** Contact question (§11 wording), keyed, 8 threads × 3 seeds | s018 "Sofia" → **`c3` Deb** 3/3 (the real error); "Wife" and "Unknown Number" → `unknown`; Deb/Danny threads → `c3` (agree); **0 false contact readings**. The earlier wording without "according to the passage … does not say" answered Danny for an invented Walt thread (a false alarm) |
 
 ---
@@ -101,7 +119,12 @@ Unchanged from Wave B and re-verified by `doctor` (22 checks OK):
 | C4 | No internal ids on screen | A validator + prompt change; must precede C7's eval. |
 | C5 | Caption word spacing | Renderer-only; changes goldens. Independent of C1–C4. |
 | C6 | Hygiene: generated country codes; a missing input fails loudly | Small; before the final measurement. |
-| C7 | Re-measure: planner eval, E2E, cold budget; close-out | Measures the finished system (C1–C6 and C8). |
+| C7 | Re-measure: planner eval, E2E, cold budget; close-out of Wave C | Measures the finished Wave C (C1–C6 and C8) before Wave D changes the planner again, so each wave's effect is attributable. |
+| D1 | Word-budget contracts: removed fields, list maxima, `neutral`, `WORD_CAPS`, `planner/words.py`, renderer, gallery | Every other D item builds on these shapes and on `count_words`; the Python and TypeScript shapes must change in one commit to keep G5 and G8 green. |
+| D2 | Planner word budget: validator item 9, writing rules, `props.md`, 12-word fallback, text audit, critic `neutral` | Needs D1's `WORD_CAPS`. It must precede D3, whose picture scenes pass through `validate_scene`. |
+| D3 | Selection rules R6 and R7; deterministic pictures | Needs D1's template classes and D2's validator. |
+| D4 | Word-density measurement: eval bar, `evals/word_density.py`, E2E step 9 | Measures D1–D3; must exist before D5. |
+| D5 | Re-measure: planner eval, E2E, cold budget; close-out | Measures the finished system. |
 
 ---
 
@@ -345,10 +368,263 @@ Unchanged from Wave B and re-verified by `doctor` (22 checks OK):
 
 **Validate:** bars as above, plus budget ≤ 6.5 / 3.5 / 10 min. Exceeding a bar is filed with numbers, never tuned away.
 
+**Close-out of Wave C (not of this guide):**
+1. Full battery, bare; update §1.3.
+2. Add Wave C to §5.1 and update `ongoing_general_errors.md` §1.
+3. **Do not rewrite this guide and do not stop. Continue with D1.** The Wave B numbers in §1.4 are Wave D's "before".
+
+---
+
+## 3.D Wave D — picture-first stories (Issue 7 → Option A)
+
+**Read first:** `design_templates.md` §5 (the whole word budget: counting, removed fields, caps, template classes, measurements) and `design_planner.md` §4 (R6, R7), §5, §6 item 9, §9 and §11. **Line numbers below are as of `ee0879d`, before Wave C.** Wave C moves some of them, so find code by symbol.
+
+**Standing rule for this wave:** captions are **not** touched. Karaoke captions stay exactly as C5 leaves them; the user chose Option A, which keeps them.
+
+---
+
+### D1 — Word-budget contracts: removed fields, list maxima, `neutral`, `WORD_CAPS`, words module, renderer, gallery
+
+**What this means for the user:** pictures stop carrying captions that repeat the narration, characters are introduced without trait chips, lists get shorter, and a reaction shot can show a plain face.
+
+**The gap:**
+- The props models still carry the fields that restated the narration, in `src/animated_infographics/contracts/templates.py`:
+  - `StatCalloutProps.caption` (`:82`), `EmotionBeatProps.caption` (`:190`), `LocationProps.caption` (`:234`), `SetPieceProps.caption` (`:243`) and `MapFocusProps.caption` (`:260`);
+  - `CharacterIntroProps.traits` (`:148-150`).
+- The list maxima allow long lists: `icon_list.items` 4 (`:98`), `cause_effect.nodes` 4 (`:120`), `comparison` points 4 (`:130-132`), `dialogue.lines` 3 (`:165`), `text_thread.messages` 5 (`:181`) and `timeline.events` 6 (`:274`).
+- `EmotionBeatProps.emotion` (`:189`) has no `neutral`.
+- Nothing counts words.
+- **Measured on the Wave B storyboards:** 1.11–1.91 graphic words/s, and only 3–12% of scenes with ≤ 2 words (§1.4).
+
+**Implementation:**
+1. **Props models** (`contracts/templates.py`):
+   - Delete the six fields above.
+   - Set the list maxima: `IconListProps.items` 2..3, `CauseEffectProps.nodes` 2..3, `ComparisonPanel.points` 1..2, `DialogueProps.lines` 1..2, `TextThreadProps.messages` 2..3, `TimelineProps.events` 3..4.
+   - `EmotionBeatProps.emotion` becomes `Literal["neutral", "happy", "sad", "angry", "shocked", "confused", "smug", "nervous"]`.
+   - Character limits stay as they are.
+2. **Registry**:
+   - Remove the `caption` slot from `stat_callout`, `emotion_beat`, `location`, `set_piece` and `map_focus`, and the `trait` slot from `character_intro`.
+   - `use_when` for `icon_list` becomes `2-3 parallel things (demands, causes, items, reasons).`, and for `timeline`, `3-4 dated events in sequence.`
+   - Writing rules change in D2, not here.
+3. **`WORD_CAPS: Final[dict[str, dict[str, int]]]`** in `contracts/templates.py`. Copy it verbatim; the path syntax is `a.b` for nested objects and `x[]` for "every element":
+   ```python
+   WORD_CAPS = {
+       "kinetic_quote": {"text": 12},
+       "stat_callout": {"suffix": 2},
+       "icon_list": {"heading": 3, "items[].label": 3},
+       "reveal": {"kicker": 3, "text": 6},
+       "cause_effect": {"nodes[].label": 3},
+       "comparison": {"a.heading": 3, "b.heading": 3, "a.points[]": 3, "b.points[]": 3},
+       "character_intro": {"descriptor": 4},
+       "dialogue": {"lines[].text": 10},
+       "text_thread": {"contact_name": 3, "messages[].text": 8},
+       "relationship_map": {"edges[].label": 3},
+       "location": {"era_label": 2},
+       "map_focus": {"markers[].label": 3},
+       "timeline": {"events[].date_label": 3, "events[].label": 3},
+   }
+   ```
+   Also add the three template classes of `design_templates.md` §5.4 as frozensets: `PICTURE_TEMPLATES`, `REPLACEABLE_TEMPLATES` and `KEPT_TEMPLATES`.
+4. **`src/animated_infographics/planner/words.py`** (new):
+   - `count_words(s: str | None) -> int`: tokens of `s.split()` that contain a character with `.isalnum()`; 0 for `None`.
+   - `field_values(props: Mapping[str, Any], path: str) -> list[tuple[str, str]]`: every `(concrete_path, value)` for a `WORD_CAPS` path, e.g. `items[1].label`, skipping `None`.
+   - `graphic_words(template: str, props: Mapping[str, Any]) -> int`: the sum of `count_words` over every `WORD_CAPS[template]` path; 0 for a template without an entry (`title_card`, `emotion_beat`, `set_piece`).
+   - This one table therefore defines both the caps and the density metric (`design_templates.md` §5.1).
+5. **Regenerate** the JSON Schema and TypeScript types (`contracts/export.py`). G8 must be green.
+6. **Python code that read the removed fields:**
+   - delete the caption and trait branches in `planner/validate.py` `normalize_props_text` (`:120-123`, `:169-170`, `:197-199`, `:212-214`) and `validate_scene` (`:385`, `:388`, `:439-441`, `:466-467`, `:506`, `:508`, `:533-534`, `:561-562`);
+   - update the field list in the docstring of `evals/text_audit.py:125`;
+   - update `tests/data/props_examples.json` and every test that builds a removed field or an over-long list (`grep -rn "caption\|traits" tests` lists the files; `caption` also matches karaoke captions, which are not touched).
+7. **Renderer:**
+   - Delete the drawing of the removed fields in `renderer/src/templates/{stat_callout,emotion_beat,location,set_piece,map_focus,character_intro}.tsx`. Every other element keeps its position (`design_templates.md` §2).
+   - `emotion_beat` moves the avatar to top y 400 and the glyph to (800, 420). `neutral` draws **no glyph** and the neutral face. The avatar blinks at scene frames 45 and 135.
+   - `dialogue` no longer has a third row.
+8. **Gallery:**
+   - Update `renderer/src/gallery/fixtures/*.ts` so that every fixture obeys `design_templates.md` §3 and §5.3. `max` strings reach their **character** limit within their **word** cap.
+   - `emotion_beat` `typical` shows the neutral face.
+   - Re-cut the goldens of the changed fixtures only (`check_gallery.sh --update`), then run G10 without `--update`: 0 overflows.
+
+**Validate:**
+- **Red first:** before the change, a test asserting that `StatCalloutProps.model_validate({... "caption": "x"})` raises, and that a 4-item `IconListProps` raises, **fails**. Record it.
+- After the change:
+  - both raise;
+  - a test walks `WORD_CAPS` and asserts that every path resolves to a `str` or `str | None` field of that template's props model, so a typo cannot silently disable a cap;
+  - a test asserts the three classes partition the 16 templates;
+  - the `count_words` cases in the "word counting and caps" row of `design_testing_and_validation.md` §2 pass.
+- G5, G8 and G10 are green.
+- **Falsify:**
+  - hand-edit a generated TypeScript type to re-add `caption` → G8 is red;
+  - add a fourth item to the `icon_list` `max` fixture → the fixture's type check or the gallery overflow check is red.
+- Open the new goldens `emotion_beat__typical`, `location__max`, `character_intro__max` and `timeline__max`. Describe each: what text remains, and where the avatar sits.
+
+**Blast radius:** `contracts/templates.py`, `contracts/export.py` outputs (schema and TypeScript), `planner/words.py` (new), `planner/validate.py`, `evals/text_audit.py`, `tests/`, `tests/data/props_examples.json`, 6 renderer templates, `renderer/src/gallery/fixtures/`, `renderer/goldens/`.
+
+---
+
+### D2 — Planner word budget: validator item 9, writing rules, `props.md`, 12-word fallback, text audit, critic `neutral`
+
+**What this means for the user:** every label, quote and message on screen is a few words, not a restated sentence.
+
+**The gap:**
+- Nothing checks words.
+  - The frozen `tests/data/word_cap_cases.json` holds 9 real Wave B props objects, e.g. a 7-word character descriptor and a 13-word `kinetic_quote`. **All 9 pass `validate_scene` today.** 40 Wave B scenes break at least one cap.
+- `planner/props.py:183-207` `_format_pydantic_validation_error` formats only `string_too_long`. A list that is too long reaches the model as Pydantic's raw message.
+- `prompts/props.md:29-30` asks for "character limits and line counts" and "punchy on-screen display copy". The measured result was 16 of 32 scenes with ≥ 10 words.
+- `prompts/select.md:26` says "2 to 4 parallel items".
+- The deterministic `kinetic_quote` (`props.py:74-104`) can produce 17 words.
+- The critic's `emotion_beat` enum (`critic.py:165-177`) cannot say `neutral`.
+
+**Implementation:**
+1. **Validator item 9** in `planner/validate.py`: `word_cap_errors(template: str, props: Mapping[str, Any]) -> list[str]`.
+   - For each path of `WORD_CAPS[template]` in table order, and each value in index order, when `count_words(value) > cap`, emit exactly `f"props.{concrete_path}: {n} words, limit {cap} — rewrite it shorter as a complete phrase"`.
+   - Call it from `validate_scene` with `props.model_dump()`, after item 8 (C4).
+2. **List error format** in `_format_pydantic_validation_error`: when `type == "too_long"` and the input is a list, return `f"{path}: {len(input)} items, limit {ctx['max_length']} — keep the most important ones"`.
+3. **Registry `writing_rules`**, replaced verbatim. Templates not listed keep theirs.
+
+   | Template | `writing_rules` |
+   |---|---|
+   | `kinetic_quote` | `text is a verbatim span of this beat, at most 12 words` · `each emphasis word is a whole word of text` |
+   | `stat_callout` | `value must be a number said in this beat` · `suffix is the unit, at most 2 words (e.g. "gallons", "feet high")` |
+   | `icon_list` | `2 to 3 items` · `heading is optional, at most 3 words` · `each label at most 3 words: a name or short noun phrase, not a sentence` |
+   | `reveal` | `kicker at most 3 words (rendered uppercase, e.g. "PLOT TWIST")` · `text at most 6 words` · `at most 2 per video (planner R4)` |
+   | `cause_effect` | `2 to 3 nodes in sequence` · `each label at most 3 words` |
+   | `comparison` | `each heading at most 3 words` · `1 to 2 points per side, each at most 3 words` |
+   | `character_intro` | `descriptor at most 4 words, saying who they are, not their name (e.g. "The motel manager")` · `at most once per cast_id per video (planner R3)` |
+   | `dialogue` | `1 to 2 lines` · `each line at most 10 words` |
+   | `text_thread` | `contact_name at most 3 words` · `2 to 3 messages` · `each message at most 8 words` |
+   | `emotion_beat` | `emotion is the feeling this beat shows for that person; neutral if it shows none` |
+   | `relationship_map` | the four existing rules, then `each edge label at most 3 words` |
+   | `location` | `era_label is optional, at most 2 words` · `era_label digit grounding` |
+   | `set_piece` | `set_piece_id is the object this beat is about` |
+   | `map_focus` | `1 to 3 markers` · `region is 'world' or ISO3` · `each marker label at most 3 words` |
+   | `timeline` | `3 to 4 events` · `0 <= highlight_index < len(events)` · `date_label at most 3 words` · `label at most 3 words` · then the existing date-label rule and `labels all differ and run forward in time`, unchanged |
+4. **`prompts/props.md`:** replace guidelines 3 and 4 with the two lines in `design_planner.md` §5, verbatim. C4's sentence stays.
+5. **`prompts/select.md:26`:** `- A set of 2 to 3 parallel items, reasons, or steps -> icon_list`.
+6. **Deterministic `kinetic_quote`:** the 12-word rule of `design_planner.md` §5.
+7. **`critic.py`:** add `"neutral"` first to the `emotion_beat` emotion enum. The mismatch rule is unchanged.
+8. **`evals/text_audit.py`:** count word-cap violations over the saved storyboards (`word_cap_errors` per scene). The bar is 0 (`design_planner.md` §9).
+9. Record the new SHA-256 of `props.md` and `select.md` in D5's eval.
+
+**Validate:**
+- **Red first:** the 9 frozen cases produce `[]` from today's `validate_scene`. After the change, `word_cap_errors` returns **exactly** each case's `expected_errors`, strings and order included.
+- The rest of the "word counting and caps" row: the list message, the 30-word fallback, and no error at exactly the cap.
+- **Slow test (real model)** `tests/slow/test_word_caps_live.py`. Five real beats from the September 27 probe, one each of `timeline` (`emu_war` s010), `comparison` (`emu_war` s017), `icon_list` (`molasses_flood` s006), `text_thread` (`story_room_12` s016) and `character_intro` (`emu_war` s008), through the real props stage. Each must yield valid props within 3 attempts, with the backend's normal seeds (7 + attempt), and the `character_intro` descriptor must not contain the cast member's name. The probe passed all five. The five cases (bible, sentence texts, neighbouring beats, the Wave B props and the probe's props) are frozen in `tests/data/word_caps_live_cases.json`; build the `Transcript` from its sentence texts as `evals/planner.py` does.
+- **Falsify:** raise one cap to 99 → the matching frozen case is red.
+
+**Blast radius:** `planner/validate.py`, `planner/props.py`, `contracts/templates.py` (writing rules), `prompts/props.md`, `prompts/select.md`, `planner/critic.py`, `evals/text_audit.py`, tests.
+
+---
+
+### D3 — Selection rules R6 and R7; deterministic pictures
+
+**What this means for the user:** a story has at most one timeline and one comparison, and after a couple of wordy scenes it cuts to a face, an object or a place, the way Casually Explained does.
+
+**The gap:**
+- `planner/select.py:66-143` `apply_rules` runs R1, R2, R4 and R5 only.
+  - The frozen `tests/data/recipe_choices.json` (real Wave B `story_recipe_box` choices) keeps **3 timelines and 2 comparisons** through it.
+  - Nothing ever inserts a wordless picture.
+- `Choice` (`select.py:20-27`) cannot carry an entity.
+- `plan_storyboard` (`props.py:445-555`) always calls the LLM.
+- `critic.needs_critic` (`critic.py:24-36`) skips only `"deterministic fallback"`.
+- `validate_plan` (`validate.py:582-640`) has no per-video limit for timelines or comparisons.
+
+**Implementation:**
+1. `Choice` gains `rhythm_id: str | None = None`.
+2. `apply_rules(choices, n_scenes, beats, bible)`: the new signature, because R7 needs the beat texts and the bible. The order is R1, **R6**, R2, R4, R5, **R7**, exactly as in `design_planner.md` §4. R6 and R7 log a `RuleRepair` with `rule="R6"` / `"R7"`.
+3. **`src/animated_infographics/planner/rhythm.py`** (new):
+   - `QUOTED = re.compile(r"\"[^\"]*\"|“[^”]*”")`;
+   - `FIRST_PERSON = re.compile(r"\b(i|me|my|mine|myself|we|us|our)\b", re.IGNORECASE)`;
+   - `name_tokens(name)`;
+   - `named_at(name, text) -> int | None`;
+   - `rhythm_target(text, bible, prev, next) -> tuple[str, str] | None` returning `(template, entity_id)`.
+
+   All of it exactly per `design_planner.md` §4, "R7".
+4. **Props stage:** for a choice with `rhythm_id`, build the scene **without** the LLM. `build_rhythm_picture(scene_id, beat_i, template, rhythm_id)` produces:
+   - `EmotionBeatProps(cast_id=id, emotion="neutral")`;
+   - `SetPieceProps(set_piece_id=id)`;
+   - `LocationProps(place_id=id, era_label=None)`.
+
+   Each gets `rationale="rhythm picture"`, then `validate_scene`.
+   - **Valid:** accept it with `fallback_level` 0, `attempts` 0 and critic `not_applicable`.
+   - **Invalid:** run the normal ladder with `choice.alternate` (the replaced template) as the primary and `kinetic_quote` as the alternate.
+5. `needs_critic` returns `False` for `rationale == "rhythm picture"`.
+6. `validate_plan`: more than one `timeline` → `storyboard: timeline appears <n> times (max 1 per video)`; the same for `comparison`. R7 is a planner behaviour, **not** a plan invariant: a reviewer may replace a picture.
+
+**Validate:**
+- The "rhythm rules R6/R7" row in `design_testing_and_validation.md` §2.
+- **Red first:** today's `apply_rules` on `tests/data/recipe_choices.json` keeps 3 timelines → the `≤ 1` assertion is red.
+- After the change:
+  - the output equals the file's `expected.choices` and `expected.rule_repairs` **exactly**: R6 s010, s023 and s008; R7 s002 → `emotion_beat` c1 and s016 → `set_piece` v2;
+  - the seven `rhythm_cases.json` cases give their `expected`;
+  - a stub-backend storyboard in which R7 fires makes **0** backend calls for that scene (call counter).
+- **Falsify:**
+  - drop the `QUOTED` stripping → R7-b picks `c1` → red;
+  - drop the kept-class check → R7-e and R7-f are replaced → red.
+
+**Blast radius:** `planner/select.py`, `planner/rhythm.py` (new), `planner/props.py`, `planner/critic.py`, `planner/validate.py`, tests; `tests/data/rhythm_cases.json` and `tests/data/recipe_choices.json` are already committed.
+
+---
+
+### D4 — Word-density measurement: eval bar, `evals/word_density.py`, E2E step 9
+
+**What this means for the user:** "fewer words" becomes a number that every run reports and a gate that fails when it drifts.
+
+**The gap:** no report counts on-screen words. The planner eval's transcript is simulated at a fixed 4 words/s (`evals/planner.py:54-99`), so a words-per-second bar can only be measured on real renders.
+
+**Implementation:**
+1. **`evals/planner.py`**, per fixture:
+   - `graphic_words_total`;
+   - `graphic_words_per_narration_word`;
+   - `light_share` = scenes after the title card with `graphic_words ≤ 2` / (scenes − 1);
+   - R6 and R7 repair counts.
+
+   `light_share ≥ 1/3` joins `fixture_pass`. The report table gains these columns and prints the Wave B baselines from `design_templates.md` §5.5 beside them.
+2. **`src/animated_infographics/evals/word_density.py`** (new CLI). Its arguments are job directories. For each it:
+   - loads `timeline.json`;
+   - sums `graphic_words(scene.template, scene.props)`;
+   - sets `seconds = duration_frames / fps`;
+   - prints `<job>: graphic_words=<n> seconds=<s.s> per_second=<x.xx> light=<k>/<m>`, where m is the number of scenes after the title card.
+
+   It exits 1 if any job has `per_second > 1.0` or `k < m/3`.
+3. **`scripts/e2e.sh`** step 9 per `design_testing_and_validation.md` §4. Its lines go into `docs/evals/e2e_<date>.md`.
+
+**Validate:**
+- A unit test on a synthetic two-scene timeline checks exact numbers.
+- **Falsify:**
+  - the E2E step on a copy of a job whose `duration_frames` is divided by 3 → exit **1**;
+  - set the eval's light-share bar to 0.9 temporarily → the eval fails; restore it.
+
+**Blast radius:** `evals/planner.py`, `evals/word_density.py` (new), `scripts/e2e.sh`, tests.
+
+---
+
+### D5 — Re-measure; close-out
+
+**What this means for the user:** they see, measured on the four stories, that the videos carry far fewer words and that nothing else regressed.
+
+**Implementation:**
+1. **Planner eval**, cold (`--no-llm-cache`) → `docs/evals/planner_<date>.md`. Every `design_planner.md` §9 bar must hold on every fixture:
+   - fallback ≤ 15%, distinct templates, 0 violations;
+   - critic regression 8/8;
+   - text audit with 0 newlines, completeness failures, id leaks and **word-cap violations**;
+   - **light share ≥ 1/3**.
+   Report R6/R7 counts and graphic words next to Wave B's.
+2. **G12** including step 9. Every rendered job must show **≤ 1.0 graphic word/s and ≥ 1/3 light scenes**. Record each job's line against Wave B (`story_recipe_box` 1.91/s, 3/32).
+3. **Cold budget** (`scripts/measure_budget.sh`) → `docs/evals/budget_<date>.md`. The bars are unchanged (≤ 390 s / 210 s / 600 s). R7 pictures remove LLM calls, and the probe used fewer props attempts than Wave B.
+4. Open `story_recipe_box`'s contact sheet and five stills, and describe them:
+   - a reaction shot (a neutral face, no text);
+   - a set piece (name only);
+   - the single timeline (≤ 4 events);
+   - a text thread (≤ 3 messages);
+   - a `kinetic_quote` (≤ 12 words).
+5. README: remove any mention of captions under pictures or of trait chips; set the status to "Waves A–D delivered".
+
+**Validate:** the bars above. Exceeding one is filed in `ongoing_general_errors.md` with the numbers, never tuned away. In particular, **do not raise a word cap, lower the light-share bar or add a template to the picture class to pass.**
+
 **Close-out:**
 1. Full battery, bare; update §1.3.
-2. Rewrite this guide to **Queue Complete**. If the user has selected on Issue 7, rewrite it to that wave instead.
-3. Move Wave C to §5.1.
+2. Rewrite this guide to **Queue Complete**.
+3. Move Waves C and D to §5.1.
 4. Update `ongoing_general_errors.md` §1.
 5. Stop.
 
@@ -356,8 +632,8 @@ Unchanged from Wave B and re-verified by `doctor` (22 checks OK):
 
 ## 4. Deferred — do NOT start
 
-- **Issue 7** (`ongoing_general_errors.md`): fewer words on screen in story videos (Casually Explained as the reference). It awaits `Your selection`. Do not change any template limit, caption rule or selection rule for it.
-- **D1–D9** (`ongoing_general_errors.md` §4): video input + PiP, 16:9, multi-voice, live mode, Reddit URL fetch, public-domain photos, historical borders, web editor, cloud LLM.
+- **Anything beyond Wave D's five items for Issue 7.** In particular: no change to karaoke captions, no new templates, no redrawn art style, no re-layout of the caption band.
+- **DF1–DF9** (`ongoing_general_errors.md` §4): video input + PiP, 16:9, multi-voice, live mode, Reddit URL fetch, public-domain photos, historical borders, web editor, cloud LLM.
 
 ---
 
@@ -405,7 +681,8 @@ Unchanged from Wave B and re-verified by `doctor` (22 checks OK):
 
 **September 27, 2026 (in chat):**
 - **Issue 6 → D (keep as is):** "I think the paraphrasing is fine." `dialogue` and `text_thread` may paraphrase in every genre.
-- **Live presentations:** "For real-time presentations, it makes sense to show timelines and repeated graphics to drive home the point." Recorded for D4 in `design_future_live_and_video.md` §4.
+- **Live presentations:** "For real-time presentations, it makes sense to show timelines and repeated graphics to drive home the point." Recorded for DF4 in `design_future_live_and_video.md` §4.
+- **Issue 7 → A:** "Proceed with Option A." Picture-first stories: no restating text, word caps, a reaction-shot rhythm; karaoke captions stay (Wave D).
 
 ### 5.4 Invariants and intentional design decisions
 
@@ -422,6 +699,14 @@ Unchanged from Wave B and re-verified by `doctor` (22 checks OK):
 - **The critic names a thread's contact, and a contact that disagrees is a mismatch.** `unknown` never is (C8).
 - **A null `contact_cast_id` is filled only on an exact, unique name match** (C8).
 - **`dialogue` and `text_thread` may paraphrase** (Issue 6 → D). Do not add a verbatim or word-overlap check to them.
+
+**New (September 27, 2026, Wave D):**
+- **`WORD_CAPS` is the single source** of both the word caps and the density metric; `count_words` is the only word counter.
+- **Removed fields stay removed.** No caption under a picture and no trait chips, and no migration for jobs planned earlier.
+- **R7 pictures are deterministic:** a neutral reaction shot, or a set piece or place with its name only. No LLM call, no critic call.
+- **R7 never replaces a kept template** (`title_card`, `character_intro`, `dialogue`, `text_thread`, `reveal`), and quoted speech never counts as the narrator speaking.
+- **At most one `timeline` and one `comparison` per offline video** (R6, also enforced in `validate_plan`). Live mode is exempt by the user's direction.
+- **Karaoke captions are unchanged by Wave D.**
 
 **Unchanged:**
 - Job-local inputs are authoritative.
@@ -476,6 +761,13 @@ Unchanged from Wave B and re-verified by `doctor` (22 checks OK):
 - An array schema for per-message critic answers; `contact` before the message keys; the contact question without "according to the passage … does not say".
 - Fuzzy or first-name matching for the contact fill.
 
+**New, September 27, 2026 (Wave D):**
+- Issue 7 options B (hiding captions on quote, dialogue and text scenes), C (no captions) and D.
+- LLM-chosen emotions for R7 reaction shots, and a critic question that leans "neutral" (it answered `neutral` 27/27).
+- Letting R7 replace introductions, dialogue, text threads or reveals.
+- Raising `kinetic_quote` above 12 words for quotes that do not fit; the ladder's alternate handles them.
+- Counting bible names or the stat value in graphic words; a words-per-second bar in the planner eval (its transcript is simulated).
+
 ---
 
 ## 6. Where the contracts live
@@ -490,8 +782,11 @@ Unchanged from Wave B and re-verified by `doctor` (22 checks OK):
 | Palette, composited contrast §2.1, **captions incl. word spacing and spacing check (§8)**, illustration + text check §7 | `design_visual_direction.md` |
 | Remotion, clock, render CLI, preview, verification | `design_rendering.md` |
 | Fixtures, test rows (**quoted-speech splitting, internal ids, critic hardening, critic text threads**), gates, E2E, offline, cold budget | `design_testing_and_validation.md` |
-| **Issue 7**, resolved index (Wave B verdicts; Issue 6's decision), lessons 2.6–2.9, deferred items, decision log | `ongoing_general_errors.md` |
+| Resolved index (Wave B verdicts; Issues 6 and 7 decisions), lessons 2.6–2.9, deferred items DF1–DF9, decision log | `ongoing_general_errors.md` |
 | Live mode, including the user's direction on timelines and repeated graphics | `design_future_live_and_video.md` |
+| **Word budget: counting, removed fields, caps table, template classes, measurements (Wave D)** | `design_templates.md` §5 (per-template props in §2) |
+| **R6, R7, `rhythm_target`, deterministic pictures, the props prompt, validator item 9, word-budget bars** | `design_planner.md` §4, §5, §6 item 9, §9 |
+| **Word-cap and rhythm test rows; E2E step 9 (word density)** | `design_testing_and_validation.md` §2, §4 |
 
 ---
 
@@ -511,9 +806,9 @@ Unchanged from Wave B and re-verified by `doctor` (22 checks OK):
 ## 8. THE LOOP
 
 ```
-(1) Is there an approved item? Wave C, C1–C8, in §2 order (C8 runs third).
-    If all are done, STOP. Never start Issue 7 or D1–D9 without a user
-    selection.
+(1) Is there an approved item? Wave C (C1–C8, C8 third), then Wave D
+    (D1–D5), in §2 order. If all are done, STOP. Never start DF1–DF9 or
+    anything not in §3 without a user selection.
     Never fill in a `Your selection:` line.
 (2) Read the item and EVERY design section it names. Copy prompts, header
     lines, thresholds and error strings VERBATIM.
@@ -522,24 +817,35 @@ Unchanged from Wave B and re-verified by `doctor` (22 checks OK):
 (5) GREEN; then falsify (break, see red, restore, see green).
 (6) Open every artefact and describe it.
 (7) Full battery, bare. Update §1.3.
-(8) ONE commit, scope = item id (`fix(c1): …`). WHY + red/green in the body.
-    ONE line under "Wave C" in ongoing_general_errors.md §3, citing
-    `git log --grep "(c1)"`. Never amend after pushing.
+(8) ONE commit, scope = item id (`fix(c1): …`, `feat(d1): …`). WHY +
+    red/green in the body. ONE line under "Wave C" / "Wave D" in
+    ongoing_general_errors.md §3, citing `git log --grep "(c1)"`.
+    Never amend after pushing.
 (9) git push origin main.
 (10) Next item.
 ```
 
 ---
 
-## 9. Definition of Done: Wave C
+## 9. Definition of Done: Waves C and D
 
+**Wave C**
 - [ ] C1–C8 each landed as one pushed commit scoped to its id, with red and green runs recorded.
-- [ ] §1.3: every gate G1–G14 green, measured this session, read bare.
 - [ ] `tests/data/quote_sentence.json` yields one beat; the Walter Lindqvist quote is not attributed to the narrator in the re-run E2E.
 - [ ] Critic regression 8/8 on seeds 7, 8, 9; unchanged-after-mismatch reported and lower than Wave B's 30/149.
 - [ ] Case F yields `contact: Sofia vs Deb (c3)`. The re-run E2E lists every text thread's contact, with 0 `unavailable` text-thread critics.
-- [ ] 0 id leaks in the new planner eval's text audit.
+- [ ] 0 id leaks in C7's planner-eval text audit.
 - [ ] Caption spacing check green on the gallery fixture and on every re-previewed `story_recipe_box` page.
 - [ ] `countryCodes.ts` generated and sync-gated; a missing recorded input fails with exit 2.
+- [ ] C7's cold budget measured with 0 cache hits; bars met or filed. Wave C is recorded in §5.1; the guide is **not** rewritten yet.
+
+**Wave D**
+- [ ] D1–D5 each landed as one pushed commit scoped to its id, with red and green runs recorded.
+- [ ] The removed fields exist nowhere: the props models, the generated schema and TypeScript, the renderer and the fixtures (G5, G8 and G10 green).
+- [ ] All 9 frozen word-cap cases give their exact errors; the 7 rhythm cases and `recipe_choices.json` give their exact expected output.
+- [ ] Planner eval: every §9 bar on every fixture, including **light share ≥ 1/3** and **0 word-cap violations**; critic 8/8.
+- [ ] E2E step 9: every rendered job **≤ 1.0 graphic word/s** and **≥ 1/3 light scenes**, reported beside Wave B's numbers.
 - [ ] Cold budget re-measured with 0 cache hits; bars met or filed.
-- [ ] This guide rewritten to **Queue Complete** (or to the Issue 7 wave if selected). **Then stop. Do not invent work.**
+- [ ] Five `story_recipe_box` stills opened and described (reaction shot, set piece, timeline, text thread, quote).
+- [ ] §1.3: every gate G1–G14 green, measured this session, read bare.
+- [ ] This guide rewritten to **Queue Complete**. **Then stop. Do not invent work.**

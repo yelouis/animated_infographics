@@ -122,7 +122,7 @@ Beat 0 is **always `title_card`** and is not sent to the LLM.
 **Output schema:** `{"choices": [{"beat_i": int, "primary": <enum>, "alternate": <enum>}]}`, exactly one choice per beat in the window, `primary != alternate`.
 
 **`select.md` must convey these mappings:**
-spoken exchange → `dialogue`; texts/messages → `text_thread`; a person's first real appearance → `character_intro`; a reaction or feeling → `emotion_beat`; how people relate → `relationship_map`; a specific number → `stat_callout`; a sequence of dated events → `timeline`; a journey or where something is → `map_focus`; arriving somewhere or setting a scene → `location`; a key object or moment → `set_piece`; A-versus-B → `comparison`; X led to Y → `cause_effect`; a set of 2–4 things → `icon_list`; a twist or punchline → `reveal`; a line worth emphasising → `kinetic_quote`.
+spoken exchange → `dialogue`; texts/messages → `text_thread`; a person's first real appearance → `character_intro`; a reaction or feeling → `emotion_beat`; how people relate → `relationship_map`; a specific number → `stat_callout`; a sequence of dated events → `timeline`; a journey or where something is → `map_focus`; arriving somewhere or setting a scene → `location`; a key object or moment → `set_piece`; A-versus-B → `comparison`; X led to Y → `cause_effect`; a set of 2–3 things → `icon_list` (2–4 until September 27, 2026); a twist or punchline → `reveal`; a line worth emphasising → `kinetic_quote`.
 
 **Deterministic rule pass** over the whole video, in order. Each repair is logged in `plan_report.json.rule_repairs`:
 
@@ -133,6 +133,53 @@ spoken exchange → `dialogue`; texts/messages → `text_thread`; a person's fir
 | **R3** | `character_intro` for the same `cast_id` more than once | *(applied after props, §5)* later ones → alternate |
 | **R4** | `reveal` more than **2** times | Later ones → alternate |
 | **R5** | `kinetic_quote` more than `ceil(0.30 × n_scenes)` times (counting only LLM primaries) | Excess (latest first) → alternate if it is not `kinetic_quote` |
+| **R6** (added September 27, 2026) | More than one `timeline`, or more than one `comparison`, in the video | Later ones → alternate if it is neither the same template nor `title_card`, else `kinetic_quote` |
+| **R7** (added September 27, 2026) | Two worded scenes in a row, then a **replaceable** scene whose beat names a picture target | That scene → a deterministic **picture** (below) |
+
+**Rule order (revised September 27, 2026):** R1, **R6**, R2, R4, R5, **R7**, then R3 after props. R6 runs before R2 so that R2 removes any consecutive duplicate R6 creates. R7 runs last and never creates one.
+
+**R7, the reaction-shot rhythm (Issue 7 → Option A).** The template classes (picture, replaceable, kept) are in `design_templates.md` §5.4.
+```
+run = 1                                   # scene 0 (title_card) counts as worded
+for i in 1 .. n-1:
+    t = choices[i].primary
+    if run >= 2 and t in REPLACEABLE:
+        target = rhythm_target(beats[i].text, bible,
+                               prev=choices[i-1].primary,
+                               next=choices[i+1].primary if i+1 < n else None)
+        if target is not None:
+            choices[i] = Choice(beat_i=i, primary=target.template, alternate=t, rhythm_id=target.id)
+            log RuleRepair(rule="R7", scene=f"s{i:03d}", from=t, to=target.template)
+    run = 0 if choices[i].primary in PICTURE else run + 1
+```
+`rhythm_target` returns the **first** of these candidates, in this priority order, whose template differs from both `prev` and `next`, or `None`:
+1. **`emotion_beat`** (only if the bible has cast):
+   - **the narrator**, if the bible has one and the beat text, **with quoted spans removed** (`"[^"]*"` and `“[^”]*”`), matches `\b(i|me|my|mine|myself|we|us|our)\b` case-insensitively;
+   - otherwise **the non-narrator cast member named earliest** in the beat.
+2. **`set_piece`**: the set piece named earliest.
+3. **`location`**: the place named earliest.
+
+**"Named":**
+- A name's tokens are `re.findall(r"[a-z0-9]+", name.casefold())` of length ≥ 3, excluding `the`, `and`, `for`, `with` and `from`.
+- A name is named at the smallest offset in the casefolded beat where any token matches `\b<token>(?:s|'s|’s)?\b`.
+- Ties go to bible order.
+
+**The picture is built deterministically in the props stage.** No LLM call, no critic call, `rationale: "rhythm picture"`, `fallback_level` 0:
+- `emotion_beat` → `{cast_id, emotion: "neutral"}`, the **reaction shot**;
+- `set_piece` → `{set_piece_id}`;
+- `location` → `{place_id, era_label: null}`.
+
+If it fails `validate_scene`, the scene goes through the normal ladder with its alternate (the replaced template) as the primary.
+
+**Why deterministic, and why these exclusions (measured September 27, 2026, `gemma4:26b`):**
+- Given the reaction-shot beats R7 picks, the props model invented feelings for plain beats: "smug" for "…I think I got the better deal.", "confused" for "I asked if he minded me using it.", and "angry" for "Meredith was impressed by his opponent."
+- The blind critic's emotion readings were no steadier. Across 9 real beats its answers differed from the props in person or feeling on 6. Asked to prefer "neutral", it answered "neutral" on all 27 calls, which tells us nothing.
+- A neutral face invents nothing, which is what the reaction shot is for.
+- Quoted spans are removed before the first-person test, because Walt's line "I've been waiting for someone to call about the pie." would otherwise pick the narrator. That beat now gets the blueberry pie.
+- Kept templates are never replaced (`design_templates.md` §5.4).
+- The real cases are frozen in `tests/data/rhythm_cases.json` (R7-a…g).
+
+**Scope:** R6 and R7 are offline rules. Live presentations want timelines and repeated graphics (`design_future_live_and_video.md` §4).
 
 **Fallback** for a window after 3 failed attempts: every beat in it gets `primary = kinetic_quote`, `alternate = kinetic_quote`.
 
@@ -146,6 +193,13 @@ spoken exchange → `dialogue`; texts/messages → `text_thread`; a person's fir
 
 **`props.md` must state:** use only facts in *this beat's* text or the bible; never invent numbers, dates, names or quotes; stay within the length limits; write short, concrete, on-screen language (not sentences copied wholesale, except where a template requires a verbatim span); JSON only.
 
+**Word budget in the props prompt (added September 27, 2026, Issue 7 → Option A).** In `prompts/props.md`, guidelines 3 and 4 become, verbatim:
+```
+3. Length: Stay within every word and item limit in the writing rules. Fewer words is better.
+4. Style: The viewer hears the narration, so on-screen words must not repeat it. Write names, labels and numbers, not sentences. Do not copy sentences unless required by kinetic_quote.
+```
+Each template's registry `writing_rules` state its word caps and list maxima (`design_templates.md` §5.3); the exact strings are in `agent_execution_guide.md` item D2. The removed fields (`design_templates.md` §5.2) are no longer in the props models, so the schema cannot ask for them. The measured effect is in `design_templates.md` §5.5.
+
 **Dialogue and text messages may paraphrase (Issue 6 → Option D; the user, September 27, 2026, after watching both story renders: *"I think the paraphrasing is fine."*).** `dialogue` lines and `text_thread` messages may paraphrase or dramatise what the beat reports, in every genre. Only `kinetic_quote` needs a verbatim span (§8). **Do not add a verbatim or word-overlap check to `dialogue` or `text_thread`.** *Who* says each line is still checked by the critic (§11).
 
 **The fallback ladder for each scene:**
@@ -158,7 +212,12 @@ alternate template: same 3 attempts
 kinetic_quote built deterministically (never fails)      ← fallback_level 2
 ```
 
-**Deterministic `kinetic_quote`:** `text` = the beat text if ≤ 90 characters, else the beat text cut at the last word boundary at or before character 89, followed by `…`; `emphasis = []`; `attribution_cast_id = null`. It always passes the verbatim validator by construction.
+**Deterministic `kinetic_quote` (revised September 27, 2026, for the 12-word cap):**
+1. Take the beat text's whitespace tokens up to and including the 12th word (a token with a letter or digit).
+2. If the beat has more words, join them with single spaces and append `…`.
+3. Then, if the result is longer than 90 characters, apply the old rule: cut at the last word boundary at or before character 89, followed by `…`.
+
+`emphasis = []`; `attribution_cast_id = null`. It always passes the verbatim validator and the word cap by construction; a unit test proves both on a 30-word beat.
 
 `title_card` props for scene 0 are **not** LLM-generated: `title` = `bible.title`; `subtitle` = null; `icon` = the first set piece's icon, else the first place's icon, else null.
 
@@ -181,6 +240,10 @@ The **same functions** run on LLM output (inside the ladder) and on human edits 
    - **Repair (not an error):** runs of whitespace, including `\n`, collapse to one space; strip the ends.
    - **Errors:** the string contains no letter or digit (`"..."`, `"—"`); it ends with `-`, `(`, `[`, `,`, `:` or `/`; its `(`/`)`, `[`/`]` or `"` characters are unbalanced; its last word is a truncation fragment (a single **lowercase** letter other than `a`, e.g. "…crowds at p"; a capital like "Plan B" is legitimate). Error format: `props.caption: looks cut off ("…crowds at p")`.
 8. **No internal ids on screen (added September 26, 2026).** No free-text field (the list in item 7) may contain a whole token equal to one of **this bible's** entity ids (`c1`–`c8`, `p1`–`p4`, `v1`–`v3`), with or without surrounding parentheses or a trailing colon, casefolded. Error: `props.text: contains the internal id "v1" — use the name ("the recipe box")`. The props prompt says: "Refer to people, places and objects by their names; never write ids like c1, p2 or v1." Measured in Wave B's E2E storyboards: 4 leaks in 311 unique scenes, e.g. "One card missing from the recipe box (v1).", "c1 buys the Sundowner from c3", "Feathered adversaries (c4: The Emus)".
+9. **Word caps (added September 27, 2026, Issue 7 → Option A).**
+   - For every `(template, field path)` in `WORD_CAPS` (`design_templates.md` §5.3), `count_words(value)` must be ≤ the cap. Error: `props.items[0].label: 5 words, limit 3 — rewrite it shorter as a complete phrase`.
+   - A list longer than its model maximum is reported as `props.items: 4 items, limit 3 — keep the most important ones`, formatted from Pydantic's `too_long` error.
+   - Both run on LLM output and on human edits in `preview`, like every validator.
 
 ---
 
@@ -231,7 +294,8 @@ The renderer independently detects overflow in the DOM (`design_rendering.md` §
 | Voice decision matches `fixtures/expected/<name>.json` (`voice` and `reason`) | **4 of 4** fixtures |
 | Critic regression set (§11) | **8 of 8** cases (A, B, B′, C, E, F, G, H) classified as expected |
 | Critic cost | reported per fixture: critic calls, mismatches, props changed, tone repairs, **mismatches left unchanged** (no bar; the cold budget run bounds the time) |
-| Text audit (added September 26, 2026) | **0** strings containing a newline, **0** completeness failures, **0** internal-id leaks (§6 item 8). Strings exactly at their limit are **reported, not failed**: the model never sees the limit, so they cannot be truncations. Wave B's four were complete phrases ("Major Meredith of the Royal Australian Artillery"). |
+| Word budget (added September 27, 2026, Issue 7 → Option A) | **Light share ≥ 1/3**: scenes after the title card with ≤ 2 graphic words (`design_templates.md` §5.1). Also reported, with no bar: total graphic words, graphic words per narration word, and R6/R7 repairs. The per-second bar (**≤ 1.0 graphic word per second**) needs real narration timing, so it is checked in the E2E, not here: this eval's simulated transcript runs at a fixed 4 words/s (`design_testing_and_validation.md` §4). |
+| Text audit (added September 26, 2026) | **0** strings containing a newline, **0** completeness failures, **0** internal-id leaks (§6 item 8), **0** word-cap violations (§6 item 9, added September 27, 2026). Strings exactly at their limit are **reported, not failed**: the model never sees the limit, so they cannot be truncations. Wave B's four were complete phrases ("Major Meredith of the Royal Australian Artillery"). |
 
 A bar that fails is **filed, not tuned away**. Do not raise the fallback threshold, drop a validator, or loosen grounding to pass. Prompt changes are legitimate; each one re-runs the full eval and the report records the prompt files' SHA-256.
 
@@ -314,7 +378,7 @@ Runs after `ingest` and **before** `narrate`, because the voice must be known be
 
      Every ✗ that is actually true of a narrator (e.g. `I'm her daughter`) is an **accepted false negative**: it falls back to `am_michael`, which is the safe direction of the asymmetry.
    - `reason`: `"llm"` if `female`/`male` was accepted, `"no_evidence"` otherwise.
-5. **Decide:** `voice = af_heart` **iff** `perspective == "first_person"` **and** `narrator_gender == "female"`; otherwise `am_michael`. That makes `male` and `unknown` behave identically today. They are recorded separately because the bible (§2 repair 5) and any future multi-voice work (D3) can use the difference.
+5. **Decide:** `voice = af_heart` **iff** `perspective == "first_person"` **and** `narrator_gender == "female"`; otherwise `am_michael`. That makes `male` and `unknown` behave identically today. They are recorded separately because the bible (§2 repair 5) and any future multi-voice work (DF3) can use the difference.
 
 **`voice.json`:**
 
@@ -345,7 +409,7 @@ Runs after `ingest` and **before** `narrate`, because the voice must be known be
 
 **The user's selection:** *"Option A."* Part 1 (the deterministic rules) is §6 item 6. Part 2 is this section: one extra local LLM call per *people* scene, asking **blind** who says or feels what, and one props retry when that reading disagrees with the props.
 
-**Which scenes:** `dialogue`, `text_thread`, `emotion_beat`, and `kinetic_quote` **with** a non-null `attribution_cast_id`. Never the deterministic fallback scenes.
+**Which scenes:** `dialogue`, `text_thread`, `emotion_beat`, and `kinetic_quote` **with** a non-null `attribution_cast_id`. Never the deterministic scenes: `rationale` `"deterministic fallback"` or, from September 27, 2026, `"rhythm picture"` (R7's reaction shots and pictures, §4).
 
 **When:** inside props planning, after a candidate scene has passed `validate_scene` (fallback level 0 or 1), before it is accepted. **This includes scenes rebuilt by a rule repair** (R3's alternate), which the first implementation skipped (revised September 26, 2026).
 
@@ -367,7 +431,7 @@ Runs after `ingest` and **before** `narrate`, because the voice must be known be
 | `kinetic_quote` | `Who wrote or said these quoted words: "<text>" Answer a cast id, "narration" if they are the narrator telling the story, or "unknown".` | `{"speaker": <cast ids> \| "narration" \| "unknown"}` |
 | `dialogue` | `The scene shows these lines in order: 1. "<text>" 2. "<text>" … For each line, who says it (cast id or "unknown") and in what tone?` | `{"lines": [{"speaker": <cast ids> \| "unknown", "tone": neutral\|angry\|happy\|sad\|shocked\|sarcastic\|unknown}]}`, the same length as `props.lines` (a length mismatch is a failed attempt) |
 | `text_thread` (revised September 27, 2026) | `The phone belongs to the narrator. Messages in order: 1. "<text>" … For each, was it sent by the narrator ("me") or the other person ("them")? Who is the other person in this conversation, according to the passage? Answer a cast id, or "unknown" if the passage does not say or they are not in the cast list.` | **Keyed, one field per message**, in this order: `{"message_1": "me"\|"them"\|"unknown", …, "message_<n>": …, "contact": <cast ids except the narrator> \| "unknown"}`, where n = `len(props.messages)`; every key is required; `additionalProperties: false` |
-| `emotion_beat` | `Which cast member feels something in this beat, and what is the main feeling?` | `{"cast_id": <cast ids> \| "unknown", "emotion": happy\|sad\|angry\|shocked\|confused\|smug\|nervous\|unknown}` |
+| `emotion_beat` | `Which cast member feels something in this beat, and what is the main feeling?` | `{"cast_id": <cast ids> \| "unknown", "emotion": neutral\|happy\|sad\|angry\|shocked\|confused\|smug\|nervous\|unknown}`. `neutral` was added September 27, 2026 with the props enum (`design_templates.md` §2.11); the mismatch rule is unchanged. |
 
 **Why the `text_thread` answer is keyed (measured September 27, 2026, `gemma4:26b`, seeds 7, 8, 9, passage framing).** With a `messages` array, the model collapses consecutive messages from the same sender into one element. On the 8 real `text_thread` scenes of Wave B's story runs, **3 returned a 1-element array on all three seeds**: `story_room_12` s018 and `story_recipe_box` s011, and s012 of a second run, each with 2–3 consecutive "them" messages. Every attempt then fails the length check and the scene ends `unavailable`, unchecked. With one required key per message, **24 of 24** answers were complete, and the sender readings matched the array answers wherever those were complete. `dialogue` was measured with its array schema, and all 39 answers were complete (13 real scenes × 3 seeds), so it keeps its array.
 

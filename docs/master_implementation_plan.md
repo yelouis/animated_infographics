@@ -65,7 +65,16 @@ Wave B was delivered and independently verified: all gates green, all 17 items t
 
 A fifth problem was added on September 27, 2026: a text thread credited to the wrong contact.
 
-Wave C (C1–C8) fixes them and re-measures. Issue 6 was decided on September 27, 2026: paraphrased dialogue is fine. Issue 7 (fewer words on screen in story videos, inspired by Casually Explained) awaits the user and would become the next wave.
+Wave C (C1–C8) fixes them and re-measures. Issue 6 was decided on September 27, 2026: paraphrased dialogue is fine.
 
-## After Wave C (deferred; each needs a user selection)
+## Wave D: picture-first stories (Issue 7 → Option A, selected September 27, 2026)
+The story videos put ≈ 4.5 words/s on screen against 2.6 words/s of narration. The user's reference, Casually Explained, leaves half its frames wordless. Wave D (D1–D5) does four things, and keeps karaoke captions:
+- removes the text fields that restated the narration;
+- caps every remaining field in words;
+- limits each video to one timeline and one comparison;
+- inserts deterministic reaction shots and pictures after runs of wordy scenes.
+
+Measured before specifying: graphic words fall from 1.1–1.9 per second to 0.5–0.9, and 39–56% of scenes become nearly wordless. Contract: `design_templates.md` §5.
+
+## After Wave D (deferred; each needs a user selection)
 Video input with picture-in-picture · 16:9 output · **live mode** (streaming ASR → incremental planning → the same templates on a live clock, webcam in a corner) · multi-voice narration · Reddit URL fetch · public-domain photos · historical borders · a web review editor. See `ongoing_general_errors.md` §4.

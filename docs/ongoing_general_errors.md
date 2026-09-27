@@ -18,74 +18,15 @@
 - Hygiene: a hand-copied country-code table; a missing music file silently dropped (C6).
 - **Added September 27, 2026:** a text thread credited to the wrong person. In `story_room_12` s018, Deb's reply "Keep the room. He's never missed one." sits under the contact name **"Sofia"**, and the per-message sender check cannot see it (C8). Measuring the fix showed a second problem: the passage framing specified for C2 makes the model collapse consecutive same-sender messages into one answer. That left **3 of 8** real threads unchecked on every seed, so C2 now asks for one answer per message (lesson 2.9).
 
-**Issue 6 was decided on September 27, 2026** (paraphrase allowed; §3). **One question needs the user: Issue 7 below.** It does not block Wave C.
+**Issues 6 and 7 were decided on September 27, 2026** (§3):
+- **Issue 6:** paraphrase allowed; nothing to build.
+- **Issue 7 → Option A:** picture-first stories.
+
+**Wave D (D1–D5), specced in the same guide to run after Wave C, delivers Issue 7.** No question is open.
 
 ## ⚠️ Unresolved Issues & Suggestions
 
-### Issue 7: Too many words on screen in story videos
-
-**Status**: ⚠️ Confirmed Unresolved — measured September 27, 2026 on the Wave B E2E renders (run `20260926_140601`), against Casually Explained, the reference the user named.
-- **`story_recipe_box`** (the 2:37 video the user watched): all 407 narration words appear as karaoke captions, **plus 301 words drawn on the graphics**. That is about 708 words in 157 s: **≈ 4.5 words/s on screen, while the narrator speaks 2.6 words/s**.
-  - 16 of its 32 scenes carry ≥ 10 graphic words; only **3** carry ≤ 2.
-  - `story_room_12`: 289 graphic words, 1 of 33 scenes with ≤ 2. `emu_war`: 212 graphic words, 3 of 25.
-- **Most graphic words restate the narration:**
-  - set-piece and location captions (≈ 8 words each);
-  - a character's descriptor plus trait chips (9–14);
-  - **three timelines per personal story** (13–16 each);
-  - comparisons (13–21) and text threads (15–20).
-- **Casually Explained, "Break-Ups"** (12 frames, one every 30 s of story content, sponsor segment excluded; two more frames from "First Date Mistakes" agree):
-  - **6 of 12 frames have no words at all**; the median is 3 words; there are no burned-in captions.
-  - Words appear only as:
-    - text that exists in the story's world (a phone text thread, a dating profile, a search box);
-    - one short speech bubble that is the punchline;
-    - one-word labels that make a visual metaphor readable ("You" / "Them" on a world map);
-    - an occasional list card ("5 Stages of a Break-up").
-  - The drawing carries the joke and the narration carries the information. **The screen never repeats the narration in writing.**
-  - The most common shot is a character's face reacting.
-
-**Scope.** These options cover offline videos, both history and personal stories. Live presentations keep timelines and repeated graphics, per the user's September 27 note, recorded in `design_future_live_and_video.md` §4. As with Issues 3–5, the selected option's exact caps are measured on the four fixtures before they are specified.
-
-**Option A (recommended)**: **Picture-first stories: no restating text, word caps, a reaction-shot rhythm; karaoke captions stay**
-1. **Drop the fields that restate the narration.** The planner leaves them empty, and the renderer already handles empty values:
-   - the `set_piece`, `location`, `map_focus` and `stat_callout` captions;
-   - the `emotion_beat` caption;
-   - the `character_intro` trait chips, with its descriptor limited to ≤ 4 words.
-2. **Cap what remains**, each cap a validator counting words:
-   - every `label`, `heading`, `kicker` and `date_label` ≤ 3 words;
-   - lists ≤ 3 items, and a `timeline` 3–4 events;
-   - `comparison` ≤ 2 points per side;
-   - `text_thread` 2–3 messages of ≤ 8 words; `dialogue` ≤ 2 lines of ≤ 10 words;
-   - `kinetic_quote` ≤ 12 words (the deterministic fallback is cut at 12 words plus "…"); `reveal` text ≤ 6 words.
-   - At most **one** `timeline` and **one** `comparison` per video (a new selection rule, with the excess going to its alternate).
-3. **Rhythm rule.** After two scenes in a row with words, the next scene is a text-free picture (≤ 2 words): either the person the beat is about, reacting (`emotion_beat`, no caption), or the beat's place or object (`location`/`set_piece`, name only). If the beat has none of these, the rule waits for the next beat.
-- **Proposed bars** (planner eval, every fixture): **≤ 1.0 graphic word per second** and **≥ 1/3 of scenes with ≤ 2 graphic words**.
-- **Measured effect of steps 1–2 alone.** This is an upper bound: the caps were applied to the real storyboards.
-
-  | Fixture | Graphic words | Scenes with ≤ 2 words |
-  |---|---|---|
-  | `story_recipe_box` | 301 → ≤ 206 (1.92 → 1.31/s) | 3 → 10 of 32 |
-  | `story_room_12` | 289 → ≤ 179 (1.78 → 1.10/s) | 1 → 12 of 33 |
-  | `emu_war` | 212 → ≤ 117 (1.55 → 0.85/s) | 3 → 11 of 25 |
-
-  The one-timeline limit removes about 26–30 more words from each personal story. The rhythm rule is what lifts the text-free share to a third.
-  - *Pros*: Roughly halves the words on the graphics, and every cap is a deterministic validator, so it cannot drift. Karaoke captions are unchanged: muted 9:16 viewers still follow, and your September 23 choice stands. The reaction shot is Casually Explained's most common frame, and the avatars already have 7 expressions.
-  - *Cons*: Captions still show every spoken word (2.3–2.6 words/s), so total on-screen words in `story_recipe_box` fall only from ≈ 4.5 to ≈ 3.6 words/s (2.6 of captions plus ≤ 1.0 of graphics). It touches the template contracts (gallery fixtures and goldens re-cut), adds two selection rules, and needs a full planner-eval re-run. History videos lose detail: `emu_war`'s 17-word timeline becomes ≤ 4 events of ≤ 3 words. The avatars are simpler than Casually Explained's drawings, so several reaction shots can look repetitive.
-
-**Option B**: **A, plus captions step aside for quotes, dialogue and texts**
-- While a `kinetic_quote`, `dialogue` or `text_thread` scene is on screen, the karaoke captions are hidden. This extends today's `hide_captions` rule, which already hides them on the title card (`design_audio_and_timing.md`). Those scenes already show the spoken words, verbatim or paraphrased, so the viewer reads one thing instead of two.
-  - *Pros*: Removes the most obvious double reading. Measured, captions would be hidden for **24–29%** of each personal story's runtime (11% of `emu_war`, 0% of `molasses_flood`). It is a small compile/renderer change on top of A.
-  - *Cons*: Where a line is paraphrased (allowed since Issue 6), a muted viewer sees the paraphrase, not the exact narration, for those seconds. It is also one more rule for the reviewer to keep in mind.
-
-**Option C**: **A, plus no burned-in captions on story videos (the Casually Explained look)**
-- Captions are off by default; `infographics new --captions karaoke` turns them on for a job.
-  - *Pros*: Closest to the reference: on-screen words fall from ≈ 4.5 to about 1 word/s, and the picture gets all the attention.
-  - *Cons*: Reverses the September 23 karaoke decision; "no captions" is on the rejected list, so it needs this explicit selection. Muted viewers, a large share of 9:16 viewing, would follow only the pictures. The caption band (y 1220–1460) sits empty unless the templates are re-laid out, which this option does not include.
-
-**Option D**: **Keep as is**
-  - *Pros*: Nothing to build; the most information on screen.
-  - *Cons*: ≈ 4.5 words/s on screen against 2.6 words/s of narration; half the scenes carry ≥ 10 words.
-
-Your selection: _____
+No open issues.
 
 ---
 
@@ -168,6 +109,7 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 - **Issue 4 — Timeline date labels** — selected September 25, 2026: *"Proceed with Option A."* — delivered by B5 git log --grep "(b5)". Verified: date_labels must contain a grounded digit run or match one of 17 relative time phrases; pairwise distinct; first four-digit years in event order non-decreasing. Wave A defects ("2013/2013/2013", "No Record", "Present") rejected; valid dates and relative phrases accepted. The rule's permanent home is `design_planner.md` §8.
 - **Issue 5 — Meaning rules + people-scene critic** — selected September 25, 2026: *"Option A"* — delivered by B6 git log --grep "(b6)". Verified: currency symbols rejected in stat_callout suffix; ungrounded 'ago' rejected in location era_label; blind local critic checks dialogue, text_thread, emotion_beat, and attributed kinetic_quote with at most 1 retry and 0 loops; regression set classifies 4/4 cases as expected with gemma4:26b. The rules' permanent home is `design_planner.md` §6 item 6 and §11.
 - **Issue 6 — Dialogue and text messages the story never contains** — decided September 27, 2026 in chat, after watching the `story_recipe_box` and `story_room_12` renders: *"I think the paraphrasing is fine."* Recorded as **Option D (keep as is)**: `dialogue` and `text_thread` lines may paraphrase or dramatise in every genre; no verbatim or word-overlap check; the reviewer judges at the gate. Nothing to build. *Who* speaks is still checked by the critic (and, from C8, who the contact is). The permanent home is `design_planner.md` §5.
+- **Issue 7 — Too many words on screen in story videos** — selected September 27, 2026: *"Proceed with Option A."* Picture-first stories: no restating text, word caps, a reaction-shot rhythm; karaoke captions stay. To be delivered by **Wave D (D1–D5)**. The measurements behind the option (≈ 4.5 words/s on screen against 2.6 spoken; 6 of 12 sampled Casually Explained frames wordless) and the measured design (`design_templates.md` §5.5: caps met on 93/94 real scenes; 0.52–0.89 graphic words/s and 39–56% light scenes after R6/R7) live in the design docs. The permanent homes are `design_templates.md` §5 and `design_planner.md` §4–§6 and §9.
 
 **Wave B — delivered; independently verified September 26, 2026.** Verdicts: B1 ✓ (a missing recorded input is silently dropped → C6) · B2 ✓ · B3 ✓ (7 `run_with_retries` sites; `generate_json` only in `llm.py`) · B4 ✓ · B5 ✓ (all 8 probe cases, exact error strings) · **B6** as specced, but the spec had gaps → C1, C2, C3 · B7 ✓ (the audit's 4 at-limit strings are complete phrases; the bar was corrected in `design_planner.md` §9) · B8 ✓ · B9 ✓ (symlink gone) · B10 ✓ (prompt and lists byte-identical) · B11 ✓ (the white worst case is legible) · B12 ✓ (Lake Superior drawn; country codes hand-copied → C6) · B13 ✓ · B14 ✓ · B15 ✓ · B16 ✓ (sync count parsed from JSON) · B17 ✓ (re-measured; see `agent_execution_guide.md` §1.3).
 
@@ -198,15 +140,15 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 
 | Id | Feature | Trigger to start | Notes |
 |---|---|---|---|
-| D1 | Video input + PiP of the original speaker | User selects it | The 9:16 PiP placement is an open design question (`design_future_live_and_video.md` §2) |
-| D2 | 16:9 output | User selects it | Roughly doubles template work |
-| D3 | Multi-voice narration (character voices) | User selects it | Needs a dialogue-attribution step (see Issue 5 for how often attribution is wrong today). `voice.json` already records `male` separately from `unknown`. |
-| D4 | **Live mode** (speak in real time, webcam in a corner) | Wave B complete **and** the user answers the three questions in `design_future_live_and_video.md` §4 | The end goal |
-| D5 | Reddit URL fetching | User selects it | Terms-of-service review first |
-| D6 | Public-domain photo sourcing (e.g. Wikimedia) | User selects it | Requires runtime network, which conflicts with the local-only policy as written |
-| D7 | Historical map borders | User selects it | The MVP uses modern borders |
-| D8 | Web editor for the review gate | User selects it | The MVP gate is JSON edit + contact sheet |
-| D9 | Cloud LLM planner backend | Only if the local planner fails its eval bars on both candidate models **and** the user accepts a paid API | Reverses a user decision; needs explicit selection |
+| DF1 | Video input + PiP of the original speaker | User selects it | The 9:16 PiP placement is an open design question (`design_future_live_and_video.md` §2) |
+| DF2 | 16:9 output | User selects it | Roughly doubles template work |
+| DF3 | Multi-voice narration (character voices) | User selects it | Needs a dialogue-attribution step (see Issue 5 for how often attribution is wrong today). `voice.json` already records `male` separately from `unknown`. |
+| DF4 | **Live mode** (speak in real time, webcam in a corner) | Wave B complete **and** the user answers the three questions in `design_future_live_and_video.md` §4 | The end goal |
+| DF5 | Reddit URL fetching | User selects it | Terms-of-service review first |
+| DF6 | Public-domain photo sourcing (e.g. Wikimedia) | User selects it | Requires runtime network, which conflicts with the local-only policy as written |
+| DF7 | Historical map borders | User selects it | The MVP uses modern borders |
+| DF8 | Web editor for the review gate | User selects it | The MVP gate is JSON edit + contact sheet |
+| DF9 | Cloud LLM planner backend | Only if the local planner fails its eval bars on both candidate models **and** the user accepts a paid API | Reverses a user decision; needs explicit selection |
 
 ---
 
@@ -261,3 +203,21 @@ Wave C (C1–C7) specced. Issue 6 filed for the user.
 - The text-thread critic now answers one key per message (C2 amended: the array schema left 3 of 8 real threads unchecked) and names the contact (C8: Deb caught on `story_room_12` s018 on 3 of 3 seeds, no false contact reading on 8 threads × 3 seeds).
 - Regression cases F, G and H were frozen from real output in `tests/data/critic_text_thread_cases.json`; the critic bar is now 8/8.
 - Contracts updated: `design_planner.md` §5, §9 and §11; `design_templates.md` §2.10; `design_testing_and_validation.md` §2; `design_future_live_and_video.md` §4.
+
+**September 27, 2026: selection (user).** Issue 7 → *"Proceed with Option A."*
+
+**September 27, 2026: consequences (designer, measured before specifying, `gemma4:26b`, the Wave B E2E storyboards):**
+- **Caps met.** The props stage with the proposed caps passed on 93 of 94 real scenes within the normal 3 attempts, with fewer attempts than Wave B (118 vs 147). The one failure is a 13-word verbatim quote, which the ladder moves to its alternate.
+- **Both selection rules are needed.** Caps alone left `story_recipe_box` at 1.13 words/s and 31% light scenes. With R6 (one timeline and one comparison per video) and R7 (rhythm), the four fixtures measure 0.52–0.89 words/s and 39–56%.
+- **R7 pictures are deterministic.** A neutral reaction shot, or a named set piece or place: the model invented feelings for plain beats, and the critic's readings were unstable.
+- **R7 never replaces kept templates.** Unrestricted, it replaced Meredith's introduction and Deb's reply.
+- **Quoted speech never counts as the narrator.** Walt's "I've been waiting…" would otherwise have picked the narrator.
+- **The words-per-second bar lives in the E2E.** The planner eval simulates timing at 4 words/s, so it carries the light-share bar only.
+- **Relabelled:** the deferred features D1–D9 became **DF1–DF9**, so that Wave D's item ids are unambiguous. `design_future_live_and_video.md` already used F1–F6 for its constraints.
+- **New frozen real data:** `tests/data/word_cap_cases.json`, `rhythm_cases.json`, `recipe_choices.json` and `word_caps_live_cases.json`.
+- **Contracts updated:**
+  - `design_templates.md` §1, §2, §3 and §5 (new);
+  - `design_planner.md` §4 (R6, R7), §5, §6 item 9, §9 and §11;
+  - `design_testing_and_validation.md` §2 and §4 (step 9);
+  - `design_data_contracts.md` §5 and §6.
+
