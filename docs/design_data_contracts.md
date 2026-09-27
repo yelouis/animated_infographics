@@ -159,7 +159,7 @@ Written by the planner; read by `status`, the planner eval and `preview/storyboa
 
 `fallback_level`: `0` primary template accepted · `1` alternate template used · `2` deterministic `kinetic_quote` fallback.
 
-`critic` (added September 25, 2026, Issue 5): `status` ∈ `not_applicable` · `agree` · `mismatch_retried` · `unavailable`; `mismatches` lists `"<field>: <props value> vs <critic value>"`; `changed` is true iff the final props **differ** from the original. `repair` is `"tone_neutral"` or null. `retry_errors` holds the critic-triggered retry's validation errors when it failed (added September 26, 2026). Rules: `design_planner.md` §11.
+`critic` (added September 25, 2026, Issue 5): `status` ∈ `not_applicable` · `agree` · `mismatch_retried` · `unavailable`; `mismatches` lists `"<field>: <props value> vs <critic value>"` (for a `text_thread` contact, `"contact: <contact_name> vs <cast name> (<cast id>)"`, added September 27, 2026); `changed` is true iff the final props **differ** from the original. `repair` is `"tone_neutral"` or null. `retry_errors` holds the critic-triggered retry's validation errors when it failed (added September 26, 2026). Rules: `design_planner.md` §11.
 
 ---
 

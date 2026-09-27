@@ -63,7 +63,9 @@ Wave B was delivered and independently verified: all gates green, all 17 items t
 - internal ids on screen;
 - caption words colliding.
 
-Wave C (C1–C7) fixes them and re-measures. Issue 6 (invented dialogue) awaits the user.
+A fifth problem was added on September 27, 2026: a text thread credited to the wrong contact.
+
+Wave C (C1–C8) fixes them and re-measures. Issue 6 was decided on September 27, 2026: paraphrased dialogue is fine. Issue 7 (fewer words on screen in story videos, inspired by Casually Explained) awaits the user and would become the next wave.
 
 ## After Wave C (deferred; each needs a user selection)
 Video input with picture-in-picture · 16:9 output · **live mode** (streaming ASR → incremental planning → the same templates on a live clock, webcam in a corner) · multi-voice narration · Reddit URL fetch · public-domain photos · historical borders · a web review editor. See `ongoing_general_errors.md` §4.

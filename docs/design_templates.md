@@ -107,7 +107,8 @@ Notation: `str≤N` = 1..N characters; `?` = nullable; `[a..b]` = list length bo
 - **Slots:** contact body 700 40→30 · 1 · 560 | message body 600 38→30 · 4 · 476
 - **Motion:** messages at `item_frames` (`spread 0.7`); each "them" message is preceded by a 12-frame typing indicator (three dots) that ends at its item frame. Hold: the phone floats 6 px, period 90 frames.
 - **SFX:** `pop` at each `item`.
-- **Critic:** every accepted scene goes through the people-scene critic (`design_planner.md` §11): who sent each message (the narrator or the contact), read blind from the beat.
+- **Critic:** every accepted scene goes through the people-scene critic (`design_planner.md` §11): who sent each message (the narrator or the contact), and **who the contact is** (added September 27, 2026), read blind from the passage.
+- **Contact avatar:** when `contact_name` names exactly one non-narrator cast member (case-insensitive), the planner fills a null `contact_cast_id`, so the header shows that person's avatar (`design_planner.md` §11, "Contact resolution").
 
 ### 2.11 `emotion_beat` (people)
 - **Use when:** a reaction or feeling is the point.

@@ -1,0 +1,197 @@
+{
+  "source": "Wave B E2E run 20260926_140601 (real planner output, frozen September 27, 2026)",
+  "cases": [
+    {
+      "case": "F",
+      "job": "story-room-12-20260926-211326",
+      "scene_id": "s018",
+      "cast": [
+        {
+          "id": "c1",
+          "name": "Me",
+          "role": "The night clerk and owner",
+          "is_narrator": true
+        },
+        {
+          "id": "c2",
+          "name": "Mr. Alvarez",
+          "role": "The regular guest",
+          "is_narrator": false
+        },
+        {
+          "id": "c3",
+          "name": "Deb",
+          "role": "The motel manager",
+          "is_narrator": false
+        },
+        {
+          "id": "c4",
+          "name": "Sofia",
+          "role": "Mr. Alvarez's daughter",
+          "is_narrator": false
+        }
+      ],
+      "beats": {
+        "before_previous": "This March, he didn't come. By midnight, I texted Deb:",
+        "previous": "\"Mr. Alvarez isn't here. Should I worry?\"",
+        "current": "She wrote back: \"Keep the room. He's never missed one.\"",
+        "next": "At 1:40 in the morning, a woman walked in holding a small suitcase I recognized."
+      },
+      "props": {
+        "contact_name": "Sofia",
+        "contact_cast_id": null,
+        "messages": [
+          {
+            "from": "them",
+            "text": "Keep the room."
+          },
+          {
+            "from": "them",
+            "text": "He's never missed one."
+          }
+        ]
+      },
+      "expected": {
+        "senders": [
+          "them",
+          "them"
+        ],
+        "contact": "c3",
+        "result": "mismatch",
+        "mismatches": [
+          "contact: Sofia vs Deb (c3)"
+        ]
+      }
+    },
+    {
+      "case": "G",
+      "job": "story-room-12-20260926-211326",
+      "scene_id": "s004",
+      "cast": [
+        {
+          "id": "c1",
+          "name": "Me",
+          "role": "The night clerk and owner",
+          "is_narrator": true
+        },
+        {
+          "id": "c2",
+          "name": "Mr. Alvarez",
+          "role": "The regular guest",
+          "is_narrator": false
+        },
+        {
+          "id": "c3",
+          "name": "Deb",
+          "role": "The motel manager",
+          "is_narrator": false
+        },
+        {
+          "id": "c4",
+          "name": "Sofia",
+          "role": "Mr. Alvarez's daughter",
+          "is_narrator": false
+        }
+      ],
+      "beats": {
+        "before_previous": "Texas. Nights were quiet.",
+        "previous": "I did crosswords, knitted scarves nobody asked for,",
+        "current": "and texted my wife to make sure she was still awake.",
+        "next": "Every year on March 3rd, the same man checked in."
+      },
+      "props": {
+        "contact_name": "Wife",
+        "contact_cast_id": null,
+        "messages": [
+          {
+            "from": "me",
+            "text": "You still awake?"
+          },
+          {
+            "from": "them",
+            "text": "Yeah, just reading. Why?"
+          },
+          {
+            "from": "me",
+            "text": "Just checking in. Love you."
+          }
+        ]
+      },
+      "expected": {
+        "senders": [
+          "me",
+          "them",
+          "me"
+        ],
+        "contact": "unknown",
+        "result": "agree",
+        "mismatches": []
+      }
+    },
+    {
+      "case": "H",
+      "job": "story-recipe-box-20260926-211008",
+      "scene_id": "s011",
+      "cast": [
+        {
+          "id": "c1",
+          "name": "Me",
+          "role": "narrator",
+          "is_narrator": true
+        },
+        {
+          "id": "c2",
+          "name": "Grandma Rose",
+          "role": "character",
+          "is_narrator": false
+        },
+        {
+          "id": "c3",
+          "name": "Danny",
+          "role": "character",
+          "is_narrator": false
+        },
+        {
+          "id": "c4",
+          "name": "Walt",
+          "role": "character",
+          "is_narrator": false
+        }
+      ],
+      "beats": {
+        "before_previous": "I kept that slip on my fridge for eleven years.",
+        "previous": "Last spring, Danny finally sold the house.",
+        "current": "While clearing the attic, he found a shoebox of letters and texted me a photo:",
+        "next": "\"Who is Walter Lindqvist and why did he write to Grandma 60 times?\""
+      },
+      "props": {
+        "contact_name": "Danny",
+        "contact_cast_id": null,
+        "messages": [
+          {
+            "from": "them",
+            "text": "Found this in the attic while clearing out the house."
+          },
+          {
+            "from": "them",
+            "text": "A whole shoebox of letters."
+          },
+          {
+            "from": "them",
+            "text": "[Photo Attached]"
+          }
+        ]
+      },
+      "expected": {
+        "senders": [
+          "them",
+          "them",
+          "them"
+        ],
+        "contact": "c3",
+        "result": "agree",
+        "mismatches": []
+      }
+    }
+  ]
+}

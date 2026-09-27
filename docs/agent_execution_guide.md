@@ -1,14 +1,15 @@
-# Agent Execution Guide — Active Build: Wave C (verification fixes, 7 items) — September 26, 2026
+# Agent Execution Guide — Active Build: Wave C (verification fixes, 8 items) — September 27, 2026
 
 **You are an engineering agent with no memory of this project.** The offline MVP (Wave A, A1–A22) and the verification-fix wave (Wave B, B1–B17) are built, committed and pushed (head `beb4c4f`). On September 26, 2026 an independent pass re-ran every gate, read every Wave B item against its spec, **and inspected real output**. All 14 gates reproduce green, and all 17 Wave B items do what their specs say. But real output showed problems the specs had not anticipated:
 - **The people-scene critic (Issue 5) misses the error it was chosen to catch.** In a real `story_recipe_box` run it *agreed* that Danny's text "Who is Walter Lindqvist…" was the narrator's. The beat splitter had cut the quote away from "…he texted me a photo:", and the critic treated that neighbouring beat as "context only".
 - **30 of 149 critic disagreements kept the known-wrong scene**, because the retry had one attempt.
 - **Internal ids appear on screen** ("One card missing from the recipe box (v1).").
 - **Highlighted caption words collide with their neighbours** ("theengagementfell").
+- **A text thread shows the wrong contact** (added September 27, 2026). Deb's reply "Keep the room. He's never missed one." appears under "Sofia", and the critic cannot see it because it asks only "me or them" per message. While measuring this, the passage framing for C2 turned out to make the model **collapse consecutive same-sender messages into one answer**: 3 of 8 real threads would end unchecked. C2 now asks for one answer per message; C8 adds the contact.
 
-Wave C fixes these. **It is the only approved work.** Issue 6 (invented dialogue) awaits the user and must not be started.
+Wave C fixes these. **It is the only approved work.** Issue 6 was decided on September 27, 2026: paraphrased dialogue is fine, so there is nothing to build. **Issue 7 (fewer words on screen) awaits the user and must not be started.**
 
-**What is approved:** Wave C, items **C1–C7** in §3, in the order of §2. **What NOT to touch:** everything in §5. **What must not be started:** everything in §4.
+**What is approved:** Wave C, items **C1–C8** in §3, in the order of §2 (C8 runs third, straight after C2). **What NOT to touch:** everything in §5. **What must not be started:** everything in §4.
 
 **Every number and literal string in this document and in the design docs is a decision, not a suggestion.** Implement as written; that includes prompts, header lines, thresholds, seeds and error strings. If a value is genuinely impossible, keep the *intent*, deviate minimally, say so in the commit body, and add it to §5.2. If the design itself cannot work, **STOP and file it in `docs/ongoing_general_errors.md` with options and a `Your selection: _____` line. Do not improvise, and never fill in a selection line yourself.**
 
@@ -47,7 +48,9 @@ Unchanged from Wave B and re-verified by `doctor` (22 checks OK):
 
 - Wave A `4df212a`…`e374a15`; Wave B `cad065d`…`beb4c4f` (17 commits scoped `(b1)`…`(b17)`).
 - Design contracts revised September 26, 2026 for Wave C (list in `ongoing_general_errors.md` §5).
-- New frozen test data: `tests/data/quote_sentence.json` (the real 9,625 ms quoted sentence and its word timings).
+- New frozen test data:
+  - `tests/data/quote_sentence.json`: the real 9,625 ms quoted sentence and its word timings;
+  - `tests/data/critic_text_thread_cases.json` (September 27): real `text_thread` scenes F, G and H, each with cast, the four passage beats, props and expected result.
 
 ### 1.3 Gates (run bare in the verification session)
 
@@ -69,7 +72,7 @@ Unchanged from Wave B and re-verified by `doctor` (22 checks OK):
 | G14 | `uv run infographics doctor` | exit 0 · 22 checks OK |
 | Budget | `./scripts/measure_budget.sh` (cold, `story_recipe_box`) | exit 0 · cold, **0 cache hits** · `new`→review **241.2 s** (≤ 390) · render **198.1 s** (≤ 210, only 12 s of headroom) · total **439.3 s** (≤ 600) · 70 LLM calls, 10 critic calls, 4 text checks, 5 images |
 
-### 1.4 Measurements that shaped Wave C (September 26, 2026, `gemma4:26b`)
+### 1.4 Measurements that shaped Wave C (September 26–27, 2026, `gemma4:26b`)
 
 | What | Result |
 |---|---|
@@ -80,6 +83,10 @@ Unchanged from Wave B and re-verified by `doctor` (22 checks OK):
 | Critic outcomes across Wave B's runs | 261 agree · 119 "changed" · **30 retried but unchanged** (known-wrong original kept) |
 | Internal ids in free text, Wave B E2E storyboards | **4** in 311 unique scenes |
 | Caption gap metric on half-scale stills | broken "theengagementfell": widest empty run **4 px**; correctly spaced pages **12–17 px**; a second collapsed page found ("312 handwritten cards,") |
+| **(Sept 27)** `text_thread` critic with passage framing and the **array** schema, 8 real threads × seeds 7–9 | **3 of 8** threads (room12 s018, recipe s011, recipe run 2 s012; all with consecutive "them" messages) returned **1 element** on every seed: a failed attempt each time → `unavailable` |
+| **(Sept 27)** Same, with **keyed** answers (`message_1…message_n`) | **24/24** complete; the senders match the array answers wherever those were complete |
+| **(Sept 27)** `dialogue` critic, array schema, passage framing, 13 real scenes × 3 seeds | **39/39** complete: dialogue keeps its array |
+| **(Sept 27)** Contact question (§11 wording), keyed, 8 threads × 3 seeds | s018 "Sofia" → **`c3` Deb** 3/3 (the real error); "Wife" and "Unknown Number" → `unknown`; Deb/Danny threads → `c3` (agree); **0 false contact readings**. The earlier wording without "according to the passage … does not say" answered Danny for an invented Walt thread (a false alarm) |
 
 ---
 
@@ -88,12 +95,13 @@ Unchanged from Wave B and re-verified by `doctor` (22 checks OK):
 | # | Item | Why this position |
 |---|---|---|
 | C1 | Quoted speech stays whole when splitting beats | It changes beats, which changes every downstream planner input. It must land before the critic items are measured. |
-| C2 | Critic passage framing + regression case E | The critic's input format; needs C1's beats for its real-output check. |
+| C2 | Critic passage framing, keyed text-thread answers, regression cases E + H | The critic's input format; needs C1's beats for its real-output check. The keyed answer must land with the framing, because the framing is what triggers the collapse. |
+| C8 | Text-thread contact identity (critic `contact`, contact resolution, avatar fill, cases F + G) | Extends C2's text-thread request; it must precede C3, whose retry path formats its mismatches, and C7's eval. |
 | C3 | Critic retry robustness (3 attempts, tone repair, recorded errors, R3 path, honest `changed`) | Builds on C2's critic; its effect is measured in C7's eval. |
 | C4 | No internal ids on screen | A validator + prompt change; must precede C7's eval. |
 | C5 | Caption word spacing | Renderer-only; changes goldens. Independent of C1–C4. |
 | C6 | Hygiene: generated country codes; a missing input fails loudly | Small; before the final measurement. |
-| C7 | Re-measure: planner eval, E2E, cold budget; close-out | Measures the finished system. |
+| C7 | Re-measure: planner eval, E2E, cold budget; close-out | Measures the finished system (C1–C6 and C8). |
 
 ---
 
@@ -128,27 +136,96 @@ Unchanged from Wave B and re-verified by `doctor` (22 checks OK):
 
 ---
 
-### C2 — Critic passage framing + regression case E
+### C2 — Critic passage framing, keyed text-thread answers, regression cases E + H
 
-**What this means for the user:** the critic actually catches a line credited to the wrong person, including when the speaker is named in the previous sentence.
+**What this means for the user:**
+- The critic catches a line credited to the wrong person, including when the speaker is named in the sentence before the quote.
+- Text threads get checked instead of silently skipped.
 
 **The gap:**
 - `src/animated_infographics/planner/critic.py:59-64` sends `Previous beat [context only]` / `Current beat` / `Next beat [context only]`.
 - Measured: on the real split case the critic answered the narrator on seeds 7, 8 and 9, and the rules then report **agree** (§1.4).
-- Contract: `design_planner.md` §11 (revised "User" bullet; regression case E).
+- **Measured September 27, with the passage framing:** `critic.py:128-154` asks text threads for a `messages` array.
+  - On **3 of 8** real threads, all with consecutive "them" messages, `gemma4:26b` returned a **1-element** array on seeds 7, 8 and 9.
+  - `validate_critic_answer` (`critic.py:204-211`) rightly counts that as a failed attempt, so each of those scenes would end `unavailable`, unchecked.
+  - With one required key per message: 24/24 complete (§1.4). This is regression case **H**.
+- Contract: `design_planner.md` §11 (the revised "User" bullet; the `text_thread` row; "Why the `text_thread` answer is keyed"; cases E and H).
 
 **Implementation:**
-1. `build_critic_request` builds the user message as: the cast block; a blank line; the **exact** header line `Passage (read all of it; who speaks is often named in the sentence before a quote):`; a newline; then the beat before the previous one, the previous beat, this beat and the next beat, joined by single spaces (skip missing ones); a blank line; the template's question (unchanged).
+1. `build_critic_request` builds the user message as follows:
+   - the cast block;
+   - a blank line;
+   - the **exact** header line `Passage (read all of it; who speaks is often named in the sentence before a quote):`, then a newline;
+   - the beat before the previous one, the previous beat, this beat and the next beat, joined by single spaces (skip missing ones);
+   - a blank line;
+   - the template's question (unchanged in this item).
 2. No "context only" text remains anywhere in the request.
-3. Add case **E** to the regression set, in both `tests/slow/` and the planner eval, exactly as in the §11 table. Case E uses its own cast list: `c1 Me (narrator)`, `c2 Grandma Rose`, `c3 Danny`, `c4 Walt`.
+3. **`text_thread` answers are keyed.**
+   - The schema is `{"type": "object", "properties": {"message_1": E, …, "message_<n>": E}, "required": ["message_1", …, "message_<n>"], "additionalProperties": false}`.
+   - `E = {"type": "string", "enum": ["me", "them", "unknown"]}` and `n = len(props.messages)`.
+   - The keys appear in this order.
+4. `validate_critic_answer` for `text_thread`:
+   - a missing `message_<k>` is the error `critic messages missing: message_<k>` (a failed attempt);
+   - otherwise it returns the answer **normalised** to `{"messages": [{"sender": answer["message_1"]}, …]}`, so `critic_mismatches` keeps its current sender logic.
+5. `dialogue` keeps its array schema (39/39 complete, §1.4).
+6. Add cases **E** and **H** to the regression set, in both `tests/slow/` and the planner eval, exactly as in the §11 table.
+   - Case E uses its own cast list: `c1 Me (narrator)`, `c2 Grandma Rose`, `c3 Danny`, `c4 Walt`.
+   - Case H reads its cast, the four passage beats and its props from `tests/data/critic_text_thread_cases.json` (`"case": "H"`).
 
 **Validate:**
 - **Red first:** case E fails on the current framing (the critic answers `c1`, reported as agree).
-- After the fix: the five cases A, B, B′, C, E classify correctly on **seeds 7, 8 and 9** (15/15).
-- Unit: the request contains the header line verbatim and no "context only".
-- **Falsify:** restore the old labels → case E is red.
+- **Intermediate red** (the reason step 3 exists): after step 1 but before step 3, case H returns one element on seeds 7, 8 and 9 → `unavailable`. Record it.
+- After the fix, the six cases A, B, B′, C, E and H classify correctly on **seeds 7, 8 and 9** (18/18).
+- Unit tests:
+  - the request contains the header line verbatim and no "context only";
+  - a 3-message thread's schema has exactly the keys `message_1`, `message_2`, `message_3`, all required;
+  - a stub answer missing `message_2` is a failed attempt.
+- **Falsify:**
+  - restore the old labels → case E is red;
+  - restore the array schema → case H is red.
 
-**Blast radius:** `planner/critic.py`, `tests/test_critic.py`, `tests/slow/`, `evals/planner.py`.
+**Blast radius:** `planner/critic.py`, `tests/test_critic.py`, `tests/slow/`, `evals/planner.py`; `tests/data/critic_text_thread_cases.json` is already committed.
+
+---
+
+### C8 — Text-thread contact identity
+
+**What this means for the user:** a text message is never shown under the wrong person's name, and a thread with someone from the story shows their face.
+
+**The gap:**
+- In `story_room_12` s018 (Wave B E2E), the beat `She wrote back: "Keep the room. He's never missed one."` directly follows `By midnight, I texted Deb:`, yet the thread's `contact_name` is **"Sofia"** (`c4`, Mr. Alvarez's daughter).
+  - Nothing checks `contact_name`. The critic asks only "me or them" per message (`critic.py:128-154`), and both messages really are "them".
+  - `critic_mismatches` compares senders only (`critic.py:263-275`). `plan_report.json` records s018 as **agree**.
+- All 8 threads in Wave B's story runs have `contact_cast_id: null`, including the four whose contact is Deb or Danny. So the header avatar (`design_templates.md` §2.10) is never drawn.
+- Contracts: `design_planner.md` §11 (the `text_thread` row; "Why `contact`"; "Contact resolution"; the **Contact** mismatch rule; cases F and G); `design_templates.md` §2.10.
+
+**Implementation:**
+1. Append to the `text_thread` question, verbatim, with one leading space: ` Who is the other person in this conversation, according to the passage? Answer a cast id, or "unknown" if the passage does not say or they are not in the cast list.` The wording is measured: without "according to the passage … does not say", the model answered Danny for an invented thread with Walt (§1.4).
+2. Add `"contact": {"type": "string", "enum": [<every cast id except the narrator's>, "unknown"]}` to the keyed schema from C2, as the **last** property, and require it. With `contact` placed first, a different set of threads collapsed.
+3. `planner/critic.py`: add `resolve_contact(props, bible) -> str | None`. Let `norm(x) = " ".join(x.split()).casefold()`. It returns:
+   - `contact_cast_id`, if set;
+   - otherwise the id of the **only** non-narrator cast member with `norm(name) == norm(contact_name)`;
+   - otherwise `None`.
+4. `critic_mismatches` for `text_thread`: when `answer["contact"]` is neither `"unknown"` nor `resolve_contact(...)`, append `f"contact: {props.contact_name} vs {name} ({cid})"`, where `cid` is the critic's id and `name` is that cast member's bible name (e.g. `contact: Sofia vs Deb (c3)`). `format_disagreement_message` then renders `- contact: you said Sofia; the reading says Deb (c3)`, and needs no change.
+5. **Contact fill** (`planner/props.py`). For every `text_thread` props object the planner produces (primary, alternate and critic retry):
+   - after text normalisation and **before** `validate_scene`, if `contact_cast_id` is null and rule 3's name match finds exactly one id, set `contact_cast_id` to it (a new props object);
+   - never touch a non-null `contact_cast_id`;
+   - leave hand edits in `preview` alone.
+6. Add cases **F** and **G** to the regression set in `tests/slow/` and the planner eval, from `tests/data/critic_text_thread_cases.json`.
+
+**Validate:**
+- The "critic text threads" row in `design_testing_and_validation.md` §2.
+- **Red first:** on the post-C2 code, case F yields no mismatch (reported agree); record it.
+- **The falsifying assertion:** F yields exactly `["contact: Sofia vs Deb (c3)"]` on seeds 7, 8 and 9.
+- After the fix, the eight cases A, B, B′, C, E, F, G and H classify correctly on seeds 7, 8 and 9 (24/24).
+- **Falsify:**
+  - delete the contact comparison → F is red;
+  - move `contact` before the message keys and re-run F, G and H on the three seeds → record whether any collapses (a measurement for the commit body, not a gate).
+- In C7's E2E, for every `text_thread` in `story_room_12` and `story_recipe_box`:
+  - list `contact_name`, `contact_cast_id` and the critic status;
+  - open the hero frame of each thread whose contact is a cast member, and describe the header avatar.
+
+**Blast radius:** `planner/critic.py`, `planner/props.py`, `tests/test_critic.py`, `tests/slow/`, `evals/planner.py`.
 
 ---
 
@@ -258,17 +335,19 @@ Unchanged from Wave B and re-verified by `doctor` (22 checks OK):
 
 **Implementation:**
 1. Re-run the planner eval (`--no-llm-cache`) → a new `docs/evals/planner_<date>.md`. Every `design_planner.md` §9 bar must hold:
-   - critic regression 5/5;
+   - critic regression **8/8** (A, B, B′, C, E, F, G, H);
    - text audit with 0 newlines, 0 completeness failures and **0 id leaks**;
    - the critic outcome table, including unchanged-after-mismatch versus Wave B's 30/149.
-2. Re-run G12. In `story_recipe_box`'s storyboard, the Walter Lindqvist quote must no longer be attributed to the narrator (describe what it is attributed to, and whether its beat contains "texted me a photo:").
+2. Re-run G12.
+   - In `story_recipe_box`'s storyboard, the Walter Lindqvist quote must no longer be attributed to the narrator. Describe what it is attributed to, and whether its beat contains "texted me a photo:".
+   - List every `text_thread` in `story_room_12` and `story_recipe_box` with its `contact_name`, `contact_cast_id` and critic status (C8). Count the `unavailable` text-thread critics (expected 0).
 3. Re-run `scripts/measure_budget.sh` → `docs/evals/budget_<date>.md`, cold, with 0 cache hits.
 
 **Validate:** bars as above, plus budget ≤ 6.5 / 3.5 / 10 min. Exceeding a bar is filed with numbers, never tuned away.
 
 **Close-out:**
 1. Full battery, bare; update §1.3.
-2. Rewrite this guide to **Queue Complete**. If the user has selected on Issue 6, rewrite it to that wave instead.
+2. Rewrite this guide to **Queue Complete**. If the user has selected on Issue 7, rewrite it to that wave instead.
 3. Move Wave C to §5.1.
 4. Update `ongoing_general_errors.md` §1.
 5. Stop.
@@ -277,7 +356,7 @@ Unchanged from Wave B and re-verified by `doctor` (22 checks OK):
 
 ## 4. Deferred — do NOT start
 
-- **Issue 6** (`ongoing_general_errors.md`): dialogue and text messages the story never contains. It awaits `Your selection`.
+- **Issue 7** (`ongoing_general_errors.md`): fewer words on screen in story videos (Casually Explained as the reference). It awaits `Your selection`. Do not change any template limit, caption rule or selection rule for it.
 - **D1–D9** (`ongoing_general_errors.md` §4): video input + PiP, 16:9, multi-voice, live mode, Reddit URL fetch, public-domain photos, historical borders, web editor, cloud LLM.
 
 ---
@@ -324,6 +403,10 @@ Unchanged from Wave B and re-verified by `doctor` (22 checks OK):
 - **Issue 4 → A:** "Proceed with Option A."
 - **Issue 5 → A:** "Option A".
 
+**September 27, 2026 (in chat):**
+- **Issue 6 → D (keep as is):** "I think the paraphrasing is fine." `dialogue` and `text_thread` may paraphrase in every genre.
+- **Live presentations:** "For real-time presentations, it makes sense to show timelines and repeated graphics to drive home the point." Recorded for D4 in `design_future_live_and_video.md` §4.
+
 ### 5.4 Invariants and intentional design decisions
 
 **New (September 26, 2026):**
@@ -333,6 +416,12 @@ Unchanged from Wave B and re-verified by `doctor` (22 checks OK):
 - **No bible entity id appears in on-screen text** (C4).
 - **Caption words are laid out at their active size**; highlighting never changes layout (C5).
 - **A recorded job-local input that is missing is an error, not a silent drop** (C6).
+
+**New (September 27, 2026):**
+- **The critic's `text_thread` answer is keyed, one required field per message**; `dialogue` keeps its array (C2).
+- **The critic names a thread's contact, and a contact that disagrees is a mismatch.** `unknown` never is (C8).
+- **A null `contact_cast_id` is filled only on an exact, unique name match** (C8).
+- **`dialogue` and `text_thread` may paraphrase** (Issue 6 → D). Do not add a verbatim or word-overlap check to them.
 
 **Unchanged:**
 - Job-local inputs are authoritative.
@@ -382,6 +471,11 @@ Unchanged from Wave B and re-verified by `doctor` (22 checks OK):
 - Fixing caption spacing by lowering the active scale below 1.12.
 - Treating at-limit strings as failures.
 
+**New, September 27, 2026:**
+- Issue 6 options A, B and C (verbatim or word-overlap checks on dialogue).
+- An array schema for per-message critic answers; `contact` before the message keys; the contact question without "according to the passage … does not say".
+- Fuzzy or first-name matching for the contact fill.
+
 ---
 
 ## 6. Where the contracts live
@@ -391,12 +485,13 @@ Unchanged from Wave B and re-verified by `doctor` (22 checks OK):
 | Pipeline, job layout, **job-local inputs incl. missing-input error (§4)**, CLI, review gate, local-only policy, pinned models | `design_system_architecture.md` |
 | JSON shapes (**`plan_report.critic` incl. `repair`, `retry_errors`**), generated files (**`countryCodes.ts`**), sync gate | `design_data_contracts.md` |
 | Ingest, TTS, ASR, loudness, frame math, **beat splitting with quoted speech (§7)**, captions, SFX | `design_audio_and_timing.md` |
-| LLM backend, voice §10, validators (**§6 items 6–8**), grounding and timeline labels §8, eval bars §9 (**text audit, 5-case critic regression**), **critic §11 (passage framing, 3-attempt retry, tone repair, case E)** | `design_planner.md` |
-| The 16 templates | `design_templates.md` |
+| LLM backend, **paraphrase rule for dialogue (§5)**, voice §10, validators (**§6 items 6–8**), grounding and timeline labels §8, eval bars §9 (**text audit, 8-case critic regression**), **critic §11 (passage framing, keyed text-thread answers, contact resolution and mismatch, 3-attempt retry, tone repair, cases E–H)** | `design_planner.md` |
+| The 16 templates (**§2.10: the contact critic and avatar fill**) | `design_templates.md` |
 | Palette, composited contrast §2.1, **captions incl. word spacing and spacing check (§8)**, illustration + text check §7 | `design_visual_direction.md` |
 | Remotion, clock, render CLI, preview, verification | `design_rendering.md` |
-| Fixtures, test rows (**quoted-speech splitting, internal ids, critic hardening**), gates, E2E, offline, cold budget | `design_testing_and_validation.md` |
-| **Issue 6**, resolved index (Wave B verdicts), lessons 2.6–2.8, deferred items, decision log | `ongoing_general_errors.md` |
+| Fixtures, test rows (**quoted-speech splitting, internal ids, critic hardening, critic text threads**), gates, E2E, offline, cold budget | `design_testing_and_validation.md` |
+| **Issue 7**, resolved index (Wave B verdicts; Issue 6's decision), lessons 2.6–2.9, deferred items, decision log | `ongoing_general_errors.md` |
+| Live mode, including the user's direction on timelines and repeated graphics | `design_future_live_and_video.md` |
 
 ---
 
@@ -416,8 +511,9 @@ Unchanged from Wave B and re-verified by `doctor` (22 checks OK):
 ## 8. THE LOOP
 
 ```
-(1) Is there an approved item? Wave C, C1–C7, in §2 order. If all are done,
-    STOP. Never start Issue 6 or D1–D9 without a user selection.
+(1) Is there an approved item? Wave C, C1–C8, in §2 order (C8 runs third).
+    If all are done, STOP. Never start Issue 7 or D1–D9 without a user
+    selection.
     Never fill in a `Your selection:` line.
 (2) Read the item and EVERY design section it names. Copy prompts, header
     lines, thresholds and error strings VERBATIM.
@@ -437,12 +533,13 @@ Unchanged from Wave B and re-verified by `doctor` (22 checks OK):
 
 ## 9. Definition of Done: Wave C
 
-- [ ] C1–C7 each landed as one pushed commit scoped to its id, with red and green runs recorded.
+- [ ] C1–C8 each landed as one pushed commit scoped to its id, with red and green runs recorded.
 - [ ] §1.3: every gate G1–G14 green, measured this session, read bare.
 - [ ] `tests/data/quote_sentence.json` yields one beat; the Walter Lindqvist quote is not attributed to the narrator in the re-run E2E.
-- [ ] Critic regression 5/5 on seeds 7, 8, 9; unchanged-after-mismatch reported and lower than Wave B's 30/149.
+- [ ] Critic regression 8/8 on seeds 7, 8, 9; unchanged-after-mismatch reported and lower than Wave B's 30/149.
+- [ ] Case F yields `contact: Sofia vs Deb (c3)`. The re-run E2E lists every text thread's contact, with 0 `unavailable` text-thread critics.
 - [ ] 0 id leaks in the new planner eval's text audit.
 - [ ] Caption spacing check green on the gallery fixture and on every re-previewed `story_recipe_box` page.
 - [ ] `countryCodes.ts` generated and sync-gated; a missing recorded input fails with exit 2.
 - [ ] Cold budget re-measured with 0 cache hits; bars met or filed.
-- [ ] This guide rewritten to **Queue Complete** (or to the Issue 6 wave if selected). **Then stop. Do not invent work.**
+- [ ] This guide rewritten to **Queue Complete** (or to the Issue 7 wave if selected). **Then stop. Do not invent work.**

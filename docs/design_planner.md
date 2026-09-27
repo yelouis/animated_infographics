@@ -146,6 +146,8 @@ spoken exchange → `dialogue`; texts/messages → `text_thread`; a person's fir
 
 **`props.md` must state:** use only facts in *this beat's* text or the bible; never invent numbers, dates, names or quotes; stay within the length limits; write short, concrete, on-screen language (not sentences copied wholesale, except where a template requires a verbatim span); JSON only.
 
+**Dialogue and text messages may paraphrase (Issue 6 → Option D; the user, September 27, 2026, after watching both story renders: *"I think the paraphrasing is fine."*).** `dialogue` lines and `text_thread` messages may paraphrase or dramatise what the beat reports, in every genre. Only `kinetic_quote` needs a verbatim span (§8). **Do not add a verbatim or word-overlap check to `dialogue` or `text_thread`.** *Who* says each line is still checked by the critic (§11).
+
 **The fallback ladder for each scene:**
 
 ```
@@ -227,7 +229,7 @@ The renderer independently detects overflow in the DOM (`design_rendering.md` §
 | Grounding / reference / fit violations in the **final** storyboard | **0**, re-verified by running §6 over the saved `storyboard.json` as an independent pass |
 | Planner wall time for `story_recipe_box`, the longest fixture (cold LLM cache, model already loaded) | ≤ **240 s** |
 | Voice decision matches `fixtures/expected/<name>.json` (`voice` and `reason`) | **4 of 4** fixtures |
-| Critic regression set (§11) | **5 of 5** cases (A, B, B′, C, E) classified as expected |
+| Critic regression set (§11) | **8 of 8** cases (A, B, B′, C, E, F, G, H) classified as expected |
 | Critic cost | reported per fixture: critic calls, mismatches, props changed, tone repairs, **mismatches left unchanged** (no bar; the cold budget run bounds the time) |
 | Text audit (added September 26, 2026) | **0** strings containing a newline, **0** completeness failures, **0** internal-id leaks (§6 item 8). Strings exactly at their limit are **reported, not failed**: the model never sees the limit, so they cannot be truncations. Wave B's four were complete phrases ("Major Meredith of the Royal Australian Artillery"). |
 
@@ -358,17 +360,31 @@ Runs after `ingest` and **before** `narrate`, because the voice must be known be
   Then the template's question.
   - **Why:** the first framing labelled the neighbouring beats "context only". In Wave B's `story_recipe_box` E2E, beat splitting had put "…he found a shoebox of letters and texted me a photo:" in the previous beat and the bare quote in this one. The critic then answered the narrator (`c1`) on seeds 7, 8 and 9, and **agreed with the wrong attribution**.
   - With the passage framing it answered Danny on all three seeds, and the four original regression cases still scored 4/4 on every seed (measured September 26, 2026). That case is now **regression case E** below.
-- **Blind:** the question gives the scene's *texts* but **never** the proposed speaker, sender, tone or emotion.
+- **Blind:** the question gives the scene's *texts* but **never** the proposed speaker, sender, contact, tone or emotion.
 
 | Template | Question (the quoted texts come from the props) | Schema |
 |---|---|---|
 | `kinetic_quote` | `Who wrote or said these quoted words: "<text>" Answer a cast id, "narration" if they are the narrator telling the story, or "unknown".` | `{"speaker": <cast ids> \| "narration" \| "unknown"}` |
 | `dialogue` | `The scene shows these lines in order: 1. "<text>" 2. "<text>" … For each line, who says it (cast id or "unknown") and in what tone?` | `{"lines": [{"speaker": <cast ids> \| "unknown", "tone": neutral\|angry\|happy\|sad\|shocked\|sarcastic\|unknown}]}`, the same length as `props.lines` (a length mismatch is a failed attempt) |
-| `text_thread` | `The phone belongs to the narrator. Messages in order: 1. "<text>" … For each, was it sent by the narrator ("me") or the other person ("them")?` | `{"messages": [{"sender": "me"\|"them"\|"unknown"}]}`, the same length as `props.messages` |
+| `text_thread` (revised September 27, 2026) | `The phone belongs to the narrator. Messages in order: 1. "<text>" … For each, was it sent by the narrator ("me") or the other person ("them")? Who is the other person in this conversation, according to the passage? Answer a cast id, or "unknown" if the passage does not say or they are not in the cast list.` | **Keyed, one field per message**, in this order: `{"message_1": "me"\|"them"\|"unknown", …, "message_<n>": …, "contact": <cast ids except the narrator> \| "unknown"}`, where n = `len(props.messages)`; every key is required; `additionalProperties: false` |
 | `emotion_beat` | `Which cast member feels something in this beat, and what is the main feeling?` | `{"cast_id": <cast ids> \| "unknown", "emotion": happy\|sad\|angry\|shocked\|confused\|smug\|nervous\|unknown}` |
+
+**Why the `text_thread` answer is keyed (measured September 27, 2026, `gemma4:26b`, seeds 7, 8, 9, passage framing).** With a `messages` array, the model collapses consecutive messages from the same sender into one element. On the 8 real `text_thread` scenes of Wave B's story runs, **3 returned a 1-element array on all three seeds**: `story_room_12` s018 and `story_recipe_box` s011, and s012 of a second run, each with 2–3 consecutive "them" messages. Every attempt then fails the length check and the scene ends `unavailable`, unchecked. With one required key per message, **24 of 24** answers were complete, and the sender readings matched the array answers wherever those were complete. `dialogue` was measured with its array schema, and all 39 answers were complete (13 real scenes × 3 seeds), so it keeps its array.
+
+**Why `contact` (measured September 27, 2026, same runs).** In `story_room_12`, s018 shows Deb's reply ("She wrote back: 'Keep the room. He's never missed one.'", right after "I texted Deb:") in a thread labelled **"Sofia"**. The per-message sender check cannot see this, because both messages really are "them". With the question above, the critic answered `c3` (Deb) for s018 on all three seeds; `unknown` for the non-cast "Wife" (s004) and the invented "Unknown Number" (s014); `c3` for the three correct Deb/Danny threads. **No false contact reading on 8 scenes × 3 seeds.**
+- The earlier wording without "according to the passage … does not say" answered **Danny** for an invented thread with Walt (a second run's s027). That would have been a false mismatch.
+- `contact` sits **last** in the schema: placed first, it changed which scenes collapsed.
+
+**Contact resolution (deterministic).** A thread's *props contact* is:
+1. `contact_cast_id`, if set;
+2. otherwise the id of the **one** non-narrator cast member whose `name`, after `casefold()` and whitespace collapse, equals `contact_name` the same way;
+3. otherwise **none**.
+
+Before validation, the planner **fills** a null `contact_cast_id` with rule 2's id when there is exactly one match. That way a thread with a cast member shows their avatar in the header (`design_templates.md` §2.10). In Wave B's runs, all 8 threads had `contact_cast_id: null`, including the four with Deb or Danny.
 
 **Mismatch rules (deterministic, `planner/critic.py`):**
 - **Who** (speaker, sender, `cast_id`): a mismatch iff the critic's value is not `unknown` **and** differs from the props. For `kinetic_quote`, `narration` agrees only with the narrator's cast id. A speaker the critic cannot resolve (`unknown`) is **never** a mismatch.
+- **Contact** (`text_thread`, added September 27, 2026): a mismatch iff the critic's `contact` is not `unknown` **and** differs from the props contact (none counts as different). It is recorded as `contact: <contact_name> vs <critic's cast name> (<critic's id>)`, e.g. `contact: Sofia vs Deb (c3)`, so the retry message names the person.
 - **Dialogue tone:** a mismatch iff (the critic's tone is not `unknown` and differs from the props) **or** (the critic's tone is `unknown` and the props' tone is not `neutral`). A strong tone the text does not show is an error.
 - **Emotion** (`emotion_beat`): a mismatch iff the critic's value is not `unknown` and differs from the props.
 
@@ -399,5 +415,10 @@ If the critic call itself fails entirely, the scene is accepted with critic stat
 | B′: the same line with tone `neutral` | `c1`, `neutral` | `c1`, `unknown` | agree | agree ✓ |
 | C: "I've been waiting for someone to call about the pie." | attribution `c3` | `unknown` | agree | agree ✓ |
 | **E** (added September 26, 2026): the bare quote "Who is Walter Lindqvist and why did he write to Grandma 60 times?", previous beat "While clearing the attic, he found a shoebox of letters and texted me a photo:" (cast for this case: `c1 Me (narrator)`, `c2 Grandma Rose`, `c3 Danny`, `c4 Walt`; the beat before: "Last spring, Danny finally sold the house.") | attribution `c1` | `c3` (passage framing) | mismatch | mismatch ✓ |
+| **F** (added September 27, 2026): `story_room_12` s018, "Keep the room." / "He's never missed one." after "I texted Deb:" | contact "Sofia" (resolves to `c4`), senders them, them | `c3`; them, them | mismatch (`contact: Sofia vs Deb (c3)`) | mismatch ✓ |
+| **G** (added September 27, 2026): `story_room_12` s004, a thread with "Wife", who is not in the cast | contact "Wife" (none), senders me, them, me | `unknown`; me, them, me | agree | agree ✓ |
+| **H** (added September 27, 2026): `story_recipe_box` s011, three consecutive "them" messages from Danny | contact "Danny" (resolves to `c3`), senders them ×3 | `c3`; them ×3, **3 keys answered** | agree | agree ✓ (the array schema returned 1 element on every seed: `unavailable`) |
 
-Latency was ~0.5 s per call. Case C is why "unknown" must never count as a mismatch for *who*: the critic could not resolve "he said" from the beat alone, and the props were right. **Regression bar: all five cases (A, B, B′, C, E), on seeds 7, 8 and 9.**
+Cases F, G and H use their own casts and passages, frozen from real output in `tests/data/critic_text_thread_cases.json`.
+
+Latency was ~0.5 s per call. Case C is why "unknown" must never count as a mismatch for *who*: the critic could not resolve "he said" from the beat alone, and the props were right. **Regression bar: all eight cases (A, B, B′, C, E, F, G, H), on seeds 7, 8 and 9.**

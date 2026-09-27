@@ -48,4 +48,9 @@ mic ─► streaming ASR (local) ─► word stream ─► live beat closer ─�
 - **The latency reality:** a beat cannot be planned before it has been said. With a MoE model at the MVP's speed, visuals will lag speech by roughly **2–4 s**. Two mitigations to evaluate: (a) show an immediate `kinetic_quote` of the live words, then upgrade to the planned template when it arrives; (b) **prepared mode**: if the speaker has a script or outline, plan every scene in advance with the offline planner and, live, only *match* speech to the next planned scene. That gives near-zero lag and full quality.
 - **Rendering:** the templates run unchanged in a plain React app. The clock adapter swaps `useCurrentFrame` for a `requestAnimationFrame` counter (F1 is what makes that a small change). Remotion is not needed live.
 
+**User direction for live presentations (September 27, 2026), verbatim:** *"For real-time presentations, it makes sense to show timelines and repeated graphics to drive home the point."* So live mode gets its **own** visual profile when D4 is specced:
+- Timelines stay a first-class device.
+- Graphics may **recur** to reinforce a point, e.g. the same timeline returning with the next event highlighted. The offline no-repeat rule R2 (`design_planner.md` §4) and any per-video template limits do not carry over.
+- Any word-density limits chosen for offline **story** videos (Issue 7 in `ongoing_general_errors.md`) do not apply to live mode.
+
 **Questions for the user when D4 is selected:** improvised or scripted talks (decides between mitigations (a) and (b))? Where does the output go (fullscreen, OBS, Zoom virtual camera)? What lag is acceptable?
