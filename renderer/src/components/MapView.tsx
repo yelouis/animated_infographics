@@ -6,7 +6,7 @@ import worldTopology from "world-atlas/countries-110m.json";
 import lakesData from "../../public/geo/lakes-50m.json";
 import { palette } from "../theme/palette";
 import { Chip } from "./Chip";
-import { NUMERIC_TO_ISO3 } from "./countryCodes";
+import { NUMERIC_TO_ISO3 } from "../generated/countryCodes";
 import { computeChipPlacement, createMapProjection, type GeoPoint } from "./mapFraming";
 
 export interface MapMarker {

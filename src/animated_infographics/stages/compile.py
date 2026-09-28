@@ -14,6 +14,7 @@ from animated_infographics.contracts.models import (
     Storyboard,
     Transcript,
 )
+from animated_infographics.errors import ValidationFailed
 from animated_infographics.jobs import Job, RunContext
 
 
@@ -42,17 +43,23 @@ def run_compile_stage(job: Job, ctx: RunContext) -> None:
     music_dst = job.dir / "audio" / "music.wav"
     if ingest and ingest.music:
         music_src = job.dir / ingest.music
-        if music_src.is_file():
-            prepare_music(music_src, music_dst)
-            music_rel_path = "job/audio/music.wav"
+        if not music_src.is_file():
+            raise ValidationFailed(
+                f"{ingest.music} is recorded in ingest.json but missing from the job"
+            )
+        prepare_music(music_src, music_dst)
+        music_rel_path = "job/audio/music.wav"
 
     # SFX preparation
     sfx_files_by_role: dict[str, list[Path]] = {}
     sfx_dst_dir = job.dir / "audio" / "sfx"
     if ingest and ingest.sfx_dir:
         sfx_src = job.dir / ingest.sfx_dir
-        if sfx_src.is_dir():
-            sfx_files_by_role = prepare_sfx(sfx_src, sfx_dst_dir)
+        if not sfx_src.is_dir():
+            raise ValidationFailed(
+                f"{ingest.sfx_dir} is recorded in ingest.json but missing from the job"
+            )
+        sfx_files_by_role = prepare_sfx(sfx_src, sfx_dst_dir)
 
     plan_sha = job.plan_sha256()
 

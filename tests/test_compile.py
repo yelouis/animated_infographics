@@ -410,3 +410,92 @@ def test_no_forbidden_runcontext_music_sfx_reads() -> None:
                 violations.append(f"{rel_path}:{line_no}: {line.strip()}")
 
     assert not violations, "Forbidden RunContext music/sfx reads found:\n" + "\n".join(violations)
+
+
+def test_compile_missing_music_fails_loudly(tmp_path: Path) -> None:
+    import json
+    import shutil
+    from datetime import UTC, datetime
+
+    import pytest
+
+    from animated_infographics.contracts.models import (
+        Beats,
+        CharacterIntroProps,
+        CharacterIntroScene,
+    )
+    from animated_infographics.errors import ValidationFailed
+    from animated_infographics.jobs import Job, RunContext
+    from animated_infographics.stages.compile import run_compile_stage
+
+    job = Job.create(Path("story.txt"), tmp_path, datetime.now(UTC))
+    job_dir = job.dir
+    (job_dir / "input").mkdir(exist_ok=True)
+    shutil.copy2("fixtures/music/test_bed.wav", job_dir / "input" / "test_bed.wav")
+
+    ingest_json = {
+        "schema_version": 1,
+        "kind": "text",
+        "source": "input/story.txt",
+        "title": "Title",
+        "paragraphs": ["The Title", "Second sentence", "Third sentence"],
+        "word_count": 6,
+        "music": "input/test_bed.wav",
+        "sfx_dir": None,
+    }
+    (job_dir / "ingest.json").write_text(json.dumps(ingest_json), encoding="utf-8")
+
+    transcript = _make_dummy_transcript()
+    (job_dir / "transcript.json").write_text(transcript.model_dump_json(indent=2), encoding="utf-8")
+    bible = _make_dummy_bible()
+    (job_dir / "bible.json").write_text(bible.model_dump_json(indent=2), encoding="utf-8")
+    beats = [
+        Beat(i=0, text="The Title", start_ms=0, end_ms=1000, word_start=0, word_end=2),
+        Beat(i=1, text="Second sentence", start_ms=1000, end_ms=2500, word_start=2, word_end=4),
+        Beat(i=2, text="Third sentence", start_ms=2500, end_ms=3200, word_start=4, word_end=6),
+    ]
+    (job_dir / "beats.json").write_text(
+        Beats(schema_version=1, beats=beats).model_dump_json(indent=2), encoding="utf-8"
+    )
+    scenes = [
+        TitleCardScene(
+            id="s000",
+            beat_i=0,
+            template="title_card",
+            props=TitleCardProps(title="The Title"),
+        ),
+        CharacterIntroScene(
+            id="s001",
+            beat_i=1,
+            template="character_intro",
+            props=CharacterIntroProps(cast_id="c1", descriptor="Hero"),
+        ),
+        KineticQuoteScene(
+            id="s002",
+            beat_i=2,
+            template="kinetic_quote",
+            props=KineticQuoteProps(text="Third sentence"),
+        ),
+    ]
+    storyboard = Storyboard(schema_version=1, aspect="9:16", scenes=scenes)
+    (job_dir / "storyboard.json").write_text(storyboard.model_dump_json(indent=2), encoding="utf-8")
+
+    # Delete the music file recorded in ingest.json
+    (job_dir / "input" / "test_bed.wav").unlink()
+
+    with pytest.raises(ValidationFailed) as exc_info:
+        run_compile_stage(job, RunContext())
+
+    expected_msg = "input/test_bed.wav is recorded in ingest.json but missing from the job"
+    assert expected_msg in str(exc_info.value)
+
+    # Also test missing sfx_dir fails loudly
+    shutil.copy2("fixtures/music/test_bed.wav", job_dir / "input" / "test_bed.wav")
+    ingest_json["sfx_dir"] = "input/missing_sfx_dir"
+    (job_dir / "ingest.json").write_text(json.dumps(ingest_json), encoding="utf-8")
+
+    with pytest.raises(ValidationFailed) as exc_info_sfx:
+        run_compile_stage(job, RunContext())
+
+    expected_sfx_msg = "input/missing_sfx_dir is recorded in ingest.json but missing from the job"
+    assert expected_sfx_msg in str(exc_info_sfx.value)

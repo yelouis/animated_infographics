@@ -16,6 +16,7 @@ FILES_TO_CHECK=(
   "renderer/src/generated/templateRegistry.json"
   "renderer/src/generated/iconNames.json"
   "renderer/src/generated/iconMap.ts"
+  "renderer/src/generated/countryCodes.ts"
   "data/geo/country_bboxes.json"
   "renderer/public/geo/lakes-50m.json"
 )
@@ -26,9 +27,11 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 # 1. Regenerate contracts and schemas into temp dir
 uv run python -m animated_infographics.contracts.export --out "$TMP_DIR" > /dev/null
 
-# 2. Regenerate country bboxes into temp dir
-mkdir -p "$TMP_DIR/data/geo"
-npx --prefix renderer tsx renderer/scripts/gen-country-bboxes.ts "$TMP_DIR/data/geo/country_bboxes.json" > /dev/null
+# 2. Regenerate country bboxes and country codes into temp dir
+mkdir -p "$TMP_DIR/data/geo" "$TMP_DIR/renderer/src/generated"
+npx --prefix renderer tsx renderer/scripts/gen-country-bboxes.ts \
+  "$TMP_DIR/data/geo/country_bboxes.json" \
+  "$TMP_DIR/renderer/src/generated/countryCodes.ts" > /dev/null
 
 # 3. Regenerate lakes into temp dir
 mkdir -p "$TMP_DIR/renderer/public/geo"
@@ -63,5 +66,5 @@ for file in "${FILES_TO_CHECK[@]}"; do
   fi
 done
 
-echo "G8: Schema and contracts sync check passed (12 files verified)."
+echo "G8: Schema and contracts sync check passed (13 files verified)."
 exit 0
