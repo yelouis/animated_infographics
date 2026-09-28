@@ -133,6 +133,10 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 - B16 — E2E: computed counts, audible music — git log --grep "(b16)" — G1–G14 green bare, 218 passed (+4 tests); check-sync outputs JSON {"checked", "expected", "failures"} and asserts equality to len(scenes) - 1 with 0 failures (falsified by --skip-boundary 1 -> exit 1); voice lines read dynamically from voice.json across all fixtures; step 4 final MP4 audio RMS in [duration - 1.4s, duration - 1.0s] measured at -39.85 dBFS (> -60.0 dBFS required; falsified on music-less re-render at -91.16 dBFS -> exit 1); Remotion AudioLayer audio volume clamped to >= 0.001 to prevent unregistering render asset, and RemotionAudioCue passes loop and loopVolumeCurveBehavior="extend" to Audio; report lists critic counts and text_check statuses per fixture.
 - B17 — Cold-cache performance budget; close-out — git log --grep "(b17)" — G1–G14 green bare; scripts/measure_budget.sh created and verified on story_recipe_box (~3 min story); cold new->awaiting_review 252.29 s (<= 390 s), render 197.01 s (<= 210 s), total 449.30 s (<= 600 s), warm preview 15.25 s (<= 60 s); verified 0 cache hits; critic 10 calls, text checks 4 calls, 5 images generated; docs/evals/budget_2026-09-26.md generated and committed; full battery G1–G14 exits 0 bare.
 
+**Wave C:**
+
+- C1 — Quoted speech stays whole when splitting beats — git log --grep "(c1)" — G1–G14 green bare, 221 passed (+3 tests); colon removed from PUNCT_SUFFIXES; QUOTED_SENTENCE_MAX_MS = 16000; quote spans and opening quotes preserved in split pass; tests/data/quote_sentence.json yields 1 beat instead of 2 (falsified on colon bonus and quote exclusion removal); 17,000ms synthetic sentence splits without breaking opening quote; beat counts: molasses_flood 10, emu_war 25, story_recipe_box 32->29, story_room_12 33->34.
+
 
 ---
 

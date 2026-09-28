@@ -3,7 +3,12 @@
 import logging
 from collections.abc import Sequence
 
-from animated_infographics.contracts.models import Beat, Transcript, TranscriptWord
+from animated_infographics.contracts.models import (
+    Beat,
+    Transcript,
+    TranscriptSentence,
+    TranscriptWord,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -11,8 +16,9 @@ BEAT_MIN_MS: int = 1500
 BEAT_TARGET_MIN_MS: int = 2500
 BEAT_TARGET_MAX_MS: int = 6000
 BEAT_MAX_MS: int = 8000
+QUOTED_SENTENCE_MAX_MS: int = 16000
 
-PUNCT_SUFFIXES: tuple[str, ...] = (",", ";", ":", "—", "--")
+PUNCT_SUFFIXES: tuple[str, ...] = (",", ";", "—", "--")
 
 
 def _compute_bounds(
@@ -31,6 +37,52 @@ def _compute_bounds(
             end_ms = words[w_end - 1].end_ms
         bounds.append((start_ms, end_ms))
     return bounds
+
+
+def _word_begins_quote(text: str) -> bool:
+    """True if the word begins with an opening quotation mark."""
+    return len(text) > 0 and text[0] in ('"', "“", "‘")
+
+
+def _find_quote_spans_and_boundaries(
+    words: Sequence[TranscriptWord], sentences: Sequence[TranscriptSentence]
+) -> tuple[dict[int, bool], dict[int, bool], dict[int, bool], dict[int, int]]:
+    """Determine quote information per word and boundary across sentences.
+
+    Walks each sentence's words and toggles 'inside quote' on each '"', '“' or '”' character.
+    A word begins a quote if its first character is '"', '“' or '‘'.
+    """
+    word_begins_quote: dict[int, bool] = {}
+    boundary_inside_quote: dict[int, bool] = {}
+    sentence_has_quote: dict[int, bool] = {}
+    sentence_duration: dict[int, int] = {}
+
+    for s in sentences:
+        s_dur = s.end_ms - s.start_ms
+        sentence_duration[s.i] = s_dur
+        inside = False
+        has_q = False
+
+        for w_idx in range(s.word_start, s.word_end):
+            w = words[w_idx]
+            begins = _word_begins_quote(w.text)
+            word_begins_quote[w_idx] = begins
+            if begins:
+                has_q = True
+
+            if w_idx > s.word_start:
+                boundary_inside_quote[w_idx] = inside
+
+            for ch in w.text:
+                if ch in ('"', "“", "”"):
+                    inside = not inside
+                    has_q = True
+                elif ch == "‘":
+                    has_q = True
+
+        sentence_has_quote[s.i] = has_q
+
+    return word_begins_quote, boundary_inside_quote, sentence_has_quote, sentence_duration
 
 
 def build_beats(
@@ -136,6 +188,9 @@ def build_beats(
             ranges = ranges[:k] + [merged] + ranges[k + 2 :]
 
     # 3. Split pass: repeat while some beat has duration > BEAT_MAX_MS
+    word_begins_quote, boundary_inside_quote, sentence_has_quote, sentence_duration = (
+        _find_quote_spans_and_boundaries(words, sentences)
+    )
     unsplitable: set[tuple[int, int]] = set()
     while True:
         bounds = _compute_bounds(ranges, words)
@@ -156,12 +211,56 @@ def build_beats(
         best_split: int | None = None
         best_score = float("-inf")
 
+        candidate_splits: list[int] = []
+        fallback_splits: list[int] = []
+
         for w_split in range(w_start + 1, w_end):
             left_dur = words[w_split].start_ms - b_start
             right_dur = b_end - words[w_split].start_ms
             if left_dur < BEAT_MIN_MS or right_dur < BEAT_MIN_MS:
                 continue
 
+            # Step 4: not a candidate if word after begins quote
+            if word_begins_quote.get(w_split, False):
+                continue
+
+            left_word = words[w_split - 1]
+            right_word = words[w_split]
+            is_between_sentences = left_word.sentence_i != right_word.sentence_i
+            is_inside_quote = boundary_inside_quote.get(w_split, False)
+
+            if is_between_sentences:
+                # Step 5: Boundaries between sentences stay candidates,
+                # still subject to the opening-quote exclusion in step 4.
+                if not is_inside_quote:
+                    candidate_splits.append(w_split)
+                continue
+
+            # Boundary inside a sentence
+            s_i = right_word.sentence_i
+            s_has_quote = sentence_has_quote.get(s_i, False)
+            s_dur = sentence_duration.get(s_i, 0)
+
+            if not s_has_quote:
+                if not is_inside_quote:
+                    candidate_splits.append(w_split)
+            else:
+                # Sentence contains a quotation: candidates only if sentence
+                # alone is longer than QUOTED_SENTENCE_MAX_MS
+                if s_dur <= QUOTED_SENTENCE_MAX_MS:
+                    continue
+
+                if not is_inside_quote:
+                    candidate_splits.append(w_split)
+                else:
+                    # Boundaries right after a ., ? or ! inside the quote
+                    stripped = left_word.text.rstrip("\"\”’'")
+                    if stripped.endswith((".", "?", "!")):
+                        fallback_splits.append(w_split)
+
+        valid_splits = candidate_splits if candidate_splits else fallback_splits
+
+        for w_split in valid_splits:
             left_word = words[w_split - 1]
             right_word = words[w_split]
             gap_ms = right_word.start_ms - left_word.end_ms

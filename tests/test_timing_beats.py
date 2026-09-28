@@ -152,6 +152,81 @@ def test_beats_split_comma_preference() -> None:
     assert beats[1].word_start == 3
 
 
+def test_quoted_speech_frozen_stays_one_beat() -> None:
+    """9,625 ms quoted sentence stays one beat per design_audio_and_timing.md §7."""
+    import json
+    from pathlib import Path
+
+    data = json.loads(Path("tests/data/quote_sentence.json").read_text(encoding="utf-8"))
+    t0 = data["words"][0]["start_ms"]
+    words_data = [(w["text"], w["start_ms"] - t0, w["end_ms"] - t0) for w in data["words"]]
+    sentences_data = [(0, len(words_data), False)]
+    transcript = _make_transcript(words_data, sentences_data)
+    beats = build_beats(transcript, [[0]])
+
+    assert len(beats) == 1
+    assert beats[0].text == data["sentence_text"]
+
+
+def test_quoted_speech_17000ms_split_not_before_opening_quote() -> None:
+    """A synthetic 17,000 ms quoted sentence is split, but not before the opening quote."""
+    # Sentence of 17,000 ms:
+    # 0..3000: intro ("He said to the crowd,")
+    # 3000..17000: quote ("\"Listen closely to what I have to say. This is very important!\"")
+    # Opening quote is at word 5 (3000 ms).
+    words_data = [
+        ("He", 0, 500),
+        ("said", 500, 1000),
+        ("to", 1000, 1500),
+        ("the", 1500, 2000),
+        ("crowd,", 2000, 2900),  # boundary here at 3000 ms
+        ('"Listen', 3000, 4500),
+        ("closely", 4500, 6000),
+        ("to", 6000, 7500),
+        ("what", 7500, 9000),
+        ("I", 9000, 10000),
+        ("have", 10000, 11000),
+        ("to", 11000, 12000),
+        ("say.", 12000, 13500),
+        ("This", 13500, 14500),
+        ("is", 14500, 15500),
+        ('important!"', 15500, 17000),
+    ]
+    sentences_data = [(0, len(words_data), False)]
+    transcript = _make_transcript(words_data, sentences_data)
+    beats = build_beats(transcript, [[0]])
+
+    assert len(beats) > 1
+    # Check that no beat split occurred immediately before the opening quote (word 5)
+    for b in beats[:-1]:
+        assert b.word_end != 5, "Split occurred immediately before opening quote"
+
+
+def test_colon_earns_no_punctuation_bonus() -> None:
+    """Colon does not receive the punctuation bonus in split scoring."""
+    # Beat of 9000 ms.
+    # Boundary 1: at word 2 (3000 ms), word 1 has a colon ("intro:").
+    # Boundary 2: at word 3 (4500 ms, midpoint), word 2 has no punctuation ("middle").
+    words_data = [
+        ("word0", 0, 1000),
+        ("intro:", 1000, 2950),  # gap = 50ms to word 2 at 3000
+        ("middle", 3000, 4400),  # gap = 100ms to word 3 at 4500
+        ("word3", 4500, 6000),
+        ("word4", 6000, 9000),
+    ]
+    sentences_data = [(0, len(words_data), False)]
+    transcript = _make_transcript(words_data, sentences_data)
+    beats = build_beats(transcript, [[0]])
+
+    # Midpoint is 4500 ms.
+    # At word 2 (3000 ms): gap = 50. Penalty = |3000 - 4500| / 4 = 375.
+    # If colon has NO bonus: score = 50 - 375 = -325.
+    # At word 3 (4500 ms): gap = 100. Penalty = 0. Score = 100.
+    # Word 3 wins if colon earns no bonus (if colon had +1000, word 2 scores 675 and wins).
+    assert beats[0].word_end == 3
+    assert beats[1].word_start == 3
+
+
 def test_beats_property_test_500_random_streams(caplog: pytest.LogCaptureFixture) -> None:
     """Property test over 500 random word streams."""
     rng = random.Random(42)

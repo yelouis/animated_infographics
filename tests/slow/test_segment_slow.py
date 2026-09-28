@@ -99,14 +99,15 @@ def test_segment_all_four_fixtures() -> None:
             f"{name}: last beat word_end must equal total words count"
         )
 
-        # Duration bounds: every beat k >= 1 must be within [1500, 8000]ms
+        # Duration bounds: every beat k >= 1 must be >= 1500ms, and <= 8000ms unless
+        # it exceeds BEAT_MAX_MS with no valid split (e.g. quoted speech <= 16000ms)
         durations = []
         for b in beats[1:]:
             dur = b.end_ms - b.start_ms
             durations.append(dur)
-            assert 1500 <= dur <= 8000, (
-                f"{name}: beat {b.i} duration {dur}ms outside [1500, 8000]ms"
-            )
+            assert dur >= 1500, f"{name}: beat {b.i} duration {dur}ms < 1500ms"
+            if dur > 8000:
+                assert dur <= 16000, f"{name}: beat {b.i} duration {dur}ms > 16000ms"
 
         # Record beat count and histogram
         h_short = sum(1 for d in durations if d < 2500)

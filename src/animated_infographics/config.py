@@ -33,6 +33,7 @@ BEAT_MIN_MS: Final[int] = 1500
 BEAT_TARGET_MIN_MS: Final[int] = 2500
 BEAT_TARGET_MAX_MS: Final[int] = 6000
 BEAT_MAX_MS: Final[int] = 8000
+QUOTED_SENTENCE_MAX_MS: Final[int] = 16000
 
 # Caption paging
 CAPTION_MAX_WORDS: Final[int] = 3
