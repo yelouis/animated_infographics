@@ -71,14 +71,14 @@ Unchanged from Wave B and re-verified by `doctor` (22 checks OK):
 | G1 | `uv run ruff check .` | exit 0 |
 | G2 | `uv run ruff format --check .` | exit 0 · 107 files |
 | G3 | `uv run mypy src` | exit 0 · 55 source files |
-| G4 | `uv run pytest -q -m "not slow"` | exit 0 · **221 passed** |
+| G4 | `uv run pytest -q -m "not slow"` | exit 0 · **224 passed** |
 | G5 | `npm --prefix renderer run typecheck` | exit 0 |
 | G6 | `npm --prefix renderer run lint` | exit 0 |
 | G7 | `npm --prefix renderer test` | exit 0 · **16 passed** (5 files) |
 | G8 | `./scripts/check_schema_sync.sh` | exit 0 |
 | G9 | `./scripts/check_renderer_purity.sh` | exit 0 |
 | G10 | `./scripts/check_gallery.sh` | exit 0 · 36 s · 52 goldens, fails closed |
-| G11 | `uv run pytest -q -m slow` | exit 0 · **22 passed** · 197 s |
+| G11 | `uv run pytest -q -m slow` | exit 0 · **24 passed** · 172 s |
 | G12 | `./scripts/e2e.sh` | exit 0 · 857 s · steps 1–8 pass; sync probe 9/9, 0 failures; music audible at **−39.85 dBFS** (bar > −60). **But** its `story_recipe_box` job again credits the Walter Lindqvist quote to the narrator, with the critic reporting "agree" (→ C1, C2) |
 | G13 | `./scripts/check_offline.sh` | exit 0 · 224 s · self-checks pass (external network denied, loopback allowed); fresh-cache pipeline rendered |
 | G14 | `uv run infographics doctor` | exit 0 · 22 checks OK |

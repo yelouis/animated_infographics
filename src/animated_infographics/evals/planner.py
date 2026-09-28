@@ -20,6 +20,7 @@ from animated_infographics.contracts.models import (
     DialogueScene,
     KineticQuoteScene,
     Scene,
+    TextThreadScene,
     Transcript,
     TranscriptSentence,
     TranscriptWord,
@@ -28,6 +29,8 @@ from animated_infographics.contracts.templates import (
     DialogueLine,
     DialogueProps,
     KineticQuoteProps,
+    TextMessage,
+    TextThreadProps,
 )
 from animated_infographics.evals.text_audit import audit_storyboards
 from animated_infographics.ingest import ingest
@@ -99,8 +102,8 @@ def _make_transcript_from_script(script_path: Path) -> Transcript:
     )
 
 
-def run_critic_regression_set(backend: LLMBackend) -> list[dict[str, Any]]:
-    """Run the 4-case critic regression set from design_planner.md §11."""
+def run_critic_regression_set(backend: LLMBackend, attempt_offset: int = 0) -> list[dict[str, Any]]:
+    """Run the critic regression set from design_planner.md §11."""
     avatar = AvatarConfig(
         skin=1,
         hair_style="short",
@@ -151,6 +154,43 @@ def run_critic_regression_set(backend: LLMBackend) -> list[dict[str, Any]]:
         ],
     )
 
+    cases_file = Path("tests/data/critic_text_thread_cases.json")
+    if not cases_file.exists():
+        cases_file = (
+            Path(__file__).resolve().parents[3] / "tests" / "data" / "critic_text_thread_cases.json"
+        )
+    h_data = next(
+        c for c in json.loads(cases_file.read_text(encoding="utf-8"))["cases"] if c["case"] == "H"
+    )
+
+    h_bible = Bible(
+        schema_version=1,
+        title="Recipe Box",
+        logline="Grandma's recipe box.",
+        genre="personal_story",
+        cast=[
+            CastMember(
+                id=c["id"],
+                name=c["name"],
+                role=c["role"],
+                is_narrator=c["is_narrator"],
+                color_slot=i + 1,
+                avatar=avatar,
+            )
+            for i, c in enumerate(h_data["cast"])
+        ],
+    )
+    h_scene = TextThreadScene(
+        id=h_data["scene_id"],
+        beat_i=11,
+        template="text_thread",
+        props=TextThreadProps(
+            contact_name=h_data["props"]["contact_name"],
+            contact_cast_id=h_data["props"]["contact_cast_id"],
+            messages=[TextMessage.model_validate(m) for m in h_data["props"]["messages"]],
+        ),
+    )
+
     cases = [
         {
             "id": "A",
@@ -165,13 +205,13 @@ def run_critic_regression_set(backend: LLMBackend) -> list[dict[str, Any]]:
                     attribution_cast_id="c1",
                 ),
             ),
-            "beat": Beat(
-                i=12,
-                text='"Who is Walter Lindqvist and why did he write to Grandma 60 times?"',
-                start_ms=60800,
-                end_ms=65800,
-                word_start=157,
-                word_end=170,
+            "before_prev_beat": Beat(
+                i=10,
+                text="Last spring, Danny finally sold the house.",
+                start_ms=53000,
+                end_ms=55925,
+                word_start=135,
+                word_end=142,
             ),
             "prev_beat": Beat(
                 i=11,
@@ -182,6 +222,14 @@ def run_critic_regression_set(backend: LLMBackend) -> list[dict[str, Any]]:
                 end_ms=60800,
                 word_start=142,
                 word_end=157,
+            ),
+            "beat": Beat(
+                i=12,
+                text='"Who is Walter Lindqvist and why did he write to Grandma 60 times?"',
+                start_ms=60800,
+                end_ms=65800,
+                word_start=157,
+                word_end=170,
             ),
             "next_beat": Beat(
                 i=13,
@@ -208,6 +256,24 @@ def run_critic_regression_set(backend: LLMBackend) -> list[dict[str, Any]]:
                     ]
                 ),
             ),
+            "before_prev_beat": Beat(
+                i=13,
+                text=(
+                    "The return address was in Thunder Bay, Ontario, about 190 miles up the shore."
+                ),
+                start_ms=65800,
+                end_ms=72525,
+                word_start=170,
+                word_end=184,
+            ),
+            "prev_beat": Beat(
+                i=14,
+                text="I called the number I found online, expecting nothing.",
+                start_ms=72525,
+                end_ms=76425,
+                word_start=184,
+                word_end=193,
+            ),
             "beat": Beat(
                 i=15,
                 text=(
@@ -218,14 +284,6 @@ def run_critic_regression_set(backend: LLMBackend) -> list[dict[str, Any]]:
                 end_ms=82900,
                 word_start=193,
                 word_end=212,
-            ),
-            "prev_beat": Beat(
-                i=14,
-                text="I called the number I found online, expecting nothing.",
-                start_ms=72525,
-                end_ms=76425,
-                word_start=184,
-                word_end=193,
             ),
             "next_beat": Beat(
                 i=16,
@@ -250,6 +308,24 @@ def run_critic_regression_set(backend: LLMBackend) -> list[dict[str, Any]]:
                     ]
                 ),
             ),
+            "before_prev_beat": Beat(
+                i=13,
+                text=(
+                    "The return address was in Thunder Bay, Ontario, about 190 miles up the shore."
+                ),
+                start_ms=65800,
+                end_ms=72525,
+                word_start=170,
+                word_end=184,
+            ),
+            "prev_beat": Beat(
+                i=14,
+                text="I called the number I found online, expecting nothing.",
+                start_ms=72525,
+                end_ms=76425,
+                word_start=184,
+                word_end=193,
+            ),
             "beat": Beat(
                 i=15,
                 text=(
@@ -260,14 +336,6 @@ def run_critic_regression_set(backend: LLMBackend) -> list[dict[str, Any]]:
                 end_ms=82900,
                 word_start=193,
                 word_end=212,
-            ),
-            "prev_beat": Beat(
-                i=14,
-                text="I called the number I found online, expecting nothing.",
-                start_ms=72525,
-                end_ms=76425,
-                word_start=184,
-                word_end=193,
             ),
             "next_beat": Beat(
                 i=16,
@@ -292,13 +360,13 @@ def run_critic_regression_set(backend: LLMBackend) -> list[dict[str, Any]]:
                     attribution_cast_id="c3",
                 ),
             ),
-            "beat": Beat(
-                i=16,
-                text='"I\'ve been waiting for someone to call about the pie."',
-                start_ms=82900,
-                end_ms=86325,
-                word_start=212,
-                word_end=222,
+            "before_prev_beat": Beat(
+                i=14,
+                text="I called the number I found online, expecting nothing.",
+                start_ms=72525,
+                end_ms=76425,
+                word_start=184,
+                word_end=193,
             ),
             "prev_beat": Beat(
                 i=15,
@@ -311,6 +379,14 @@ def run_critic_regression_set(backend: LLMBackend) -> list[dict[str, Any]]:
                 word_start=193,
                 word_end=212,
             ),
+            "beat": Beat(
+                i=16,
+                text='"I\'ve been waiting for someone to call about the pie."',
+                start_ms=82900,
+                end_ms=86325,
+                word_start=212,
+                word_end=222,
+            ),
             "next_beat": Beat(
                 i=17,
                 text="I drove up that weekend.",
@@ -318,6 +394,136 @@ def run_critic_regression_set(backend: LLMBackend) -> list[dict[str, Any]]:
                 end_ms=88725,
                 word_start=222,
                 word_end=227,
+            ),
+            "expected": "agree",
+        },
+        {
+            "id": "E",
+            "name": "Quote with speaker named in sentence before: Danny found letters",
+            "bible": Bible(
+                schema_version=1,
+                title="Recipe Box",
+                logline="Grandma's recipe box.",
+                genre="personal_story",
+                cast=[
+                    CastMember(
+                        id="c1",
+                        name="Me",
+                        role="narrator",
+                        is_narrator=True,
+                        color_slot=1,
+                        avatar=avatar,
+                    ),
+                    CastMember(
+                        id="c2",
+                        name="Grandma Rose",
+                        role="character",
+                        is_narrator=False,
+                        color_slot=2,
+                        avatar=avatar,
+                    ),
+                    CastMember(
+                        id="c3",
+                        name="Danny",
+                        role="character",
+                        is_narrator=False,
+                        color_slot=3,
+                        avatar=avatar,
+                    ),
+                    CastMember(
+                        id="c4",
+                        name="Walt",
+                        role="character",
+                        is_narrator=False,
+                        color_slot=4,
+                        avatar=avatar,
+                    ),
+                ],
+            ),
+            "scene": KineticQuoteScene(
+                id="s012",
+                beat_i=12,
+                template="kinetic_quote",
+                props=KineticQuoteProps(
+                    text="Who is Walter Lindqvist and why did he write to Grandma 60 times?",
+                    emphasis=[],
+                    attribution_cast_id="c1",
+                ),
+            ),
+            "before_prev_beat": Beat(
+                i=10,
+                text="Last spring, Danny finally sold the house.",
+                start_ms=53000,
+                end_ms=55925,
+                word_start=135,
+                word_end=142,
+            ),
+            "prev_beat": Beat(
+                i=11,
+                text=(
+                    "While clearing the attic, he found a shoebox of letters and texted me a photo:"
+                ),
+                start_ms=55925,
+                end_ms=60800,
+                word_start=142,
+                word_end=157,
+            ),
+            "beat": Beat(
+                i=12,
+                text='"Who is Walter Lindqvist and why did he write to Grandma 60 times?"',
+                start_ms=60800,
+                end_ms=65800,
+                word_start=157,
+                word_end=170,
+            ),
+            "next_beat": Beat(
+                i=13,
+                text=(
+                    "The return address was in Thunder Bay, Ontario, about 190 miles up the shore."
+                ),
+                start_ms=65800,
+                end_ms=72525,
+                word_start=170,
+                word_end=184,
+            ),
+            "expected": "mismatch",
+        },
+        {
+            "id": "H",
+            "name": "Text thread with consecutive 'them' messages (Danny)",
+            "bible": h_bible,
+            "scene": h_scene,
+            "before_prev_beat": Beat(
+                i=9,
+                text=h_data["beats"]["before_previous"],
+                start_ms=0,
+                end_ms=1000,
+                word_start=0,
+                word_end=10,
+            ),
+            "prev_beat": Beat(
+                i=10,
+                text=h_data["beats"]["previous"],
+                start_ms=1000,
+                end_ms=2000,
+                word_start=10,
+                word_end=20,
+            ),
+            "beat": Beat(
+                i=11,
+                text=h_data["beats"]["current"],
+                start_ms=2000,
+                end_ms=3000,
+                word_start=20,
+                word_end=30,
+            ),
+            "next_beat": Beat(
+                i=12,
+                text=h_data["beats"]["next"],
+                start_ms=3000,
+                end_ms=4000,
+                word_start=30,
+                word_end=40,
             ),
             "expected": "agree",
         },
@@ -329,11 +535,20 @@ def run_critic_regression_set(backend: LLMBackend) -> list[dict[str, Any]]:
     print("==================================================")
 
     for c in cases:
+        case_bible = cast(Bible, c.get("bible", bible))
         scene = cast(Scene, c["scene"])
         beat = cast(Beat, c["beat"])
-        prev_beat = cast(Beat | None, c["prev_beat"])
-        next_beat = cast(Beat | None, c["next_beat"])
-        system, user, schema = build_critic_request(scene, beat, prev_beat, next_beat, bible)
+        prev_beat = cast(Beat | None, c.get("prev_beat"))
+        before_prev_beat = cast(Beat | None, c.get("before_prev_beat"))
+        next_beat = cast(Beat | None, c.get("next_beat"))
+        system, user, schema = build_critic_request(
+            scene,
+            beat,
+            prev_beat,
+            next_beat,
+            case_bible,
+            before_prev_beat=before_prev_beat,
+        )
 
         def validate_c(raw: dict[str, Any], sc: Scene = scene) -> tuple[dict[str, Any], list[str]]:
             return validate_critic_answer(sc, raw)
@@ -346,6 +561,7 @@ def run_critic_regression_set(backend: LLMBackend) -> list[dict[str, Any]]:
             schema=schema,
             validate=validate_c,
             max_attempts=3,
+            attempt_offset=attempt_offset,
             num_predict=256,
             temperature=0.0,
         )
@@ -354,7 +570,7 @@ def run_critic_regression_set(backend: LLMBackend) -> list[dict[str, Any]]:
             actual = "unavailable"
             mismatches: list[str] = []
         else:
-            mismatches = critic_mismatches(scene, raw_ans, bible)
+            mismatches = critic_mismatches(scene, raw_ans, case_bible)
             actual = "mismatch" if mismatches else "agree"
 
         passed = actual == c["expected"]
@@ -694,7 +910,10 @@ def run_eval(
         [
             "## Critic Regression Set (§11)",
             "",
-            f"- **Score**: {reg_passed_count}/{len(regression_results)} (Bar: 4/4)",
+            (
+                f"- **Score**: {reg_passed_count}/{len(regression_results)} "
+                f"(Bar: {len(regression_results)}/{len(regression_results)})"
+            ),
             "",
             "| Case | Name | Expected | Actual | Status |",
             "|---|---|---|---|---|",

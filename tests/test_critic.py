@@ -26,6 +26,7 @@ from animated_infographics.contracts.templates import (
     TextThreadProps,
 )
 from animated_infographics.planner.critic import (
+    build_critic_request,
     critic_mismatches,
     format_disagreement_message,
     needs_critic,
@@ -532,6 +533,45 @@ def test_critic_regression_cases_classification() -> None:
     )
     assert critic_mismatches(kq_c, {"speaker": "unknown"}, bible) == []
 
+    # Case E: Quote with speaker named in sentence before (Danny found letters)
+    # Props: attribution c1, Critic: c3 -> Expected: mismatch
+    kq_e = KineticQuoteScene(
+        id="s012",
+        beat_i=12,
+        template="kinetic_quote",
+        props=KineticQuoteProps(
+            text="Who is Walter Lindqvist and why did he write to Grandma 60 times?",
+            emphasis=[],
+            attribution_cast_id="c1",
+        ),
+    )
+    assert critic_mismatches(kq_e, {"speaker": "c3"}, bible) == ["attribution_cast_id: c1 vs c3"]
+
+    # Case H: Text thread with consecutive "them" messages
+    # Props: senders them x3, Critic keyed normalized -> Expected: agree
+    tt_h = TextThreadScene(
+        id="s011",
+        beat_i=11,
+        template="text_thread",
+        props=TextThreadProps(
+            contact_name="Danny",
+            contact_cast_id=None,
+            messages=[
+                TextMessage(
+                    from_="them",
+                    text="Found this in the attic while clearing out the house.",
+                ),
+                TextMessage(from_="them", text="A whole shoebox of letters."),
+                TextMessage(from_="them", text="[Photo Attached]"),
+            ],
+        ),
+    )
+    norm_h, errs_h = validate_critic_answer(
+        tt_h, {"message_1": "them", "message_2": "them", "message_3": "them"}
+    )
+    assert errs_h == []
+    assert critic_mismatches(tt_h, norm_h, bible) == []
+
 
 def test_falsify_tone_rule_and_who_rule() -> None:
     """Falsification tests per agent_execution_guide.md:
@@ -601,3 +641,93 @@ def test_format_disagreement_message() -> None:
         "Fix the props if that reading fits the beat text better; otherwise keep yours."
     )
     assert msg == expected
+
+
+def test_critic_passage_framing_no_context_only() -> None:
+    """Verify build_critic_request uses exact passage framing header and no 'context only'."""
+    bible = _make_critic_test_bible()
+    kq = KineticQuoteScene(
+        id="s012",
+        beat_i=12,
+        template="kinetic_quote",
+        props=KineticQuoteProps(text="A quote", emphasis=[], attribution_cast_id="c1"),
+    )
+    b0 = Beat(i=10, text="Beat before previous.", start_ms=0, end_ms=1000, word_start=0, word_end=3)
+    b1 = Beat(i=11, text="Previous beat.", start_ms=1000, end_ms=2000, word_start=3, word_end=5)
+    b2 = Beat(i=12, text="Current beat.", start_ms=2000, end_ms=3000, word_start=5, word_end=7)
+    b3 = Beat(i=13, text="Next beat.", start_ms=3000, end_ms=4000, word_start=7, word_end=9)
+
+    system, user, _ = build_critic_request(kq, b2, b1, b3, bible, before_prev_beat=b0)
+
+    expected_header = (
+        "Passage (read all of it; who speaks is often named in the sentence before a quote):"
+    )
+    assert expected_header in user, "Must include verbatim passage header"
+    assert "context only" not in user.lower(), (
+        "Must NOT include 'context only' anywhere in user prompt"
+    )
+    assert "context only" not in system.lower(), "Must NOT include 'context only' in system prompt"
+    assert "Beat before previous. Previous beat. Current beat. Next beat." in user
+
+
+def test_text_thread_critic_schema_keyed() -> None:
+    """Verify text_thread critic schema has keyed message_1..n properties, all required."""
+    bible = _make_critic_test_bible()
+    tt = TextThreadScene(
+        id="s011",
+        beat_i=11,
+        template="text_thread",
+        props=TextThreadProps(
+            contact_name="Danny",
+            contact_cast_id=None,
+            messages=[
+                TextMessage(from_="them", text="msg1"),
+                TextMessage(from_="them", text="msg2"),
+                TextMessage(from_="them", text="msg3"),
+            ],
+        ),
+    )
+    beat = Beat(i=11, text="Texting", start_ms=0, end_ms=1000, word_start=0, word_end=1)
+    _, _, schema = build_critic_request(tt, beat, None, None, bible)
+
+    props = schema["properties"]
+    assert list(props.keys()) == ["message_1", "message_2", "message_3"]
+    assert schema["required"] == ["message_1", "message_2", "message_3"]
+    assert schema["additionalProperties"] is False
+    for k in ["message_1", "message_2", "message_3"]:
+        assert props[k]["enum"] == ["me", "them", "unknown"]
+
+
+def test_validate_critic_answer_keyed_text_thread() -> None:
+    """Verify validation of keyed text_thread critic answers."""
+    tt = TextThreadScene(
+        id="s011",
+        beat_i=11,
+        template="text_thread",
+        props=TextThreadProps(
+            contact_name="Danny",
+            contact_cast_id=None,
+            messages=[
+                TextMessage(from_="them", text="msg1"),
+                TextMessage(from_="them", text="msg2"),
+                TextMessage(from_="them", text="msg3"),
+            ],
+        ),
+    )
+
+    # Valid answer normalizes to {"messages": [{"sender": ...}, ...]}
+    valid_raw = {"message_1": "them", "message_2": "me", "message_3": "them"}
+    normalized, errors = validate_critic_answer(tt, valid_raw)
+    assert errors == []
+    assert normalized == {
+        "messages": [
+            {"sender": "them"},
+            {"sender": "me"},
+            {"sender": "them"},
+        ]
+    }
+
+    # Missing message_2 is a failed attempt with specific error message
+    missing_raw = {"message_1": "them", "message_3": "them"}
+    _, errors_missing = validate_critic_answer(tt, missing_raw)
+    assert errors_missing == ["critic messages missing: message_2"]

@@ -42,6 +42,7 @@ def build_critic_request(
     prev_beat: Beat | None,
     next_beat: Beat | None,
     bible: Bible,
+    before_prev_beat: Beat | None = None,
 ) -> tuple[str, str, dict[str, Any]]:
     """Build blind critic system prompt, user prompt, and JSON schema.
 
@@ -53,15 +54,14 @@ def build_critic_request(
         cast_lines.append(f"- {c.id}: {c.name} ({c.role}){narrator_tag}")
     cast_block = "\n".join(cast_lines)
 
-    prev_text = prev_beat.text if prev_beat else "None (start of story)"
-    next_text = next_beat.text if next_beat else "None (end of story)"
+    passage_beats = [
+        b.text.strip()
+        for b in [before_prev_beat, prev_beat, beat, next_beat]
+        if b is not None and b.text and b.text.strip()
+    ]
+    passage_text = " ".join(passage_beats)
 
-    context_block = (
-        f"Cast:\n{cast_block}\n\n"
-        f"Previous beat [context only]: {prev_text}\n"
-        f"Current beat: {beat.text}\n"
-        f"Next beat [context only]: {next_text}\n\n"
-    )
+    header = "Passage (read all of it; who speaks is often named in the sentence before a quote):"
 
     cast_ids = [c.id for c in bible.cast]
 
@@ -131,25 +131,19 @@ def build_critic_request(
             f"The phone belongs to the narrator. Messages in order: {msgs_str} "
             'For each, was it sent by the narrator ("me") or the other person ("them")?'
         )
+        n = len(scene.props.messages)
+        properties = {
+            f"message_{i + 1}": {
+                "type": "string",
+                "enum": ["me", "them", "unknown"],
+            }
+            for i in range(n)
+        }
+        required_keys = [f"message_{i + 1}" for i in range(n)]
         schema = {
             "type": "object",
-            "properties": {
-                "messages": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "sender": {
-                                "type": "string",
-                                "enum": ["me", "them", "unknown"],
-                            }
-                        },
-                        "required": ["sender"],
-                        "additionalProperties": False,
-                    },
-                }
-            },
-            "required": ["messages"],
+            "properties": properties,
+            "required": required_keys,
             "additionalProperties": False,
         }
 
@@ -183,7 +177,7 @@ def build_critic_request(
     else:
         raise ValueError(f"Critic request not supported for template: {scene.template}")
 
-    user_prompt = context_block + question
+    user_prompt = f"{cast_block}\n\n{header}\n{passage_text}\n\n{question}"
     return CRITIC_SYSTEM_PROMPT, user_prompt, schema
 
 
@@ -202,13 +196,19 @@ def validate_critic_answer(
             )
 
     elif isinstance(scene, TextThreadScene):
-        messages = answer.get("messages")
-        if not isinstance(messages, list) or len(messages) != len(scene.props.messages):
-            got_len = len(messages) if isinstance(messages, list) else "non-list"
-            errors.append(
-                f"critic messages length mismatch: expected {len(scene.props.messages)}, "
-                f"got {got_len}"
-            )
+        n = len(scene.props.messages)
+        for k in range(1, n + 1):
+            key = f"message_{k}"
+            if key not in answer:
+                errors.append(f"critic messages missing: {key}")
+        if not errors:
+            normalized: dict[str, Any] = {
+                "messages": [{"sender": answer[f"message_{k}"]} for k in range(1, n + 1)]
+            }
+            for extra_k, v in answer.items():
+                if not (extra_k.startswith("message_") and extra_k[8:].isdigit()):
+                    normalized[extra_k] = v
+            return normalized, errors
 
     return answer, errors
 

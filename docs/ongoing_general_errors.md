@@ -136,6 +136,7 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 **Wave C:**
 
 - C1 — Quoted speech stays whole when splitting beats — git log --grep "(c1)" — G1–G14 green bare, 221 passed (+3 tests); colon removed from PUNCT_SUFFIXES; QUOTED_SENTENCE_MAX_MS = 16000; quote spans and opening quotes preserved in split pass; tests/data/quote_sentence.json yields 1 beat instead of 2 (falsified on colon bonus and quote exclusion removal); 17,000ms synthetic sentence splits without breaking opening quote; beat counts: molasses_flood 10, emu_war 25, story_recipe_box 32->29, story_room_12 33->34.
+- C2 — Critic passage framing, keyed text-thread answers, regression cases E + H — git log --grep "(c2)" — G1–G14 green bare, 224 passed (+3 tests), 24 slow passed (+2 tests); critic prompt updated to passage framing with verbatim header 'Passage (read all of it; who speaks is often named in the sentence before a quote):\n' and 4 beats joined by spaces, removing all 'context only' text; text_thread answers use keyed message_1..n schema and are normalized to messages array in validate_critic_answer; regression cases E and H added to slow tests and planner eval; cases A, B, B', C, E, H pass on seeds 7, 8, 9 (18/18); falsified on old framing (Case E returns narrator c1 -> agree) and missing keys (failed attempt).
 
 
 ---

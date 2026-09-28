@@ -7,12 +7,14 @@ from animated_infographics.planner.llm import OllamaBackend
 
 
 @pytest.mark.slow
-def test_critic_regression_set_4_of_4_slow() -> None:
-    """Verify critic regression set classifies 4/4 cases as expected using real Ollama model."""
+@pytest.mark.parametrize("seed", [7, 8, 9])
+def test_critic_regression_set_slow(seed: int) -> None:
+    """Verify critic regression set classifies 6/6 cases as expected on seeds 7, 8, 9."""
     backend = OllamaBackend(no_cache=True)
-    results = run_critic_regression_set(backend)
-    assert len(results) == 4
+    results = run_critic_regression_set(backend, attempt_offset=seed - 7)
+    assert len(results) == 6
     for r in results:
         assert r["passed"] is True, (
-            f"Critic regression case {r['id']} failed: got {r['actual']}, expected {r['expected']}"
+            f"Critic regression case {r['id']} (seed {seed}) failed: "
+            f"got {r['actual']}, expected {r['expected']}"
         )

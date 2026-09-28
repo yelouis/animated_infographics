@@ -318,6 +318,7 @@ def _evaluate_scene_critic(
     backend: LLMBackend,
     prompt_template: str,
     compact_bible: str,
+    before_prev_beat: Beat | None = None,
 ) -> tuple[Scene, CriticReport, int]:
     """Run blind critic check on candidate scene if required per design_planner.md §11.
 
@@ -331,7 +332,14 @@ def _evaluate_scene_critic(
             0,
         )
 
-    system, user, schema = build_critic_request(candidate_scene, beat, prev_beat, next_beat, bible)
+    system, user, schema = build_critic_request(
+        candidate_scene,
+        beat,
+        prev_beat,
+        next_beat,
+        bible,
+        before_prev_beat=before_prev_beat,
+    )
 
     def validate_critic(raw: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
         return validate_critic_answer(candidate_scene, raw)
@@ -444,6 +452,7 @@ def plan_storyboard(
     # 2. Props stage per scene with fallback ladder
     for idx, beat in enumerate(beats):
         scene_id = f"s{idx:03d}"
+        before_prev_beat = beats[idx - 2] if idx > 1 else None
         prev_beat = beats[idx - 1] if idx > 0 else None
         next_beat = beats[idx + 1] if idx + 1 < n_beats else None
 
@@ -531,6 +540,7 @@ def plan_storyboard(
                 backend,
                 prompt_template,
                 compact_bible,
+                before_prev_beat=before_prev_beat,
             )
             total_llm_calls += extra_calls
         else:
