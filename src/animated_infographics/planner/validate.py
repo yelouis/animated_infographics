@@ -101,6 +101,38 @@ def text_complete_errors(path: str, s: str | None) -> list[str]:
     return []
 
 
+def internal_id_errors(path: str, s: str | None, bible: Bible | None) -> list[str]:
+    """Validate free-text string contains no internal bible IDs per design_planner.md §6 item 8.
+
+    Tokens are re.findall(r"[A-Za-z0-9]+", s), casefolded.
+    It is an error if any token equals one of this bible's entity ids (cast, places, set_pieces).
+    The message is exactly:
+        f'{path}: contains the internal id "{tok_cf}" — use the name ("{name}")'
+    """
+    if not s or not bible:
+        return []
+
+    id_to_name: dict[str, str] = {}
+    for member in bible.cast:
+        id_to_name[member.id.casefold()] = member.name
+    for place in bible.places:
+        id_to_name[place.id.casefold()] = place.name
+    for sp in bible.set_pieces:
+        id_to_name[sp.id.casefold()] = sp.name
+
+    tokens = re.findall(r"[A-Za-z0-9]+", s)
+    errors: list[str] = []
+    seen: set[str] = set()
+    for tok in tokens:
+        tok_cf = tok.casefold()
+        if tok_cf in id_to_name and tok_cf not in seen:
+            seen.add(tok_cf)
+            name = id_to_name[tok_cf]
+            errors.append(f'{path}: contains the internal id "{tok_cf}" — use the name ("{name}")')
+
+    return errors
+
+
 def normalize_props_text(template_name: str, props: dict[str, Any]) -> dict[str, Any]:
     """Normalize all free-text string fields in a props dictionary.
 
@@ -360,6 +392,8 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
         errors.extend(_check_slot("props.subtitle", props.subtitle, slots["subtitle"]))
         errors.extend(text_complete_errors("props.title", props.title))
         errors.extend(text_complete_errors("props.subtitle", props.subtitle))
+        errors.extend(internal_id_errors("props.title", props.title, bible))
+        errors.extend(internal_id_errors("props.subtitle", props.subtitle, bible))
 
     elif isinstance(props, KineticQuoteProps):
         if props.attribution_cast_id and props.attribution_cast_id not in cast_map:
@@ -368,6 +402,7 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
             )
         errors.extend(_check_slot("props.text", props.text, slots["text"]))
         errors.extend(text_complete_errors("props.text", props.text))
+        errors.extend(internal_id_errors("props.text", props.text, bible))
         # Grounding
         _, quote_errors = is_kinetic_quote_grounded(props.text, props.emphasis, beat_text)
         errors.extend(quote_errors)
@@ -385,7 +420,9 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
         errors.extend(_check_slot("props.caption", props.caption, slots["caption"]))
         if props.suffix:
             errors.extend(text_complete_errors("props.suffix", props.suffix))
+            errors.extend(internal_id_errors("props.suffix", props.suffix, bible))
         errors.extend(text_complete_errors("props.caption", props.caption))
+        errors.extend(internal_id_errors("props.caption", props.caption, bible))
         # Grounding
         if not is_stat_grounded(props.value, props.display_scale, beat_text):
             errors.append(
@@ -396,20 +433,25 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
     elif isinstance(props, IconListProps):
         errors.extend(_check_slot("props.heading", props.heading, slots["heading"]))
         errors.extend(text_complete_errors("props.heading", props.heading))
+        errors.extend(internal_id_errors("props.heading", props.heading, bible))
         for idx, item in enumerate(props.items):
             errors.extend(_check_slot(f"props.items[{idx}].label", item.label, slots["label"]))
             errors.extend(text_complete_errors(f"props.items[{idx}].label", item.label))
+            errors.extend(internal_id_errors(f"props.items[{idx}].label", item.label, bible))
 
     elif isinstance(props, RevealProps):
         errors.extend(_check_slot("props.kicker", props.kicker, slots["kicker"]))
         errors.extend(_check_slot("props.text", props.text, slots["text"]))
         errors.extend(text_complete_errors("props.kicker", props.kicker))
         errors.extend(text_complete_errors("props.text", props.text))
+        errors.extend(internal_id_errors("props.kicker", props.kicker, bible))
+        errors.extend(internal_id_errors("props.text", props.text, bible))
 
     elif isinstance(props, CauseEffectProps):
         for idx, node in enumerate(props.nodes):
             errors.extend(_check_slot(f"props.nodes[{idx}].label", node.label, slots["label"]))
             errors.extend(text_complete_errors(f"props.nodes[{idx}].label", node.label))
+            errors.extend(internal_id_errors(f"props.nodes[{idx}].label", node.label, bible))
 
     elif isinstance(props, ComparisonProps):
         if props.a.cast_id and props.a.cast_id not in cast_map:
@@ -420,12 +462,16 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
         errors.extend(_check_slot("props.b.heading", props.b.heading, slots["heading"]))
         errors.extend(text_complete_errors("props.a.heading", props.a.heading))
         errors.extend(text_complete_errors("props.b.heading", props.b.heading))
+        errors.extend(internal_id_errors("props.a.heading", props.a.heading, bible))
+        errors.extend(internal_id_errors("props.b.heading", props.b.heading, bible))
         for idx, pt in enumerate(props.a.points):
             errors.extend(_check_slot(f"props.a.points[{idx}]", pt, slots["point"]))
             errors.extend(text_complete_errors(f"props.a.points[{idx}]", pt))
+            errors.extend(internal_id_errors(f"props.a.points[{idx}]", pt, bible))
         for idx, pt in enumerate(props.b.points):
             errors.extend(_check_slot(f"props.b.points[{idx}]", pt, slots["point"]))
             errors.extend(text_complete_errors(f"props.b.points[{idx}]", pt))
+            errors.extend(internal_id_errors(f"props.b.points[{idx}]", pt, bible))
 
     elif isinstance(props, CharacterIntroProps):
         if props.cast_id not in cast_map:
@@ -436,9 +482,11 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
             )
         errors.extend(_check_slot("props.descriptor", props.descriptor, slots["descriptor"]))
         errors.extend(text_complete_errors("props.descriptor", props.descriptor))
+        errors.extend(internal_id_errors("props.descriptor", props.descriptor, bible))
         for idx, trait in enumerate(props.traits):
             errors.extend(_check_slot(f"props.traits[{idx}]", trait, slots["trait"]))
             errors.extend(text_complete_errors(f"props.traits[{idx}]", trait))
+            errors.extend(internal_id_errors(f"props.traits[{idx}]", trait, bible))
 
     elif isinstance(props, DialogueProps):
         for idx, line in enumerate(props.lines):
@@ -448,6 +496,7 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
                 )
             errors.extend(_check_slot(f"props.lines[{idx}].text", line.text, slots["line"]))
             errors.extend(text_complete_errors(f"props.lines[{idx}].text", line.text))
+            errors.extend(internal_id_errors(f"props.lines[{idx}].text", line.text, bible))
 
     elif isinstance(props, TextThreadProps):
         if props.contact_cast_id and props.contact_cast_id not in cast_map:
@@ -456,15 +505,18 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
             )
         errors.extend(_check_slot("props.contact_name", props.contact_name, slots["contact"]))
         errors.extend(text_complete_errors("props.contact_name", props.contact_name))
+        errors.extend(internal_id_errors("props.contact_name", props.contact_name, bible))
         for idx, msg in enumerate(props.messages):
             errors.extend(_check_slot(f"props.messages[{idx}].text", msg.text, slots["message"]))
             errors.extend(text_complete_errors(f"props.messages[{idx}].text", msg.text))
+            errors.extend(internal_id_errors(f"props.messages[{idx}].text", msg.text, bible))
 
     elif isinstance(props, EmotionBeatProps):
         if props.cast_id not in cast_map:
             errors.append(f"props.cast_id: cast '{props.cast_id}' not found in bible")
         errors.extend(_check_slot("props.caption", props.caption, slots["caption"]))
         errors.extend(text_complete_errors("props.caption", props.caption))
+        errors.extend(internal_id_errors("props.caption", props.caption, bible))
 
     elif isinstance(props, RelationshipMapProps):
         for idx, cid in enumerate(props.cast_ids):
@@ -495,6 +547,7 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
             seen_edges.add(pair)
             errors.extend(_check_slot(f"props.edges[{idx}].label", edge.label, slots["edge_label"]))
             errors.extend(text_complete_errors(f"props.edges[{idx}].label", edge.label))
+            errors.extend(internal_id_errors(f"props.edges[{idx}].label", edge.label, bible))
 
     elif isinstance(props, LocationProps):
         if props.place_id not in places_map:
@@ -506,6 +559,7 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
         errors.extend(_check_slot("props.caption", props.caption, slots["caption"]))
         errors.extend(_check_slot("props.era_label", props.era_label, slots["era"]))
         errors.extend(text_complete_errors("props.caption", props.caption))
+        errors.extend(internal_id_errors("props.caption", props.caption, bible))
         if props.era_label:
             if re.search(r"\bago\b", props.era_label, re.IGNORECASE) and not re.search(
                 r"\bago\b", full_transcript, re.IGNORECASE
@@ -532,6 +586,7 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
             )
         errors.extend(_check_slot("props.caption", props.caption, slots["caption"]))
         errors.extend(text_complete_errors("props.caption", props.caption))
+        errors.extend(internal_id_errors("props.caption", props.caption, bible))
 
     elif isinstance(props, MapFocusProps):
         marker_countries: set[str] = set()
@@ -553,6 +608,7 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
                 _check_slot(f"props.markers[{idx}].label", marker.label, slots["marker_label"])
             )
             errors.extend(text_complete_errors(f"props.markers[{idx}].label", marker.label))
+            errors.extend(internal_id_errors(f"props.markers[{idx}].label", marker.label, bible))
         if props.region != "world" and props.region not in marker_countries:
             errors.append(
                 f"props.region: region '{props.region}' does not match any marker place's "
@@ -560,6 +616,7 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
             )
         errors.extend(_check_slot("props.caption", props.caption, slots["caption"]))
         errors.extend(text_complete_errors("props.caption", props.caption))
+        errors.extend(internal_id_errors("props.caption", props.caption, bible))
 
     elif isinstance(props, TimelineProps):
         if not (0 <= props.highlight_index < len(props.events)):
@@ -573,6 +630,7 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
             )
             errors.extend(_check_slot(f"props.events[{idx}].label", event.label, slots["label"]))
             errors.extend(text_complete_errors(f"props.events[{idx}].label", event.label))
+            errors.extend(internal_id_errors(f"props.events[{idx}].label", event.label, bible))
 
         errors.extend(timeline_label_errors(props.events, full_transcript))
 

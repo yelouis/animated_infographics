@@ -7,11 +7,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
 
+from animated_infographics.contracts.models import Bible
 from animated_infographics.contracts.templates import REGISTRY
+from animated_infographics.planner.validate import internal_id_errors
 
 # Terminal punctuation symbols that count as closing/completed text
 TERMINAL_PUNCTUATION: tuple[str, ...] = (".", "!", "?", ")", '"', "'", "”", "’")
@@ -127,7 +130,7 @@ def is_free_text_field(template: str, path: str) -> bool:
     events[].label, markers[].label, edges[].label and non-empty suffix.
     Not on ids, enums, prefix, date_label or era_label.
     """
-    if "date_label" in path or "era_label" in path or "cast_id" in path or "place_id" in path:
+    if "date_label" in path or "era_label" in path or path.endswith("_id") or "_id" in path:
         return False
     if path.endswith(".prefix") or path.endswith(".icon") or path.endswith(".emotion"):
         return False
@@ -138,12 +141,20 @@ def is_free_text_field(template: str, path: str) -> bool:
 
 def audit_storyboards(storyboard_paths: list[Path], dedup: bool = True) -> dict[str, Any]:
     """Audit a set of storyboard.json files and return statistics."""
-    scenes_seen: dict[tuple[str, str], dict[str, Any]] = {}
+    scenes_seen: dict[tuple[str, str], tuple[dict[str, Any], Bible | None]] = {}
     total_scenes_count = 0
 
     for sb_path in storyboard_paths:
         try:
             data = json.loads(sb_path.read_text(encoding="utf-8"))
+            bible_file = sb_path.parent / "bible.json"
+            bible: Bible | None = None
+            if bible_file.exists():
+                try:
+                    bible = Bible.model_validate_json(bible_file.read_text(encoding="utf-8"))
+                except Exception:
+                    bible = None
+
             for sc in data.get("scenes", []):
                 total_scenes_count += 1
                 template = sc.get("template", "")
@@ -152,9 +163,9 @@ def audit_storyboards(storyboard_paths: list[Path], dedup: bool = True) -> dict[
                 key = (template, props_key)
                 if dedup:
                     if key not in scenes_seen:
-                        scenes_seen[key] = sc
+                        scenes_seen[key] = (sc, bible)
                 else:
-                    scenes_seen[(f"{sb_path}:{total_scenes_count}", props_key)] = sc
+                    scenes_seen[(f"{sb_path}:{total_scenes_count}", props_key)] = (sc, bible)
         except Exception as e:
             print(f"Warning: could not read {sb_path}: {e}", file=sys.stderr)
 
@@ -166,8 +177,9 @@ def audit_storyboards(storyboard_paths: list[Path], dedup: bool = True) -> dict[
     at_max_length_no_punct: list[dict[str, Any]] = []
     contains_newline: list[dict[str, Any]] = []
     completeness_failures: list[dict[str, Any]] = []
+    id_leaks: list[dict[str, Any]] = []
 
-    for sc in unique_scenes:
+    for sc, bible in unique_scenes:
         tmpl = sc.get("template", "")
         props = sc.get("props", {})
         extracted = extract_scene_strings(tmpl, props)
@@ -210,6 +222,26 @@ def audit_storyboards(storyboard_paths: list[Path], dedup: bool = True) -> dict[
                         }
                     )
 
+                id_errs: list[str] = []
+                if bible is not None:
+                    id_errs = internal_id_errors(path, val, bible)
+                else:
+                    tokens = re.findall(r"[A-Za-z0-9]+", val)
+                    id_errs = [
+                        f'{path}: contains internal id "{t.casefold()}"'
+                        for t in tokens
+                        if re.match(r"^(?:c[1-8]|p[1-4]|v[1-3])$", t.casefold())
+                    ]
+                if id_errs:
+                    id_leaks.append(
+                        {
+                            "template": tmpl,
+                            "path": path,
+                            "value": val,
+                            "errors": id_errs,
+                        }
+                    )
+
     return {
         "storyboards_count": len(storyboard_paths),
         "total_scenes_count": total_scenes_count,
@@ -219,9 +251,11 @@ def audit_storyboards(storyboard_paths: list[Path], dedup: bool = True) -> dict[
         "at_max_length_no_punct_count": len(at_max_length_no_punct),
         "contains_newline_count": len(contains_newline),
         "completeness_failures_count": len(completeness_failures),
+        "id_leaks_count": len(id_leaks),
         "at_max_length_no_punct": at_max_length_no_punct,
         "contains_newline": contains_newline,
         "completeness_failures": completeness_failures,
+        "id_leaks": id_leaks,
     }
 
 

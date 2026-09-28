@@ -21,7 +21,7 @@ Next beat (context only, do not use facts from here):
 {field_limits}
 
 # Strict Guidelines
-1. Facts: Use ONLY facts, numbers, dates, names, and quotes mentioned in THIS BEAT or the story bible. NEVER invent numbers, dates, statistics, quotes, or characters.
+1. Facts: Use ONLY facts, numbers, dates, names, and quotes mentioned in THIS BEAT or the story bible. NEVER invent numbers, dates, statistics, quotes, or characters. Refer to people, places and objects by their names; never write ids like c1, p2 or v1.
 2. Grounding:
    - For stat_callout: the number MUST match a number spoken in this beat.
    - For timeline: dates/years MUST appear in the story transcript.

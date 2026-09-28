@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 from pydantic import ValidationError
 
@@ -599,3 +601,150 @@ def test_meaning_rules_currency_and_ago() -> None:
     )
     errs_with_ago = validate_scene(loc_scene_ago, ctx_with_ago)
     assert not any('"ago" is not in the narration' in e for e in errs_with_ago)
+
+
+def test_internal_id_errors() -> None:
+    """Verify internal_id_errors rejects internal IDs and accepts normal words (C4)."""
+    from animated_infographics.planner.validate import internal_id_errors
+
+    avatar = AvatarConfig(
+        skin=1,
+        hair_style="short",
+        hair_color="black",
+        facial_hair="none",
+        headwear="none",
+        glasses=False,
+        age="adult",
+    )
+    bible = Bible(
+        schema_version=1,
+        title="Recipe Box",
+        logline="Grandma's recipe box.",
+        genre="personal_story",
+        cast=[
+            CastMember(
+                id="c1", name="Me", role="narrator", is_narrator=True, color_slot=1, avatar=avatar
+            ),
+            CastMember(
+                id="c3", name="Walt", role="friend", is_narrator=False, color_slot=3, avatar=avatar
+            ),
+            CastMember(
+                id="c4",
+                name="The Emus",
+                role="adversary",
+                is_narrator=False,
+                color_slot=4,
+                avatar=avatar,
+            ),
+        ],
+        places=[
+            Place(
+                id="p1",
+                name="Boston",
+                kind="real",
+                country_iso3="USA",
+                lat=42.36,
+                lon=-71.06,
+                geo_source="gazetteer",
+                visual_description="Historic Boston streets.",
+                icon="Buildings",
+            ),
+        ],
+        set_pieces=[
+            SetPiece(
+                id="v1",
+                name="the recipe box",
+                visual_description="Grandma's recipe box.",
+                icon="Package",
+            ),
+        ],
+    )
+
+    # 1. Real Wave B leak strings rejected
+    errs_v1 = internal_id_errors(
+        "props.caption", "One card missing from the recipe box (v1).", bible
+    )
+    assert errs_v1 == [
+        'props.caption: contains the internal id "v1" — use the name ("the recipe box")'
+    ]
+
+    errs_c1_c3 = internal_id_errors("props.text", "c1 buys the Sundowner from c3", bible)
+    assert 'props.text: contains the internal id "c1" — use the name ("Me")' in errs_c1_c3
+    assert 'props.text: contains the internal id "c3" — use the name ("Walt")' in errs_c1_c3
+
+    errs_c4 = internal_id_errors("props.text", "Feathered adversaries (c4: The Emus)", bible)
+    assert errs_c4 == ['props.text: contains the internal id "c4" — use the name ("The Emus")']
+
+    # 2. Approved non-id words accepted
+    assert internal_id_errors("props.text", "Plan B", bible) == []
+    assert internal_id_errors("props.text", "Route 66", bible) == []
+    assert internal_id_errors("props.text", "c3po", bible) == []
+
+
+def test_validate_scene_rejects_internal_ids() -> None:
+    """Verify validate_scene rejects internal id leaks in free text fields."""
+    ctx = _make_dummy_ctx()
+    # ctx.bible has p1 (Boston) and v1 (The Great Tank)
+    scene = KineticQuoteScene(
+        id="s001",
+        beat_i=1,
+        template="kinetic_quote",
+        props=KineticQuoteProps(
+            text="About 150 people were injured at v1.",
+            emphasis=[],
+            attribution_cast_id=None,
+        ),
+    )
+    errs = validate_scene(scene, ctx)
+    assert any(
+        'props.text: contains the internal id "v1" — use the name ("The Great Tank")' in e
+        for e in errs
+    )
+
+
+def test_text_audit_counts_id_leaks(tmp_path: Path) -> None:
+    """Verify audit_storyboards counts internal id leaks (C4)."""
+    import json
+
+    from animated_infographics.evals.text_audit import audit_storyboards
+
+    sb_dir = tmp_path / "job1"
+    sb_dir.mkdir()
+    bible_json = {
+        "schema_version": 1,
+        "title": "Recipe Box",
+        "logline": "Grandma's recipe box.",
+        "genre": "personal_story",
+        "cast": [],
+        "places": [],
+        "set_pieces": [
+            {
+                "id": "v1",
+                "name": "The Recipe Box",
+                "visual_description": "A wooden box.",
+                "icon": "Package",
+            }
+        ],
+    }
+    (sb_dir / "bible.json").write_text(json.dumps(bible_json))
+
+    storyboard_json = {
+        "schema_version": 1,
+        "scenes": [
+            {
+                "id": "s001",
+                "beat_i": 1,
+                "template": "reveal",
+                "props": {
+                    "kicker": "Mystery",
+                    "text": "One card missing from the recipe box (v1).",
+                },
+            }
+        ],
+    }
+    sb_path = sb_dir / "storyboard.json"
+    sb_path.write_text(json.dumps(storyboard_json))
+
+    res = audit_storyboards([sb_path])
+    assert res["id_leaks_count"] == 1
+    assert any("v1" in e for e in res["id_leaks"][0]["errors"])
