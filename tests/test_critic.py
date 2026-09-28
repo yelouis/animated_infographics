@@ -30,9 +30,10 @@ from animated_infographics.planner.critic import (
     critic_mismatches,
     format_disagreement_message,
     needs_critic,
+    resolve_contact,
     validate_critic_answer,
 )
-from animated_infographics.planner.props import plan_storyboard
+from animated_infographics.planner.props import plan_single_template_props, plan_storyboard
 
 
 class StubLLMBackend:
@@ -567,10 +568,70 @@ def test_critic_regression_cases_classification() -> None:
         ),
     )
     norm_h, errs_h = validate_critic_answer(
-        tt_h, {"message_1": "them", "message_2": "them", "message_3": "them"}
+        tt_h,
+        {
+            "message_1": "them",
+            "message_2": "them",
+            "message_3": "them",
+            "contact": "c2",
+        },
     )
     assert errs_h == []
     assert critic_mismatches(tt_h, norm_h, bible) == []
+
+    # Case F: Text thread with wrong contact name (Sofia instead of Deb)
+    # Props: contact_name "Sofia", Critic: "c4" (Deb) -> Expected: mismatch
+    tt_f = TextThreadScene(
+        id="s018",
+        beat_i=18,
+        template="text_thread",
+        props=TextThreadProps(
+            contact_name="Sofia",
+            contact_cast_id=None,
+            messages=[
+                TextMessage(from_="them", text="Keep the room."),
+                TextMessage(from_="them", text="He's never missed one."),
+            ],
+        ),
+    )
+    norm_f, errs_f = validate_critic_answer(
+        tt_f,
+        {
+            "message_1": "them",
+            "message_2": "them",
+            "contact": "c4",
+        },
+    )
+    assert errs_f == []
+    assert critic_mismatches(tt_f, norm_f, bible) == ["contact: Sofia vs Deb (c4)"]
+
+    # Case G: Text thread with non-cast contact (Wife)
+    # Props: contact_name "Wife", Critic: "unknown" -> Expected: agree
+    tt_g = TextThreadScene(
+        id="s004",
+        beat_i=4,
+        template="text_thread",
+        props=TextThreadProps(
+            contact_name="Wife",
+            contact_cast_id=None,
+            messages=[
+                TextMessage(from_="me", text="You still awake?"),
+                TextMessage(from_="them", text="Yeah, just reading. Why?"),
+                TextMessage(from_="me", text="Just checking in. Love you."),
+            ],
+        ),
+    )
+    norm_g, errs_g = validate_critic_answer(
+        tt_g,
+        {
+            "message_1": "me",
+            "message_2": "them",
+            "message_3": "me",
+            "contact": "unknown",
+        },
+    )
+    assert errs_g == []
+    assert critic_mismatches(tt_g, norm_g, bible) == []
 
 
 def test_falsify_tone_rule_and_who_rule() -> None:
@@ -671,7 +732,7 @@ def test_critic_passage_framing_no_context_only() -> None:
 
 
 def test_text_thread_critic_schema_keyed() -> None:
-    """Verify text_thread critic schema has keyed message_1..n properties, all required."""
+    """Verify text_thread critic schema has keyed messages, then contact, all required."""
     bible = _make_critic_test_bible()
     tt = TextThreadScene(
         id="s011",
@@ -688,14 +749,25 @@ def test_text_thread_critic_schema_keyed() -> None:
         ),
     )
     beat = Beat(i=11, text="Texting", start_ms=0, end_ms=1000, word_start=0, word_end=1)
-    _, _, schema = build_critic_request(tt, beat, None, None, bible)
+    _, user, schema = build_critic_request(tt, beat, None, None, bible)
+
+    expected_q = (
+        "Who is the other person in this conversation, according to the passage? "
+        'Answer a cast id, or "unknown" if the passage does not say '
+        "or they are not in the cast list."
+    )
+    assert expected_q in user, "Must include contact question verbatim"
 
     props = schema["properties"]
-    assert list(props.keys()) == ["message_1", "message_2", "message_3"]
-    assert schema["required"] == ["message_1", "message_2", "message_3"]
+    prop_keys = list(props.keys())
+    assert prop_keys == ["message_1", "message_2", "message_3", "contact"], "contact must be last"
+    assert schema["required"] == ["message_1", "message_2", "message_3", "contact"]
     assert schema["additionalProperties"] is False
     for k in ["message_1", "message_2", "message_3"]:
         assert props[k]["enum"] == ["me", "them", "unknown"]
+    # Cast members: c1 (narrator), c2 (Danny), c3 (Walt), c4 (Deb)
+    # Non-narrators: c2, c3, c4
+    assert props["contact"]["enum"] == ["c2", "c3", "c4", "unknown"]
 
 
 def test_validate_critic_answer_keyed_text_thread() -> None:
@@ -715,8 +787,13 @@ def test_validate_critic_answer_keyed_text_thread() -> None:
         ),
     )
 
-    # Valid answer normalizes to {"messages": [{"sender": ...}, ...]}
-    valid_raw = {"message_1": "them", "message_2": "me", "message_3": "them"}
+    # Valid answer normalizes to {"messages": [{"sender": ...}, ...], "contact": ...}
+    valid_raw = {
+        "message_1": "them",
+        "message_2": "me",
+        "message_3": "them",
+        "contact": "c2",
+    }
     normalized, errors = validate_critic_answer(tt, valid_raw)
     assert errors == []
     assert normalized == {
@@ -724,10 +801,107 @@ def test_validate_critic_answer_keyed_text_thread() -> None:
             {"sender": "them"},
             {"sender": "me"},
             {"sender": "them"},
-        ]
+        ],
+        "contact": "c2",
     }
 
     # Missing message_2 is a failed attempt with specific error message
-    missing_raw = {"message_1": "them", "message_3": "them"}
+    missing_raw = {"message_1": "them", "message_3": "them", "contact": "c2"}
     _, errors_missing = validate_critic_answer(tt, missing_raw)
     assert errors_missing == ["critic messages missing: message_2"]
+
+    # Missing contact is a failed attempt
+    missing_contact_raw = {
+        "message_1": "them",
+        "message_2": "me",
+        "message_3": "them",
+    }
+    _, errors_contact = validate_critic_answer(tt, missing_contact_raw)
+    assert errors_contact == ["critic contact missing"]
+
+
+def test_resolve_contact() -> None:
+    """Verify resolve_contact behavior per design_planner.md §11."""
+    bible = _make_critic_test_bible()
+
+    sample_msgs = [
+        TextMessage(from_="them", text="hi"),
+        TextMessage(from_="me", text="hello"),
+    ]
+
+    # 1. props.contact_cast_id set -> returns it directly
+    p_set = TextThreadProps(
+        contact_name="Random Name",
+        contact_cast_id="c3",
+        messages=sample_msgs,
+    )
+    assert resolve_contact(p_set, bible) == "c3"
+
+    # 2. props.contact_cast_id is None, contact_name matches non-narrator (with case/whitespace)
+    p_match = TextThreadProps(
+        contact_name="  danny  ",
+        contact_cast_id=None,
+        messages=sample_msgs,
+    )
+    assert resolve_contact(p_match, bible) == "c2"
+
+    # 3. contact_name matches narrator -> returns None (narrator excluded)
+    p_narrator = TextThreadProps(
+        contact_name="Me",
+        contact_cast_id=None,
+        messages=sample_msgs,
+    )
+    assert resolve_contact(p_narrator, bible) is None
+
+    # 4. contact_name does not match any cast member -> returns None
+    p_unknown = TextThreadProps(
+        contact_name="Stranger",
+        contact_cast_id=None,
+        messages=sample_msgs,
+    )
+    assert resolve_contact(p_unknown, bible) is None
+
+
+def test_text_thread_contact_fill_in_props_planning() -> None:
+    """Verify props planning fills contact_cast_id when matching cast name is present."""
+    bible = _make_critic_test_bible()
+    beat = Beat(i=1, text="Texting Danny", start_ms=0, end_ms=1000, word_start=0, word_end=2)
+    transcript = Transcript(
+        schema_version=1,
+        source="tts",
+        audio_path="test.wav",
+        duration_ms=1000,
+        words=[],
+        sentences=[],
+    )
+
+    # Backend provides contact_cast_id as None, but contact_name "Danny"
+    stub_raw = {
+        "contact_name": "Danny",
+        "contact_cast_id": None,
+        "messages": [
+            {"from": "them", "text": "Are you there?"},
+            {"from": "me", "text": "Yes I am."},
+        ],
+    }
+    backend = StubLLMBackend({"props": [stub_raw]})
+
+    scene, errors, attempts = plan_single_template_props(
+        template_name="text_thread",
+        scene_id="s001",
+        beat_i=1,
+        beat=beat,
+        prev_beat=None,
+        next_beat=None,
+        transcript=transcript,
+        bible=bible,
+        backend=backend,
+        prompt_template="{this_beat_text}",
+        compact_bible="Bible info",
+    )
+
+    assert errors == []
+    assert scene is not None
+    assert isinstance(scene, TextThreadScene)
+    # Must be filled to "c2" (Danny)
+    assert scene.props.contact_cast_id == "c2"

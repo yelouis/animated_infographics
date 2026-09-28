@@ -159,37 +159,77 @@ def run_critic_regression_set(backend: LLMBackend, attempt_offset: int = 0) -> l
         cases_file = (
             Path(__file__).resolve().parents[3] / "tests" / "data" / "critic_text_thread_cases.json"
         )
-    h_data = next(
-        c for c in json.loads(cases_file.read_text(encoding="utf-8"))["cases"] if c["case"] == "H"
-    )
+    raw_tt_cases = json.loads(cases_file.read_text(encoding="utf-8"))["cases"]
+    tt_cases_by_id = {c["case"]: c for c in raw_tt_cases}
 
-    h_bible = Bible(
-        schema_version=1,
-        title="Recipe Box",
-        logline="Grandma's recipe box.",
-        genre="personal_story",
-        cast=[
-            CastMember(
-                id=c["id"],
-                name=c["name"],
-                role=c["role"],
-                is_narrator=c["is_narrator"],
-                color_slot=i + 1,
-                avatar=avatar,
-            )
-            for i, c in enumerate(h_data["cast"])
-        ],
-    )
-    h_scene = TextThreadScene(
-        id=h_data["scene_id"],
-        beat_i=11,
-        template="text_thread",
-        props=TextThreadProps(
-            contact_name=h_data["props"]["contact_name"],
-            contact_cast_id=h_data["props"]["contact_cast_id"],
-            messages=[TextMessage.model_validate(m) for m in h_data["props"]["messages"]],
-        ),
-    )
+    def _build_tt_case(cid: str, name: str) -> dict[str, Any]:
+        c_data = tt_cases_by_id[cid]
+        c_bible = Bible(
+            schema_version=1,
+            title="Story",
+            logline="Story",
+            genre="personal_story",
+            cast=[
+                CastMember(
+                    id=c["id"],
+                    name=c["name"],
+                    role=c["role"],
+                    is_narrator=c["is_narrator"],
+                    color_slot=i + 1,
+                    avatar=avatar,
+                )
+                for i, c in enumerate(c_data["cast"])
+            ],
+        )
+        c_scene = TextThreadScene(
+            id=c_data["scene_id"],
+            beat_i=11,
+            template="text_thread",
+            props=TextThreadProps(
+                contact_name=c_data["props"]["contact_name"],
+                contact_cast_id=c_data["props"]["contact_cast_id"],
+                messages=[TextMessage.model_validate(m) for m in c_data["props"]["messages"]],
+            ),
+        )
+        return {
+            "id": cid,
+            "name": name,
+            "bible": c_bible,
+            "scene": c_scene,
+            "before_prev_beat": Beat(
+                i=9,
+                text=c_data["beats"]["before_previous"],
+                start_ms=0,
+                end_ms=1000,
+                word_start=0,
+                word_end=10,
+            ),
+            "prev_beat": Beat(
+                i=10,
+                text=c_data["beats"]["previous"],
+                start_ms=1000,
+                end_ms=2000,
+                word_start=10,
+                word_end=20,
+            ),
+            "beat": Beat(
+                i=11,
+                text=c_data["beats"]["current"],
+                start_ms=2000,
+                end_ms=3000,
+                word_start=20,
+                word_end=30,
+            ),
+            "next_beat": Beat(
+                i=12,
+                text=c_data["beats"]["next"],
+                start_ms=3000,
+                end_ms=4000,
+                word_start=30,
+                word_end=40,
+            ),
+            "expected": c_data["expected"]["result"],
+        }
 
     cases = [
         {
@@ -488,45 +528,9 @@ def run_critic_regression_set(backend: LLMBackend, attempt_offset: int = 0) -> l
             ),
             "expected": "mismatch",
         },
-        {
-            "id": "H",
-            "name": "Text thread with consecutive 'them' messages (Danny)",
-            "bible": h_bible,
-            "scene": h_scene,
-            "before_prev_beat": Beat(
-                i=9,
-                text=h_data["beats"]["before_previous"],
-                start_ms=0,
-                end_ms=1000,
-                word_start=0,
-                word_end=10,
-            ),
-            "prev_beat": Beat(
-                i=10,
-                text=h_data["beats"]["previous"],
-                start_ms=1000,
-                end_ms=2000,
-                word_start=10,
-                word_end=20,
-            ),
-            "beat": Beat(
-                i=11,
-                text=h_data["beats"]["current"],
-                start_ms=2000,
-                end_ms=3000,
-                word_start=20,
-                word_end=30,
-            ),
-            "next_beat": Beat(
-                i=12,
-                text=h_data["beats"]["next"],
-                start_ms=3000,
-                end_ms=4000,
-                word_start=30,
-                word_end=40,
-            ),
-            "expected": "agree",
-        },
+        _build_tt_case("F", "Text thread with wrong contact (Deb's reply labelled Sofia)"),
+        _build_tt_case("G", "Text thread with non-cast contact (Wife)"),
+        _build_tt_case("H", "Text thread with consecutive 'them' messages (Danny)"),
     ]
 
     results: list[dict[str, Any]] = []

@@ -14,6 +14,7 @@ from animated_infographics.contracts.models import (
     Scene,
     TextThreadScene,
 )
+from animated_infographics.contracts.templates import TextThreadProps
 
 CRITIC_SYSTEM_PROMPT: str = (
     "You check who says or feels what in a story beat. "
@@ -34,6 +35,27 @@ def needs_critic(scene: Scene) -> bool:
     if isinstance(scene, KineticQuoteScene):
         return scene.props.attribution_cast_id is not None
     return False
+
+
+def resolve_contact(props: TextThreadProps, bible: Bible) -> str | None:
+    """Resolve contact cast id for a text thread per design_planner.md §11.
+
+    Returns:
+    - props.contact_cast_id if set;
+    - otherwise the id of the only non-narrator cast member with norm(name) == norm(contact_name);
+    - otherwise None.
+    """
+    if props.contact_cast_id is not None:
+        return props.contact_cast_id
+
+    def norm(x: str) -> str:
+        return " ".join(x.split()).casefold()
+
+    target_name = norm(props.contact_name)
+    matches = [c.id for c in bible.cast if not c.is_narrator and norm(c.name) == target_name]
+    if len(matches) == 1:
+        return matches[0]
+    return None
 
 
 def build_critic_request(
@@ -129,17 +151,25 @@ def build_critic_request(
         msgs_str = " ".join(f'{i + 1}. "{m.text}"' for i, m in enumerate(scene.props.messages))
         question = (
             f"The phone belongs to the narrator. Messages in order: {msgs_str} "
-            'For each, was it sent by the narrator ("me") or the other person ("them")?'
+            'For each, was it sent by the narrator ("me") or the other person ("them")? '
+            "Who is the other person in this conversation, according to the passage? "
+            'Answer a cast id, or "unknown" if the passage does not say '
+            "or they are not in the cast list."
         )
         n = len(scene.props.messages)
-        properties = {
+        non_narrator_ids = [c.id for c in bible.cast if not c.is_narrator]
+        properties: dict[str, Any] = {
             f"message_{i + 1}": {
                 "type": "string",
                 "enum": ["me", "them", "unknown"],
             }
             for i in range(n)
         }
-        required_keys = [f"message_{i + 1}" for i in range(n)]
+        properties["contact"] = {
+            "type": "string",
+            "enum": [*non_narrator_ids, "unknown"],
+        }
+        required_keys = [*[f"message_{i + 1}" for i in range(n)], "contact"]
         schema = {
             "type": "object",
             "properties": properties,
@@ -201,12 +231,18 @@ def validate_critic_answer(
             key = f"message_{k}"
             if key not in answer:
                 errors.append(f"critic messages missing: {key}")
+        if "contact" not in answer:
+            errors.append("critic contact missing")
         if not errors:
             normalized: dict[str, Any] = {
-                "messages": [{"sender": answer[f"message_{k}"]} for k in range(1, n + 1)]
+                "messages": [{"sender": answer[f"message_{k}"]} for k in range(1, n + 1)],
+                "contact": answer["contact"],
             }
             for extra_k, v in answer.items():
-                if not (extra_k.startswith("message_") and extra_k[8:].isdigit()):
+                if (
+                    not (extra_k.startswith("message_") and extra_k[8:].isdigit())
+                    and extra_k != "contact"
+                ):
                     normalized[extra_k] = v
             return normalized, errors
 
@@ -273,6 +309,16 @@ def critic_mismatches(scene: Scene, answer: dict[str, Any], bible: Bible) -> lis
                 and critic_sender != msg.from_
             ):
                 mismatches.append(f"messages[{i}].from: {msg.from_} vs {critic_sender}")
+
+        critic_contact = answer.get("contact")
+        if critic_contact is not None and critic_contact != "unknown":
+            resolved_cid = resolve_contact(scene.props, bible)
+            if critic_contact != resolved_cid:
+                cast_member = next((c for c in bible.cast if c.id == critic_contact), None)
+                name = cast_member.name if cast_member else critic_contact
+                mismatches.append(
+                    f"contact: {scene.props.contact_name} vs {name} ({critic_contact})"
+                )
 
     elif isinstance(scene, EmotionBeatScene):
         critic_cast = answer.get("cast_id")

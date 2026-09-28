@@ -35,12 +35,13 @@ from animated_infographics.contracts.models import (
     TitleCardScene,
     Transcript,
 )
-from animated_infographics.contracts.templates import REGISTRY
+from animated_infographics.contracts.templates import REGISTRY, TextThreadProps
 from animated_infographics.planner.critic import (
     build_critic_request,
     critic_mismatches,
     format_disagreement_message,
     needs_critic,
+    resolve_contact,
     validate_critic_answer,
 )
 from animated_infographics.planner.llm import LLMBackend, run_with_retries
@@ -264,6 +265,14 @@ def plan_single_template_props(
         try:
             clean_raw = normalize_props_text(template_name, raw)
             props_instance = spec.props_model.model_validate(clean_raw)
+            if template_name == "text_thread" and isinstance(props_instance, TextThreadProps):
+                if props_instance.contact_cast_id is None:
+                    matched_id = resolve_contact(props_instance, bible)
+                    if matched_id is not None:
+                        props_instance = props_instance.model_copy(
+                            update={"contact_cast_id": matched_id}
+                        )
+                        clean_raw["contact_cast_id"] = matched_id
             scene_factory: Any = scene_cls
             candidate_scene: Scene = scene_factory(
                 id=scene_id,
@@ -293,6 +302,13 @@ def plan_single_template_props(
 
     if result is not None:
         props_instance = spec.props_model.model_validate(result)
+        if template_name == "text_thread" and isinstance(props_instance, TextThreadProps):
+            if props_instance.contact_cast_id is None:
+                matched_id = resolve_contact(props_instance, bible)
+                if matched_id is not None:
+                    props_instance = props_instance.model_copy(
+                        update={"contact_cast_id": matched_id}
+                    )
         scene_factory: Any = scene_cls
         scene: Scene = scene_factory(
             id=scene_id,
