@@ -10,13 +10,7 @@
 
 **Wave B (B1–B17) was delivered as 17 commits (`cad065d`…`beb4c4f`) and independently verified on September 26, 2026.** Every gate G1–G14 was re-run bare in a separate session (numbers in `agent_execution_guide.md` §1), and the cold budget was re-measured. Each item's source was read against its spec: **all 17 do what their specs say** (per-item verdicts in §3).
 
-**Wave C (C1–C8) is specced in `agent_execution_guide.md` and not yet started.** The verification looked at real output, not just specs, and found problems no gate covers. Each fix stays within behaviour the user already approved:
-- **The Issue 5 critic misses the error it was selected to catch.** In the real `story_recipe_box` run, Danny's text "Who is Walter Lindqvist…" was still credited to the narrator, and the critic **agreed**. Cause: the beat splitter (`design_audio_and_timing.md` §7) gave colons a bonus and split "…texted me a photo:" from the quote, and the critic treated the previous beat as "context only". Both were measured and fixed in the design (C1, C2).
-- **A fifth of critic disagreements (30 of 149) kept the known-wrong scene**, because the retry had a single attempt (C3).
-- **Internal ids on screen:** 4 in 311 unique scenes, e.g. "One card missing from the recipe box (v1)." (C4).
-- **Caption words collide** when a long word is highlighted ("theengagementfell"). Present since Wave A; the spec scaled the word without reserving space (C5).
-- Hygiene: a hand-copied country-code table; a missing music file silently dropped (C6).
-- **Added September 27, 2026:** a text thread credited to the wrong person. In `story_room_12` s018, Deb's reply "Keep the room. He's never missed one." sits under the contact name **"Sofia"**, and the per-message sender check cannot see it (C8). Measuring the fix showed a second problem: the passage framing specified for C2 makes the model collapse consecutive same-sender messages into one answer. That left **3 of 8** real threads unchecked on every seed, so C2 now asks for one answer per message (lesson 2.9).
+**Wave C (C1–C8) was delivered and verified on September 27, 2026.** Every gate G1–G14 passed bare (237 passed), the cold budget measured 411.10 s (≤ 600 s), with 0 newlines, 0 completeness failures, 0 internal ID leaks, 0 unavailable text-thread critics, and the critic regression set 8/8. Per-item resolutions are in §3.
 
 **Issues 6 and 7 were decided on September 27, 2026** (§3):
 - **Issue 6:** paraphrase allowed; nothing to build.

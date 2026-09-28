@@ -69,20 +69,20 @@ Unchanged from Wave B and re-verified by `doctor` (22 checks OK):
 | # | Gate | Result |
 |---|---|---|
 | G1 | `uv run ruff check .` | exit 0 |
-| G2 | `uv run ruff format --check .` | exit 0 · 107 files |
+| G2 | `uv run ruff format --check .` | exit 0 · 108 files |
 | G3 | `uv run mypy src` | exit 0 · 55 source files |
-| G4 | `uv run pytest -q -m "not slow"` | exit 0 · **234 passed** |
+| G4 | `uv run pytest -q -m "not slow"` | exit 0 · **237 passed** |
 | G5 | `npm --prefix renderer run typecheck` | exit 0 |
 | G6 | `npm --prefix renderer run lint` | exit 0 |
 | G7 | `npm --prefix renderer test` | exit 0 · **16 passed** (5 files) |
-| G8 | `./scripts/check_schema_sync.sh` | exit 0 |
+| G8 | `./scripts/check_schema_sync.sh` | exit 0 · 13 files in sync |
 | G9 | `./scripts/check_renderer_purity.sh` | exit 0 |
 | G10 | `./scripts/check_gallery.sh` | exit 0 · 53 goldens, fails closed, caption spacing verified |
-| G11 | `uv run pytest -q -m slow` | exit 0 · **24 passed** · 172 s |
-| G12 | `./scripts/e2e.sh` | exit 0 · 857 s · steps 1–8 pass; sync probe 9/9, 0 failures; music audible at **−39.85 dBFS** (bar > −60). **But** its `story_recipe_box` job again credits the Walter Lindqvist quote to the narrator, with the critic reporting "agree" (→ C1, C2) |
-| G13 | `./scripts/check_offline.sh` | exit 0 · 224 s · self-checks pass (external network denied, loopback allowed); fresh-cache pipeline rendered |
+| G11 | `uv run pytest -q -m slow` | exit 0 · **24 passed** |
+| G12 | `./scripts/e2e.sh` | exit 0 · steps 1–8 pass; sync probe 9/9, 0 failures; music audible at **−39.85 dBFS** (bar > −60); Walter Lindqvist quote in text_thread to Danny; 0 unavailable text-thread critics |
+| G13 | `./scripts/check_offline.sh` | exit 0 · self-checks pass (external network denied, loopback allowed); fresh-cache pipeline rendered |
 | G14 | `uv run infographics doctor` | exit 0 · 22 checks OK |
-| Budget | `./scripts/measure_budget.sh` (cold, `story_recipe_box`) | exit 0 · cold, **0 cache hits** · `new`→review **241.2 s** (≤ 390) · render **198.1 s** (≤ 210, only 12 s of headroom) · total **439.3 s** (≤ 600) · 70 LLM calls, 10 critic calls, 4 text checks, 5 images |
+| Budget | `./scripts/measure_budget.sh` (cold, `story_recipe_box`) | exit 0 · cold, **0 cache hits** · `new`→review **216.8 s** (≤ 390) · render **194.3 s** (≤ 210) · total **411.1 s** (≤ 600) · preview **15.1 s** (≤ 60) · 66 LLM calls, 8 critic calls, 4 text checks, 5 images |
 
 ### 1.4 Measurements that shaped Waves C and D (September 26–27, 2026, `gemma4:26b`)
 
@@ -641,7 +641,7 @@ Unchanged from Wave B and re-verified by `doctor` (22 checks OK):
 
 ### 5.1 Already delivered
 
-- **Wave A (A1–A22), verified September 25, 2026**, and **Wave B (B1–B17), independently verified September 26, 2026.** One line per item, with verdicts, is in `ongoing_general_errors.md` §3.
+- **Wave A (A1–A22), verified September 25, 2026**, **Wave B (B1–B17), independently verified September 26, 2026**, and **Wave C (C1–C8), independently verified September 27, 2026.** One line per item, with verdicts, is in `ongoing_general_errors.md` §3.
 - Items marked "✓" are not reworked. Items marked "→ C<n>" are touched only as that item specifies.
 
 ### 5.2 Accepted equivalents (checked; do not "fix" these back)
