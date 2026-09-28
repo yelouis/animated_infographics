@@ -27,12 +27,14 @@ import { revealFixtures } from "./fixtures/reveal";
 import { setPieceFixtures } from "./fixtures/set_piece";
 import { statCalloutFixtures } from "./fixtures/stat_callout";
 import { textThreadFixtures } from "./fixtures/text_thread";
+import { captionFixtures } from "./fixtures/captions";
 import { timelineFixtures } from "./fixtures/timeline";
 import { titleCardFixtures } from "./fixtures/title_card";
+import { Captions } from "../story/Captions";
 
 export interface GalleryProps {
   template: string;
-  variant: "min" | "typical" | "max" | "worst";
+  variant: "min" | "typical" | "max" | "worst" | "long_active";
 }
 
 const GALLERY_CAST: Record<string, TimelineCastMember> = {
@@ -191,13 +193,32 @@ export const Gallery: React.FC<GalleryProps> = ({ template, variant }) => {
   } else if (template === "relationship_map") {
     props = relationshipMapFixtures[standardVariant] || relationshipMapFixtures.typical;
   } else if (template === "location") {
-    props = locationFixtures[variant] || locationFixtures.typical;
+    const locVariant = variant === "worst" ? "worst" : standardVariant;
+    props = locationFixtures[locVariant] || locationFixtures.typical;
   } else if (template === "set_piece") {
     props = setPieceFixtures[standardVariant] || setPieceFixtures.typical;
   } else if (template === "map_focus") {
     props = mapFocusFixtures[standardVariant] || mapFocusFixtures.typical;
   } else if (template === "timeline") {
     props = timelineFixtures[standardVariant] || timelineFixtures.typical;
+  }
+
+  if (template === "captions") {
+    const pages = captionFixtures[variant] || captionFixtures.long_active;
+    return (
+      <EntitiesProvider
+        value={{
+          cast: GALLERY_CAST,
+          places: GALLERY_PLACES,
+          setPieces: GALLERY_SET_PIECES,
+        }}
+      >
+        <RemotionGlobalClock>
+          <Background static={true} />
+          <Captions pages={pages} scenes={[]} />
+        </RemotionGlobalClock>
+      </EntitiesProvider>
+    );
   }
 
   const timing = getDefaultTiming(template, props, 150);

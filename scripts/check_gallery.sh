@@ -16,7 +16,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT" || fail "Cannot cd to repo root"
 
 UPDATE_GOLDENS=false
-TEMPLATES="kinetic_quote,avatar_sheet,title_card,stat_callout,icon_list,reveal,cause_effect,comparison,character_intro,dialogue,text_thread,emotion_beat,relationship_map,location,set_piece,map_focus,timeline"
+TEMPLATES="kinetic_quote,avatar_sheet,title_card,stat_callout,icon_list,reveal,cause_effect,comparison,character_intro,dialogue,text_thread,emotion_beat,relationship_map,location,set_piece,map_focus,timeline,captions"
 
 for arg in "$@"; do
   case "$arg" in
@@ -108,9 +108,12 @@ variants = ['min', 'typical', 'max']
 
 errors = []
 for tmpl in templates:
-    tmpl_variants = list(variants)
-    if tmpl == 'location':
-        tmpl_variants.append('worst')
+    if tmpl == 'captions':
+        tmpl_variants = ['long_active']
+    else:
+        tmpl_variants = list(variants)
+        if tmpl == 'location':
+            tmpl_variants.append('worst')
     for var in tmpl_variants:
         cur_file = current_dir / f'{tmpl}__{var}.png'
         golden_file = goldens_dir / f'{tmpl}__{var}.png'
@@ -165,7 +168,7 @@ from PIL import Image
 f60_dir = Path('$OUT_DIR')
 f105_dir = Path('$MOTION_DIR')
 
-templates = [t.strip() for t in '$TEMPLATES'.split(',') if t.strip()]
+templates = [t.strip() for t in '$TEMPLATES'.split(',') if t.strip() and t.strip() != 'captions']
 
 errors = []
 for tmpl in templates:
@@ -195,5 +198,11 @@ if errors:
 MOTION_CODE=$?
 [ "$MOTION_CODE" -eq 0 ] || fail "Hold motion check failed"
 
-log "G10 Gallery gate passed: all goldens matched, 0 overflows, hold motion verified."
+# (d) Caption spacing check: runs of empty columns >= 16 in caption band
+log "Running caption spacing check on captions__long_active..."
+uv run pytest tests/test_caption_spacing.py -k test_caption_spacing_long_active
+SPACING_CODE=$?
+[ "$SPACING_CODE" -eq 0 ] || fail "Caption spacing check failed"
+
+log "G10 Gallery gate passed: all goldens matched, 0 overflows, hold motion verified, caption spacing verified."
 exit 0

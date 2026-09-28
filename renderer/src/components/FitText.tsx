@@ -43,25 +43,30 @@ export const FitText: React.FC<FitTextProps> = ({
 
   const [renderHandle] = useState<number | null>(() => {
     if (typeof window !== "undefined" && typeof document !== "undefined") {
-      return delayRender(`FitText fonts loading: ${template}:${slotName}`);
+      return delayRender(`FitText sizing: ${template}:${slotName}`);
     }
     return null;
   });
+  const hasContinuedRef = useRef<boolean>(false);
 
   useEffect(() => {
+    let mounted = true;
     if (typeof document !== "undefined" && document.fonts) {
       document.fonts.ready.then(() => {
-        setFontsLoaded(true);
-        if (renderHandle !== null) {
-          continueRender(renderHandle);
+        if (mounted) {
+          setFontsLoaded(true);
         }
       });
     } else {
       setFontsLoaded(true);
-      if (renderHandle !== null) {
+    }
+    return () => {
+      mounted = false;
+      if (renderHandle !== null && !hasContinuedRef.current) {
+        hasContinuedRef.current = true;
         continueRender(renderHandle);
       }
-    }
+    };
   }, [renderHandle]);
 
   const isSingleLine = slot.max_lines === 1;
@@ -83,14 +88,18 @@ export const FitText: React.FC<FitTextProps> = ({
       ? el.scrollWidth > el.clientWidth
       : el.scrollHeight > el.clientHeight || el.scrollWidth > el.clientWidth;
 
-    if (isOverflowing) {
-      if (currentSize > slot.size_min) {
-        setCurrentSize((prev) => Math.max(slot.size_min, prev - 2));
-      } else {
+    if (isOverflowing && currentSize > slot.size_min) {
+      setCurrentSize((prev) => Math.max(slot.size_min, prev - 2));
+    } else {
+      if (isOverflowing) {
         setOverflow(true);
         console.error(
           `OVERFLOW scene=${sceneId} template=${template} slot=${slotName}`
         );
+      }
+      if (renderHandle !== null && !hasContinuedRef.current) {
+        hasContinuedRef.current = true;
+        continueRender(renderHandle);
       }
     }
   }, [
@@ -103,6 +112,7 @@ export const FitText: React.FC<FitTextProps> = ({
     slotName,
     slot.size_min,
     isSingleLine,
+    renderHandle,
   ]);
 
   const showBorder = overflow && (debug || isGallery);

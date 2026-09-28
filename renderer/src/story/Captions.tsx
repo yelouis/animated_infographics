@@ -82,17 +82,37 @@ export const Captions: React.FC<CaptionsProps> = ({ pages, scenes }) => {
             <span
               key={`${idx}-${w.text}`}
               style={{
-                display: "inline-block",
-                marginLeft: isActive ? "0.15em" : "0",
-                marginRight: isActive ? "0.45em" : "0.3em",
-                color: isActive ? palette.highlight : palette.ink,
-                transform: `scale(${isActive ? 1.12 : 1.0})`,
-                transformOrigin: "bottom center",
-                WebkitTextStroke: `12px ${palette.bgDeep}`,
-                paintOrder: "stroke fill",
+                display: "inline-grid",
+                gridTemplateAreas: '"word"',
+                marginRight: idx < activePage.words.length - 1 ? "0.3em" : "0",
+                verticalAlign: "baseline",
               }}
             >
-              {w.text}
+              <span
+                style={{
+                  gridArea: "word",
+                  visibility: "hidden",
+                  fontSize: "1.12em",
+                  WebkitTextStroke: `12px ${palette.bgDeep}`,
+                  paintOrder: "stroke fill",
+                }}
+                aria-hidden="true"
+              >
+                {w.text}
+              </span>
+              <span
+                style={{
+                  gridArea: "word",
+                  justifySelf: "center",
+                  alignSelf: "end",
+                  fontSize: isActive ? "1.12em" : "1em",
+                  color: isActive ? palette.highlight : palette.ink,
+                  WebkitTextStroke: `12px ${palette.bgDeep}`,
+                  paintOrder: "stroke fill",
+                }}
+              >
+                {w.text}
+              </span>
             </span>
           );
         })}

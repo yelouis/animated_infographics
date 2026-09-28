@@ -294,7 +294,7 @@ async function main() {
             "map_focus",
             "timeline",
           ];
-      type GalleryVariant = "min" | "typical" | "max" | "worst";
+      type GalleryVariant = "min" | "typical" | "max" | "worst" | "long_active";
       const variants: GalleryVariant[] = options.variant
         ? [options.variant as GalleryVariant]
         : ["min", "typical", "max"];
@@ -302,9 +302,12 @@ async function main() {
       const targetFrame = options.frame !== undefined ? Number(options.frame) : 60;
 
       for (const tmpl of templateToRender) {
-        const tmplVariants = [...variants];
+        let tmplVariants = [...variants];
         if (!options.variant && tmpl === "location") {
           tmplVariants.push("worst");
+        }
+        if (tmpl === "captions") {
+          tmplVariants = options.variant ? [options.variant as GalleryVariant] : ["long_active"];
         }
         for (const variant of tmplVariants) {
           const inputProps = { template: tmpl, variant };

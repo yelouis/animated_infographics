@@ -77,7 +77,7 @@ Unchanged from Wave B and re-verified by `doctor` (22 checks OK):
 | G7 | `npm --prefix renderer test` | exit 0 · **16 passed** (5 files) |
 | G8 | `./scripts/check_schema_sync.sh` | exit 0 |
 | G9 | `./scripts/check_renderer_purity.sh` | exit 0 |
-| G10 | `./scripts/check_gallery.sh` | exit 0 · 36 s · 52 goldens, fails closed |
+| G10 | `./scripts/check_gallery.sh` | exit 0 · 53 goldens, fails closed, caption spacing verified |
 | G11 | `uv run pytest -q -m slow` | exit 0 · **24 passed** · 172 s |
 | G12 | `./scripts/e2e.sh` | exit 0 · 857 s · steps 1–8 pass; sync probe 9/9, 0 failures; music audible at **−39.85 dBFS** (bar > −60). **But** its `story_recipe_box` job again credits the Walter Lindqvist quote to the narrator, with the critic reporting "agree" (→ C1, C2) |
 | G13 | `./scripts/check_offline.sh` | exit 0 · 224 s · self-checks pass (external network denied, loopback allowed); fresh-cache pipeline rendered |
