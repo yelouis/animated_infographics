@@ -905,3 +905,222 @@ def test_text_thread_contact_fill_in_props_planning() -> None:
     assert isinstance(scene, TextThreadScene)
     # Must be filled to "c2" (Danny)
     assert scene.props.contact_cast_id == "c2"
+
+
+def _make_transcript_and_beats(texts: list[str]) -> tuple[Transcript, list[Beat]]:
+    words: list[TranscriptWord] = []
+    sentences: list[TranscriptSentence] = []
+    beats: list[Beat] = []
+    word_idx = 0
+    for idx, text in enumerate(texts):
+        toks = text.split() or ["word"]
+        start_w = word_idx
+        for tok in toks:
+            words.append(
+                TranscriptWord(
+                    i=word_idx,
+                    sentence_i=idx,
+                    text=tok,
+                    start_ms=word_idx * 300,
+                    end_ms=(word_idx + 1) * 300,
+                )
+            )
+            word_idx += 1
+        end_w = word_idx
+        b = Beat(
+            i=idx,
+            word_start=start_w,
+            word_end=end_w,
+            start_ms=start_w * 300,
+            end_ms=end_w * 300,
+            text=text,
+        )
+        beats.append(b)
+        sentences.append(
+            TranscriptSentence(
+                i=idx,
+                text=text,
+                start_ms=b.start_ms,
+                end_ms=b.end_ms,
+                word_start=start_w,
+                word_end=end_w,
+                paragraph_i=0,
+                is_title=(idx == 0),
+            )
+        )
+    transcript = Transcript(
+        schema_version=1,
+        source="tts",
+        audio_path="test.wav",
+        duration_ms=max((b.end_ms for b in beats), default=1000),
+        words=words,
+        sentences=sentences,
+    )
+    return transcript, beats
+
+
+def test_critic_retry_recovers_on_attempt_2_or_3() -> None:
+    """Verify critic retry allows 3 attempts and recovers on attempt 2 (C3)."""
+    bible = _make_critic_test_bible()
+    transcript, beats = _make_transcript_and_beats(["Title", "A quote from Danny"])
+    initial_props = {"text": "A quote from Danny", "emphasis": [], "attribution_cast_id": "c1"}
+    critic_answer = {"speaker": "c2"}
+    # Attempt 1 of retry fails with validation error (empty dict), attempt 2 succeeds
+    invalid_retry_props: dict[str, Any] = {}
+    valid_retry_props = {
+        "text": "A quote from Danny",
+        "emphasis": [],
+        "attribution_cast_id": "c2",
+    }
+
+    backend = StubLLMBackend(
+        {
+            "select": [
+                {
+                    "choices": [
+                        {"beat_i": 1, "primary": "kinetic_quote", "alternate": "stat_callout"}
+                    ]
+                }
+            ],
+            "props": [initial_props, invalid_retry_props, valid_retry_props],
+            "critic": [critic_answer],
+        }
+    )
+
+    storyboard, report = plan_storyboard(transcript, beats, bible, backend)
+
+    scene = storyboard.scenes[1]
+    rep_scene = report.scenes[1]
+    assert rep_scene.critic.status == "mismatch_retried"
+    assert rep_scene.critic.changed is True
+    assert scene.props.attribution_cast_id == "c2"
+
+
+def test_critic_tone_neutral_repair_when_retry_exhausted() -> None:
+    """Verify dialogue tone is repaired to neutral when retry fails and tone was only mismatch."""
+    bible = _make_critic_test_bible()
+    transcript, beats = _make_transcript_and_beats(["Title", "Rose?"])
+    initial_props = {"lines": [{"cast_id": "c1", "text": "Rose?", "tone": "angry"}]}
+    critic_answer = {"lines": [{"speaker": "c1", "tone": "unknown"}]}
+    # All 3 retry attempts return invalid props
+    backend = StubLLMBackend(
+        {
+            "select": [
+                {"choices": [{"beat_i": 1, "primary": "dialogue", "alternate": "stat_callout"}]}
+            ],
+            "props": [initial_props, {}, {}, {}],
+            "critic": [critic_answer],
+        }
+    )
+
+    storyboard, report = plan_storyboard(transcript, beats, bible, backend)
+
+    scene = storyboard.scenes[1]
+    rep_scene = report.scenes[1]
+    assert rep_scene.critic.status == "mismatch_retried"
+    assert rep_scene.critic.changed is True
+    assert getattr(rep_scene.critic, "repair", None) == "tone_neutral"
+    assert scene.props.lines[0].tone == "neutral"
+
+
+def test_critic_non_tone_mismatch_keeps_original_and_records_retry_errors() -> None:
+    """Verify non-tone mismatch keeps original scene and records retry_errors on failure."""
+    bible = _make_critic_test_bible()
+    transcript, beats = _make_transcript_and_beats(["Title", "A quote from Danny"])
+    initial_props = {"text": "A quote from Danny", "emphasis": [], "attribution_cast_id": "c1"}
+    critic_answer = {"speaker": "c2"}
+    # All retry attempts fail
+    backend = StubLLMBackend(
+        {
+            "select": [
+                {
+                    "choices": [
+                        {"beat_i": 1, "primary": "kinetic_quote", "alternate": "stat_callout"}
+                    ]
+                }
+            ],
+            "props": [initial_props, {}, {}, {}],
+            "critic": [critic_answer],
+        }
+    )
+
+    storyboard, report = plan_storyboard(transcript, beats, bible, backend)
+
+    scene = storyboard.scenes[1]
+    rep_scene = report.scenes[1]
+    assert rep_scene.critic.status == "mismatch_retried"
+    assert rep_scene.critic.changed is False
+    assert getattr(rep_scene.critic, "repair", None) is None
+    assert len(getattr(rep_scene.critic, "retry_errors", [])) > 0
+    assert scene.props.attribution_cast_id == "c1"
+
+
+def test_critic_identical_retry_changed_is_false() -> None:
+    """Verify identical retry sets changed=False."""
+    bible = _make_critic_test_bible()
+    transcript, beats = _make_transcript_and_beats(["Title", "A quote from Danny"])
+    initial_props = {"text": "A quote from Danny", "emphasis": [], "attribution_cast_id": "c1"}
+    critic_answer = {"speaker": "c2"}
+    # Retry returns identical props
+    identical_retry_props = {
+        "text": "A quote from Danny",
+        "emphasis": [],
+        "attribution_cast_id": "c1",
+    }
+
+    backend = StubLLMBackend(
+        {
+            "select": [
+                {
+                    "choices": [
+                        {"beat_i": 1, "primary": "kinetic_quote", "alternate": "stat_callout"}
+                    ]
+                }
+            ],
+            "props": [initial_props, identical_retry_props],
+            "critic": [critic_answer],
+        }
+    )
+
+    storyboard, report = plan_storyboard(transcript, beats, bible, backend)
+
+    rep_scene = report.scenes[1]
+    assert rep_scene.critic.status == "mismatch_retried"
+    assert rep_scene.critic.changed is False
+
+
+def test_r3_repair_calls_critic() -> None:
+    """Verify scene rebuilt by rule R3 calls critic when template requires it."""
+    bible = _make_critic_test_bible()
+    transcript, beats = _make_transcript_and_beats(
+        ["Title", "Danny arrived.", "I answered.", "Danny spoke up."]
+    )
+    intro1 = {"cast_id": "c2", "descriptor": "Brother", "traits": ["Kind"]}
+    d1 = {"lines": [{"cast_id": "c1", "text": "I answered him", "tone": "neutral"}]}
+    intro2 = {"cast_id": "c2", "descriptor": "Brother", "traits": ["Kind"]}
+    d2 = {"lines": [{"cast_id": "c2", "text": "Hello there", "tone": "neutral"}]}
+    critic_d1 = {"lines": [{"speaker": "c1", "tone": "neutral"}]}
+    critic_d2 = {"lines": [{"speaker": "c2", "tone": "neutral"}]}
+
+    backend = StubLLMBackend(
+        {
+            "select": [
+                {
+                    "choices": [
+                        {"beat_i": 1, "primary": "character_intro", "alternate": "stat_callout"},
+                        {"beat_i": 2, "primary": "dialogue", "alternate": "kinetic_quote"},
+                        {"beat_i": 3, "primary": "character_intro", "alternate": "dialogue"},
+                    ]
+                }
+            ],
+            "props": [intro1, d1, intro2, d2],
+            "critic": [critic_d1, critic_d2],
+        }
+    )
+
+    storyboard, report = plan_storyboard(transcript, beats, bible, backend)
+
+    rep_scene3 = report.scenes[3]
+    assert rep_scene3.final_template == "dialogue"
+    # R3 replaced intro with dialogue, which needs_critic. Must NOT be not_applicable!
+    assert rep_scene3.critic.status == "agree"

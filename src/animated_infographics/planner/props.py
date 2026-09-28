@@ -1,5 +1,6 @@
 """Props planning with fallback ladder, schema narrowing, and deterministic repairs."""
 
+import re
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
@@ -388,9 +389,9 @@ def _evaluate_scene_critic(
             critic_calls,
         )
 
-    # Disagreement: re-request same template's props once with disagreement message
+    # Disagreement: re-request same template's props with disagreement message
     disagreement_msg = format_disagreement_message(mismatches)
-    retry_scene, _, retry_attempts = plan_single_template_props(
+    retry_scene, retry_errors, retry_attempts = plan_single_template_props(
         candidate_scene.template,
         candidate_scene.id,
         candidate_scene.beat_i,
@@ -403,20 +404,67 @@ def _evaluate_scene_critic(
         prompt_template,
         compact_bible,
         extra_user_prompt=disagreement_msg,
-        max_attempts=1,
+        max_attempts=3,
     )
     extra_calls = critic_calls + retry_attempts
 
     if retry_scene is not None:
+        changed = candidate_scene.props.model_dump() != retry_scene.props.model_dump()
         return (
             retry_scene,
-            CriticReport(status="mismatch_retried", mismatches=mismatches, changed=True),
+            CriticReport(
+                status="mismatch_retried",
+                mismatches=mismatches,
+                changed=changed,
+                repair=None,
+                retry_errors=[],
+            ),
             extra_calls,
         )
 
+    # Retry failed: check for deterministic tone repair
+    if isinstance(candidate_scene, DialogueScene) and mismatches:
+        parsed_indices: list[int] = []
+        all_tone_vs_unknown = True
+        for m in mismatches:
+            match = re.match(r"^lines\[(\d+)\]\.tone: (.+) vs unknown$", m)
+            if match:
+                parsed_indices.append(int(match.group(1)))
+            else:
+                all_tone_vs_unknown = False
+                break
+
+        if all_tone_vs_unknown:
+            new_lines = list(candidate_scene.props.lines)
+            for l_idx in parsed_indices:
+                new_lines[l_idx] = new_lines[l_idx].model_copy(update={"tone": "neutral"})
+            repaired_props = candidate_scene.props.model_copy(update={"lines": new_lines})
+            repaired_scene = candidate_scene.model_copy(update={"props": repaired_props})
+            ctx = PlanContext(transcript=transcript, bible=bible, beat=beat)
+            val_errs = validate_scene(repaired_scene, ctx)
+            if not val_errs:
+                changed = candidate_scene.props.model_dump() != repaired_scene.props.model_dump()
+                return (
+                    repaired_scene,
+                    CriticReport(
+                        status="mismatch_retried",
+                        mismatches=mismatches,
+                        changed=changed,
+                        repair="tone_neutral",
+                        retry_errors=retry_errors,
+                    ),
+                    extra_calls,
+                )
+
     return (
         candidate_scene,
-        CriticReport(status="mismatch_retried", mismatches=mismatches, changed=False),
+        CriticReport(
+            status="mismatch_retried",
+            mismatches=mismatches,
+            changed=False,
+            repair=None,
+            retry_errors=retry_errors,
+        ),
         extra_calls,
     )
 
@@ -619,6 +667,26 @@ def plan_storyboard(
                         **{"from": "character_intro"},
                     )
                 )
+                if needs_critic(new_scene):
+                    critic_scene, critic_report, c_calls = _evaluate_scene_critic(
+                        new_scene,
+                        beats[idx],
+                        beats[idx - 1] if idx > 0 else None,
+                        beats[idx + 1] if idx + 1 < n_beats else None,
+                        transcript,
+                        bible,
+                        backend,
+                        prompt_template,
+                        compact_bible,
+                        before_prev_beat=beats[idx - 2] if idx > 1 else None,
+                    )
+                    new_scene = critic_scene
+                    total_llm_calls += c_calls
+                else:
+                    critic_report = CriticReport(
+                        status="not_applicable", mismatches=[], changed=False
+                    )
+
                 scenes[idx] = new_scene
                 # Update report scene
                 old_rep = plan_report_scenes[idx]
@@ -630,7 +698,7 @@ def plan_storyboard(
                     fallback_level=1 if new_scene.template == alt_template else 2,
                     attempts=old_rep.attempts,
                     errors=old_rep.errors,
-                    critic=CriticReport(status="not_applicable", mismatches=[], changed=False),
+                    critic=critic_report,
                 )
             else:
                 seen_intro_cast.add(cast_id)

@@ -720,15 +720,24 @@ def run_eval(
             all_passed = False
 
         critic_calls = 0
+        critic_agree = 0
         critic_mismatches = 0
         critic_changed = 0
+        critic_tone_neutral_repairs = 0
+        critic_unchanged_after_mismatch = 0
         for s in report.scenes:
             if s.critic is not None:
                 if s.critic.status in ("agree", "mismatch_retried", "unavailable"):
                     critic_calls += 1
+                if s.critic.status == "agree":
+                    critic_agree += 1
                 critic_mismatches += len(s.critic.mismatches)
                 if s.critic.changed:
                     critic_changed += 1
+                if s.critic.repair == "tone_neutral":
+                    critic_tone_neutral_repairs += 1
+                if s.critic.status == "mismatch_retried" and not s.critic.changed:
+                    critic_unchanged_after_mismatch += 1
 
         fix_res: dict[str, Any] = {
             "name": fix_name,
@@ -750,8 +759,11 @@ def run_eval(
             "repairs_by_rule": repairs_by_rule,
             "val_err_hist": val_err_hist,
             "critic_calls": critic_calls,
+            "critic_agree": critic_agree,
             "critic_mismatches": critic_mismatches,
             "critic_changed": critic_changed,
+            "critic_tone_neutral_repairs": critic_tone_neutral_repairs,
+            "critic_unchanged_after_mismatch": critic_unchanged_after_mismatch,
             "llm_calls": report.llm_calls,
             "llm_cache_hits": report.llm_cache_hits,
             "wall_time": wall_time,
@@ -841,8 +853,11 @@ def run_eval(
                 f"- **Rule Repairs**: {json.dumps(r['repairs_by_rule'])}",
                 f"- **Validation Violations**: {len(r['violations'])}",
                 (
-                    f"- **Critic**: {r['critic_calls']} calls, "
-                    f"{r['critic_mismatches']} mismatches, {r['critic_changed']} changed"
+                    f"- **Critic**: {r['critic_calls']} calls, {r['critic_agree']} agree, "
+                    f"{r['critic_changed']} changed, "
+                    f"{r['critic_tone_neutral_repairs']} tone_neutral repairs, "
+                    f"{r['critic_unchanged_after_mismatch']} unchanged-after-mismatch "
+                    f"({r['critic_mismatches']} mismatches)"
                 ),
                 f"- **LLM Calls**: {r['llm_calls']} (cache hits: {r['llm_cache_hits']})",
                 f"- **Wall Time**: {r['wall_time']:.1f}s",
