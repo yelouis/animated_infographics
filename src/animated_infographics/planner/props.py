@@ -81,11 +81,27 @@ def build_deterministic_kinetic_quote(scene_id: str, beat_i: int, beat: Beat) ->
     emphasis = []
     attribution_cast_id = null
     """
-    raw_text = beat.text.strip()
-    if len(raw_text) <= 90:
-        text = raw_text
-    else:
-        clipped = raw_text[:89]
+    raw_tokens = beat.text.split()
+    word_count = 0
+    cut_idx = len(raw_tokens)
+    has_more_words = False
+
+    for idx, token in enumerate(raw_tokens):
+        if any(c.isalnum() for c in token):
+            word_count += 1
+            if word_count == 12:
+                if any(any(c.isalnum() for c in t) for t in raw_tokens[idx + 1 :]):
+                    has_more_words = True
+                    cut_idx = idx + 1
+                break
+
+    selected_tokens = raw_tokens[:cut_idx]
+    text = " ".join(selected_tokens)
+    if has_more_words:
+        text += "…"
+
+    if len(text) > 90:
+        clipped = text[:89]
         last_space = clipped.rfind(" ")
         if last_space != -1:
             text = clipped[:last_space] + "…"
@@ -204,6 +220,12 @@ def _format_pydantic_validation_error(err: Mapping[str, Any]) -> str:
         return (
             f"{path}: {length} characters, limit {limit} — rewrite it shorter as a complete phrase"
         )
+
+    if err.get("type") == "too_long":
+        inp = err.get("input")
+        if isinstance(inp, list):
+            limit = err.get("ctx", {}).get("max_length")
+            return f"{path}: {len(inp)} items, limit {limit} — keep the most important ones"
 
     msg = err.get("msg", str(err))
     return f"{path}: {msg}"

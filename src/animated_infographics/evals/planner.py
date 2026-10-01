@@ -781,6 +781,7 @@ def run_eval(
         text_audit_result["contains_newline_count"] > 0
         or text_audit_result["completeness_failures_count"] > 0
         or text_audit_result.get("id_leaks_count", 0) > 0
+        or text_audit_result.get("word_cap_violations_count", 0) > 0
     ):
         all_passed = False
 
@@ -879,13 +880,14 @@ def run_eval(
         text_audit_result["contains_newline_count"] == 0
         and text_audit_result["completeness_failures_count"] == 0
         and text_audit_result.get("id_leaks_count", 0) == 0
+        and text_audit_result.get("word_cap_violations_count", 0) == 0
     )
     at_max_with_punct = (
         text_audit_result["at_max_length_count"] - text_audit_result["at_max_length_no_punct_count"]
     )
     md_lines.extend(
         [
-            "## Text Audit (§6 item 7, item 8)",
+            "## Text Audit (§6 item 7, item 8, item 9)",
             "",
             f"- **Total Strings Audited**: {text_audit_result['total_strings']}",
             f"- **At maxLength (Total)**: {text_audit_result['at_max_length_count']}",
@@ -903,6 +905,10 @@ def run_eval(
                 f"{text_audit_result['completeness_failures_count']} (Bar: 0)"
             ),
             (f"- **Internal ID Leaks**: {text_audit_result.get('id_leaks_count', 0)} (Bar: 0)"),
+            (
+                "- **Word-Cap Violations**: "
+                f"{text_audit_result.get('word_cap_violations_count', 0)} (Bar: 0)"
+            ),
             f"- **Text Audit Status**: {'**PASS**' if audit_passed else '**FAIL**'}",
             "",
         ]

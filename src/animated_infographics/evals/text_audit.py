@@ -14,7 +14,7 @@ from typing import Any
 
 from animated_infographics.contracts.models import Bible
 from animated_infographics.contracts.templates import REGISTRY
-from animated_infographics.planner.validate import internal_id_errors
+from animated_infographics.planner.validate import internal_id_errors, word_cap_errors
 
 # Terminal punctuation symbols that count as closing/completed text
 TERMINAL_PUNCTUATION: tuple[str, ...] = (".", "!", "?", ")", '"', "'", "”", "’")
@@ -178,12 +178,23 @@ def audit_storyboards(storyboard_paths: list[Path], dedup: bool = True) -> dict[
     contains_newline: list[dict[str, Any]] = []
     completeness_failures: list[dict[str, Any]] = []
     id_leaks: list[dict[str, Any]] = []
+    word_cap_violations: list[dict[str, Any]] = []
 
     for sc, bible in unique_scenes:
         tmpl = sc.get("template", "")
         props = sc.get("props", {})
         extracted = extract_scene_strings(tmpl, props)
         total_strings += len(extracted)
+
+        cap_errs = word_cap_errors(tmpl, props)
+        if cap_errs:
+            word_cap_violations.append(
+                {
+                    "template": tmpl,
+                    "errors": cap_errs,
+                    "props": props,
+                }
+            )
 
         for path, val, ml in extracted:
             if ml is not None and len(val) == ml:
@@ -252,10 +263,12 @@ def audit_storyboards(storyboard_paths: list[Path], dedup: bool = True) -> dict[
         "contains_newline_count": len(contains_newline),
         "completeness_failures_count": len(completeness_failures),
         "id_leaks_count": len(id_leaks),
+        "word_cap_violations_count": len(word_cap_violations),
         "at_max_length_no_punct": at_max_length_no_punct,
         "contains_newline": contains_newline,
         "completeness_failures": completeness_failures,
         "id_leaks": id_leaks,
+        "word_cap_violations": word_cap_violations,
     }
 
 

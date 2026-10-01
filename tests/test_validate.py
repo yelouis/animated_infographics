@@ -40,6 +40,7 @@ from animated_infographics.planner.validate import (
     PlanContext,
     validate_plan,
     validate_scene,
+    word_cap_errors,
 )
 
 
@@ -741,3 +742,71 @@ def test_text_audit_counts_id_leaks(tmp_path: Path) -> None:
     res = audit_storyboards([sb_path])
     assert res["id_leaks_count"] == 1
     assert any("v1" in e for e in res["id_leaks"][0]["errors"])
+
+
+def test_word_cap_cases_frozen() -> None:
+    """Verify all 9 frozen word cap cases from tests/data/word_cap_cases.json."""
+    import json
+
+    cases_path = Path(__file__).resolve().parent / "data" / "word_cap_cases.json"
+    data = json.loads(cases_path.read_text(encoding="utf-8"))
+    for case in data["cases"]:
+        errors = word_cap_errors(case["template"], case["props"])
+        msg = f"Failed for {case['template']} {case['scene_id']}"
+        assert errors == case["expected_errors"], msg
+
+
+def test_format_pydantic_validation_error_list_too_long() -> None:
+    """Verify list too_long error formatting per D2."""
+    from animated_infographics.planner.props import _format_pydantic_validation_error
+
+    err = {
+        "type": "too_long",
+        "loc": ("items",),
+        "input": ["a", "b", "c", "d"],
+        "ctx": {"max_length": 3},
+    }
+    msg = _format_pydantic_validation_error(err)
+    assert msg == "props.items: 4 items, limit 3 — keep the most important ones"
+
+
+def test_deterministic_kinetic_quote_fallback_30_words() -> None:
+    """Verify 30-word beat fallback produces <= 12 words, <= 90 chars, verbatim prefix."""
+    from animated_infographics.planner.grounding import is_kinetic_quote_grounded
+    from animated_infographics.planner.props import build_deterministic_kinetic_quote
+    from animated_infographics.planner.words import count_words
+
+    beat_text = (
+        "In nineteen nineteen the molasses tank collapsed and flooded the entire north end "
+        "of Boston with two million gallons of boiling syrup moving at thirty-five miles "
+        "per hour destroying everything."
+    )
+    tokens = beat_text.split()
+    beat = Beat(
+        i=1,
+        word_start=0,
+        word_end=len(tokens),
+        start_ms=0,
+        end_ms=6000,
+        text=beat_text,
+    )
+    scene = build_deterministic_kinetic_quote("s001", 1, beat)
+    assert count_words(scene.props.text) <= 12
+    assert len(scene.props.text) <= 90
+    assert scene.props.text.endswith("…")
+    prefix = scene.props.text.rstrip("…")
+    assert beat_text.startswith(prefix)
+    valid, errors = is_kinetic_quote_grounded(scene.props.text, [], beat_text)
+    assert valid, f"Grounding failed: {errors}"
+
+
+def test_word_cap_exact_cap_passes() -> None:
+    """Verify props at exactly the word cap yield zero errors."""
+    props = {
+        "heading": "Three Big Things",  # 3 words, cap is 3
+        "items": [
+            {"icon": "Drop", "label": "One Small Step"},  # 3 words, cap is 3
+            {"icon": "WaveSine", "label": "Two Giant Leaps"},  # 3 words, cap is 3
+        ],
+    }
+    assert word_cap_errors("icon_list", props) == []

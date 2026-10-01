@@ -23,7 +23,7 @@ Match the semantic intent of each beat:
 - A key object, artifact, or dramatic moment -> set_piece
 - Comparing two sides, options, or people (A vs B) -> comparison
 - Cause and effect chain (X led to Y) -> cause_effect
-- A set of 2 to 4 parallel items, reasons, or steps -> icon_list
+- A set of 2 to 3 parallel items, reasons, or steps -> icon_list
 - A major twist, punchline, or shocking revelation -> reveal
 - A punchy statement, thematic line, or quote -> kinetic_quote
 

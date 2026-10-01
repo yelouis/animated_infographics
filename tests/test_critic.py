@@ -137,10 +137,10 @@ def test_red_first_s012_wave_a_props_critic_disagreement() -> None:
     beat = Beat(
         i=12,
         word_start=0,
-        word_end=13,
+        word_end=11,
         start_ms=60800,
         end_ms=65800,
-        text='"Who is Walter Lindqvist and why did he write to Grandma 60 times?"',
+        text='"Who is Walter Lindqvist and why did he write 60 times?"',
     )
     tokens = beat.text.split()
     words = [
@@ -169,7 +169,7 @@ def test_red_first_s012_wave_a_props_critic_disagreement() -> None:
 
     # 1. Props returns s012 with attribution_cast_id "c1"
     initial_props = {
-        "text": "Who is Walter Lindqvist and why did he write to Grandma 60 times?",
+        "text": "Who is Walter Lindqvist and why did he write 60 times?",
         "emphasis": [],
         "attribution_cast_id": "c1",
     }
@@ -177,7 +177,7 @@ def test_red_first_s012_wave_a_props_critic_disagreement() -> None:
     critic_answer = {"speaker": "c2"}
     # 3. Props retry responds with corrected props "c2"
     corrected_props = {
-        "text": "Who is Walter Lindqvist and why did he write to Grandma 60 times?",
+        "text": "Who is Walter Lindqvist and why did he write 60 times?",
         "emphasis": [],
         "attribution_cast_id": "c2",
     }

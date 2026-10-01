@@ -26,6 +26,6 @@ Next beat (context only, do not use facts from here):
    - For stat_callout: the number MUST match a number spoken in this beat.
    - For timeline: dates/years MUST appear in the story transcript.
    - For kinetic_quote: text MUST be a verbatim span copied from this beat narration.
-3. Length: Stay strictly within all character limits and line counts.
-4. Style: Write short, concrete, punchy on-screen display copy. Do not copy full sentences wholesale unless required by kinetic_quote.
+3. Length: Stay within every word and item limit in the writing rules. Fewer words is better.
+4. Style: The viewer hears the narration, so on-screen words must not repeat it. Write names, labels and numbers, not sentences. Do not copy sentences unless required by kinetic_quote.
 5. JSON only matching the schema.

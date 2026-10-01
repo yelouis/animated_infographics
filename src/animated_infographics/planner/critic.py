@@ -189,6 +189,7 @@ def build_critic_request(
                 "emotion": {
                     "type": "string",
                     "enum": [
+                        "neutral",
                         "happy",
                         "sad",
                         "angry",

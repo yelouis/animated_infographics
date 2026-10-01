@@ -325,7 +325,7 @@ REGISTRY: dict[str, TemplateSpec] = {
         props_model=KineticQuoteProps,
         use_when="a line worth emphasising and nothing more specific fits.",
         writing_rules=[
-            "verbatim-span grounding of text",
+            "text is a verbatim span of this beat, at most 12 words",
             "each emphasis word is a whole word of text",
         ],
         slots={
@@ -347,7 +347,7 @@ REGISTRY: dict[str, TemplateSpec] = {
         use_when="a specific number is the point of the beat.",
         writing_rules=[
             "value must be a number said in this beat",
-            "caption <= 70 chars, plain words",
+            'suffix is the unit, at most 2 words (e.g. "gallons", "feet high")',
         ],
         slots={
             "value": TextSlot(
@@ -366,7 +366,11 @@ REGISTRY: dict[str, TemplateSpec] = {
         category="statement",
         props_model=IconListProps,
         use_when="2-3 parallel things (demands, causes, items, reasons).",
-        writing_rules=["2 to 4 items", "items must have valid icon and label <= 32 chars"],
+        writing_rules=[
+            "2 to 3 items",
+            "heading is optional, at most 3 words",
+            "each label at most 3 words: a name or short noun phrase, not a sentence",
+        ],
         slots={
             "heading": TextSlot(
                 font="display", weight=800, size_max=64, size_min=44, max_lines=2, box_width=900
@@ -385,9 +389,9 @@ REGISTRY: dict[str, TemplateSpec] = {
         props_model=RevealProps,
         use_when="a twist, punchline or verdict.",
         writing_rules=[
+            'kicker at most 3 words (rendered uppercase, e.g. "PLOT TWIST")',
+            "text at most 6 words",
             "at most 2 per video (planner R4)",
-            "kicker <= 24 chars",
-            "text <= 60 chars",
         ],
         slots={
             "kicker": TextSlot(
@@ -406,7 +410,10 @@ REGISTRY: dict[str, TemplateSpec] = {
         category="statement",
         props_model=CauseEffectProps,
         use_when="X led to Y (to Z).",
-        writing_rules=["2 to 4 nodes in sequence", "label <= 36 chars"],
+        writing_rules=[
+            "2 to 3 nodes in sequence",
+            "each label at most 3 words",
+        ],
         slots={
             "label": TextSlot(
                 font="body", weight=700, size_max=44, size_min=32, max_lines=2, box_width=620
@@ -421,7 +428,10 @@ REGISTRY: dict[str, TemplateSpec] = {
         category="statement",
         props_model=ComparisonProps,
         use_when="A versus B (two people, two prices, before/after).",
-        writing_rules=["heading <= 20 chars", "points 1 to 4 items each <= 32 chars"],
+        writing_rules=[
+            "each heading at most 3 words",
+            "1 to 2 points per side, each at most 3 words",
+        ],
         slots={
             "heading": TextSlot(
                 font="display", weight=800, size_max=56, size_min=40, max_lines=1, box_width=760
@@ -440,9 +450,11 @@ REGISTRY: dict[str, TemplateSpec] = {
         props_model=CharacterIntroProps,
         use_when="a person's first real appearance.",
         writing_rules=[
+            (
+                "descriptor at most 4 words, saying who they are, not their name"
+                ' (e.g. "The motel manager")'
+            ),
             "at most once per cast_id per video (planner R3)",
-            "descriptor <= 48 chars",
-            "0 to 3 traits <= 18 chars",
         ],
         slots={
             "name": TextSlot(
@@ -461,7 +473,10 @@ REGISTRY: dict[str, TemplateSpec] = {
         category="people",
         props_model=DialogueProps,
         use_when="someone says something (quoted or reported speech).",
-        writing_rules=["1 to 3 dialogue lines", "text <= 90 chars"],
+        writing_rules=[
+            "1 to 2 lines",
+            "each line at most 10 words",
+        ],
         slots={
             "line": TextSlot(
                 font="body", weight=700, size_max=44, size_min=32, max_lines=4, box_width=628
@@ -477,9 +492,9 @@ REGISTRY: dict[str, TemplateSpec] = {
         props_model=TextThreadProps,
         use_when="text messages, DMs, chats.",
         writing_rules=[
-            "contact_name <= 20 chars",
-            "2 to 5 messages",
-            "message text <= 80 chars",
+            "contact_name at most 3 words",
+            "2 to 3 messages",
+            "each message at most 8 words",
         ],
         slots={
             "contact": TextSlot(
@@ -498,7 +513,9 @@ REGISTRY: dict[str, TemplateSpec] = {
         category="people",
         props_model=EmotionBeatProps,
         use_when="a reaction or feeling is the point.",
-        writing_rules=["caption <= 40 chars"],
+        writing_rules=[
+            "emotion is the feeling this beat shows for that person; neutral if it shows none",
+        ],
         slots={},
         sfx_cues=[],
         spread=None,
@@ -514,6 +531,7 @@ REGISTRY: dict[str, TemplateSpec] = {
             "1 to 6 edges",
             "every edge endpoint in cast_ids",
             "no duplicate unordered pairs",
+            "each edge label at most 3 words",
         ],
         slots={
             "name": TextSlot(
@@ -532,7 +550,10 @@ REGISTRY: dict[str, TemplateSpec] = {
         category="place_time",
         props_model=LocationProps,
         use_when="arriving somewhere, or establishing where the story is.",
-        writing_rules=["caption <= 48 chars", "era_label <= 12 chars", "era_label digit grounding"],
+        writing_rules=[
+            "era_label is optional, at most 2 words",
+            "era_label digit grounding",
+        ],
         slots={
             "name": TextSlot(
                 font="display", weight=800, size_max=72, size_min=48, max_lines=2, box_width=880
@@ -550,7 +571,9 @@ REGISTRY: dict[str, TemplateSpec] = {
         category="place_time",
         props_model=SetPieceProps,
         use_when="a key object or moment is the subject.",
-        writing_rules=["caption <= 48 chars"],
+        writing_rules=[
+            "set_piece_id is the object this beat is about",
+        ],
         slots={
             "name": TextSlot(
                 font="display", weight=800, size_max=72, size_min=48, max_lines=2, box_width=880
@@ -568,7 +591,7 @@ REGISTRY: dict[str, TemplateSpec] = {
         writing_rules=[
             "1 to 3 markers",
             "region is 'world' or ISO3",
-            "caption <= 60 chars",
+            "each marker label at most 3 words",
         ],
         slots={
             "marker_label": TextSlot(
@@ -585,10 +608,10 @@ REGISTRY: dict[str, TemplateSpec] = {
         props_model=TimelineProps,
         use_when="3-4 dated events in sequence.",
         writing_rules=[
-            "3 to 6 events",
+            "3 to 4 events",
             "0 <= highlight_index < len(events)",
-            "date_label <= 14 chars",
-            "label <= 28 chars",
+            "date_label at most 3 words",
+            "label at most 3 words",
             (
                 "date_label is a date or year said in the narration, or exactly one of: "
                 "Today, Now, Present day, That night, That weekend, The next day, "

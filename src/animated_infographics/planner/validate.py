@@ -1,7 +1,7 @@
 """Validation for storyboard scenes and whole plans against contracts, bible, and grounding."""
 
 import re
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Final
 
@@ -28,12 +28,13 @@ from animated_infographics.contracts.models import (
     TitleCardProps,
     Transcript,
 )
-from animated_infographics.contracts.templates import REGISTRY, TextSlot, TimelineEvent
+from animated_infographics.contracts.templates import REGISTRY, WORD_CAPS, TextSlot, TimelineEvent
 from animated_infographics.planner.grounding import (
     digits_grounded,
     is_kinetic_quote_grounded,
     is_stat_grounded,
 )
+from animated_infographics.planner.words import count_words, field_values
 from animated_infographics.textfit import fits
 
 RELATIVE_TIME_LABELS: Final[frozenset[str]] = frozenset(
@@ -130,6 +131,37 @@ def internal_id_errors(path: str, s: str | None, bible: Bible | None) -> list[st
             name = id_to_name[tok_cf]
             errors.append(f'{path}: contains the internal id "{tok_cf}" — use the name ("{name}")')
 
+    return errors
+
+
+def word_cap_errors(template: str, props: Mapping[str, Any] | Any) -> list[str]:
+    """Validate word caps for props of a given template.
+
+    Per design_planner.md §6 item 9:
+    For each path of WORD_CAPS[template] in table order, and each value in index order,
+    when count_words(value) > cap, emit exactly:
+    f"props.{concrete_path}: {n} words, limit {cap} — rewrite it shorter as a complete phrase"
+    """
+    if hasattr(props, "model_dump"):
+        props_map = props.model_dump()
+    elif isinstance(props, Mapping):
+        props_map = props
+    else:
+        return []
+
+    caps = WORD_CAPS.get(template)
+    if not caps:
+        return []
+
+    errors: list[str] = []
+    for path, cap in caps.items():
+        for concrete_path, val in field_values(props_map, path):
+            n = count_words(val)
+            if n > cap:
+                errors.append(
+                    f"props.{concrete_path}: {n} words, limit {cap}"
+                    " — rewrite it shorter as a complete phrase"
+                )
     return errors
 
 
@@ -606,6 +638,9 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
             errors.extend(internal_id_errors(f"props.events[{idx}].label", event.label, bible))
 
         errors.extend(timeline_label_errors(props.events, full_transcript))
+
+    # 9. Word caps (item 9)
+    errors.extend(word_cap_errors(template, scene.props))
 
     return errors
 

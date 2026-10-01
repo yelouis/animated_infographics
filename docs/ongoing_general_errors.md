@@ -141,6 +141,7 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 **Wave D:**
 
 - D1 — Word-budget contracts: removed fields, list maxima, neutral, WORD_CAPS, words module, renderer, gallery — git log --grep "(d1)" — G1–G14 green bare, 242 passed (+5 tests); removed 6 fields restating narration across contracts, validate, audit, and templates; list maxima updated for 6 templates; neutral emotion added to EmotionBeat; WORD_CAPS contract and template classes added; count_words, field_values, and graphic_words implemented in planner/words.py; gallery fixtures and goldens updated with 0 overflows.
+- D2 — Planner word budget: validator item 9, writing rules, props.md, 12-word fallback, text audit, critic neutral — git log --grep "(d2)" — G1–G14 green bare, 246 passed (+4 tests), 29 slow passed (+5 tests); validator item 9 word_cap_errors enforces WORD_CAPS limits with rewrite prompt; too_long list error formatted per D2; registry writing_rules updated verbatim across 15 templates; prompts/props.md guidelines 3 & 4 updated and prompts/select.md icon_list rule updated; deterministic kinetic_quote capped at 12 words with ellipsis; critic emotion_beat supports neutral first; text audit tracks and enforces word_cap_violations_count == 0; 9 frozen cases in word_cap_cases.json verified and falsified (timeline events[].label to 99 -> red); 5 real beats in tests/slow/test_word_caps_live.py pass within 3 attempts on gemma4:26b with character_intro descriptor omitting cast member name.
 
 
 ---
