@@ -674,6 +674,8 @@ def validate_plan(bible: Bible, storyboard: Storyboard, ctx: PlanContext) -> lis
     # Character intro at most once per cast_id (R3)
     seen_intro_cast: set[str] = set()
     reveal_count = 0
+    timeline_count = 0
+    comparison_count = 0
 
     for idx, scene in enumerate(storyboard.scenes):
         # Validate individual scene
@@ -699,8 +701,16 @@ def validate_plan(bible: Bible, storyboard: Storyboard, ctx: PlanContext) -> lis
             seen_intro_cast.add(intro_cast)
         elif scene.template == "reveal":
             reveal_count += 1
+        elif scene.template == "timeline":
+            timeline_count += 1
+        elif scene.template == "comparison":
+            comparison_count += 1
 
     if reveal_count > 2:
         errors.append(f"storyboard: reveal appears {reveal_count} times (max 2 per video allowed)")
+    if timeline_count > 1:
+        errors.append(f"storyboard: timeline appears {timeline_count} times (max 1 per video)")
+    if comparison_count > 1:
+        errors.append(f"storyboard: comparison appears {comparison_count} times (max 1 per video)")
 
     return errors

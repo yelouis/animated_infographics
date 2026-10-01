@@ -28,7 +28,7 @@ def needs_critic(scene: Scene) -> bool:
     Applies to dialogue, text_thread, emotion_beat, and kinetic_quote with
     attribution_cast_id. Never applies to deterministic fallback scenes.
     """
-    if scene.rationale == "deterministic fallback":
+    if scene.rationale in ("deterministic fallback", "rhythm picture"):
         return False
     if isinstance(scene, (DialogueScene, TextThreadScene, EmotionBeatScene)):
         return True

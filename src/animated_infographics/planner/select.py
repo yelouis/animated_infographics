@@ -13,8 +13,13 @@ from animated_infographics.contracts.models import (
     RuleRepair,
     Transcript,
 )
-from animated_infographics.contracts.templates import REGISTRY
+from animated_infographics.contracts.templates import (
+    PICTURE_TEMPLATES,
+    REGISTRY,
+    REPLACEABLE_TEMPLATES,
+)
 from animated_infographics.planner.llm import LLMBackend, run_with_retries
+from animated_infographics.planner.rhythm import rhythm_target
 
 
 class Choice(BaseModel):
@@ -25,6 +30,7 @@ class Choice(BaseModel):
     beat_i: int
     primary: str
     alternate: str
+    rhythm_id: str | None = None
 
 
 def allowed_templates(bible: Bible) -> list[str]:
@@ -63,17 +69,24 @@ def allowed_templates(bible: Bible) -> list[str]:
     return sorted(templates)
 
 
-def apply_rules(choices: list[Choice], n_scenes: int) -> tuple[list[Choice], list[RuleRepair]]:
-    """Apply deterministic rules R1, R2, R4, R5 to template choices in order.
+def apply_rules(
+    choices: list[Choice],
+    n_scenes: int,
+    beats: Sequence[Beat] | None = None,
+    bible: Bible | None = None,
+) -> tuple[list[Choice], list[RuleRepair]]:
+    """Apply deterministic rules R1, R6, R2, R4, R5, R7 to template choices in order.
 
     Per design_planner.md §4:
     R1: Scene 0 is not title_card / later scene is title_card -> Force / replace with alternate
+    R6: More than one timeline or comparison in video -> later ones -> alternate or kinetic_quote
     R2: Two consecutive scenes share template (except dialogue, text_thread) ->
         second -> alternate; if that repeats -> kinetic_quote
     (R3 applied after props)
     R4: reveal > 2 times -> later ones -> alternate
     R5: kinetic_quote > ceil(0.30 * n_scenes) times (LLM primaries) ->
         excess (latest first) -> alternate
+    R7: Reaction-shot rhythm: two worded scenes, then replaceable scene -> picture
     """
     res = list(choices)
     repairs: list[RuleRepair] = []
@@ -95,6 +108,18 @@ def apply_rules(choices: list[Choice], n_scenes: int) -> tuple[list[Choice], lis
                 RuleRepair(rule="R1", scene=f"s{i:03d}", to=target, **{"from": "title_card"})
             )
             res[i] = Choice(beat_i=i, primary=target, alternate="kinetic_quote")
+
+    # R6: More than one timeline or comparison in video
+    for limit_tmpl in ("timeline", "comparison"):
+        indices = [i for i, c in enumerate(res) if c.primary == limit_tmpl]
+        if len(indices) > 1:
+            for idx in indices[1:]:
+                alt = res[idx].alternate
+                target = alt if alt not in (limit_tmpl, "title_card") else "kinetic_quote"
+                repairs.append(
+                    RuleRepair(rule="R6", scene=f"s{idx:03d}", to=target, **{"from": limit_tmpl})
+                )
+                res[idx] = Choice(beat_i=idx, primary=target, alternate=res[idx].alternate)
 
     # R2: Consecutive duplicates (except dialogue, text_thread)
     for i in range(1, len(res)):
@@ -139,6 +164,23 @@ def apply_rules(choices: list[Choice], n_scenes: int) -> tuple[list[Choice], lis
                 )
                 res[idx] = Choice(beat_i=idx, primary=alt, alternate=res[idx].alternate)
                 excess -= 1
+
+    # R7: Rhythm rule (reaction-shot rhythm)
+    if beats is not None and bible is not None:
+        run = 1
+        n = len(res)
+        for i in range(1, n):
+            t = res[i].primary
+            if run >= 2 and t in REPLACEABLE_TEMPLATES:
+                prev_t = res[i - 1].primary
+                next_t = res[i + 1].primary if i + 1 < n else None
+                beat_text = beats[i].text if i < len(beats) else ""
+                rhythm_cand = rhythm_target(beat_text, bible, prev=prev_t, next=next_t)
+                if rhythm_cand is not None:
+                    tmpl, eid = rhythm_cand
+                    res[i] = Choice(beat_i=i, primary=tmpl, alternate=t, rhythm_id=eid)
+                    repairs.append(RuleRepair(rule="R7", scene=f"s{i:03d}", to=tmpl, **{"from": t}))
+            run = 0 if res[i].primary in PICTURE_TEMPLATES else run + 1
 
     return (res, repairs)
 
@@ -210,7 +252,7 @@ def plan_template_selection(
     all_choices: list[Choice] = [Choice(beat_i=0, primary="title_card", alternate="title_card")]
 
     if n_beats == 1:
-        repaired, repairs = apply_rules(all_choices, 1)
+        repaired, repairs = apply_rules(all_choices, 1, beats, bible)
         return (repaired, repairs, 0, 0)
 
     allowed = allowed_templates(bible)
@@ -302,5 +344,5 @@ def plan_template_selection(
 
         all_choices.extend(window_choices)
 
-    repaired_choices, rule_repairs = apply_rules(all_choices, n_beats)
+    repaired_choices, rule_repairs = apply_rules(all_choices, n_beats, beats, bible)
     return (repaired_choices, rule_repairs, total_calls, total_cache_hits)

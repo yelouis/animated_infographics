@@ -69,9 +69,9 @@ Unchanged from Wave B and re-verified by `doctor` (22 checks OK):
 | # | Gate | Result |
 |---|---|---|
 | G1 | `uv run ruff check .` | exit 0 |
-| G2 | `uv run ruff format --check .` | exit 0 · 111 files |
-| G3 | `uv run mypy src` | exit 0 · 56 source files |
-| G4 | `uv run pytest -q -m "not slow"` | exit 0 · **246 passed** |
+| G2 | `uv run ruff format --check .` | exit 0 · 112 files |
+| G3 | `uv run mypy src` | exit 0 · 57 source files |
+| G4 | `uv run pytest -q -m "not slow"` | exit 0 · **251 passed** |
 | G5 | `npm --prefix renderer run typecheck` | exit 0 |
 | G6 | `npm --prefix renderer run lint` | exit 0 |
 | G7 | `npm --prefix renderer test` | exit 0 · **16 passed** (5 files) |

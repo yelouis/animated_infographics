@@ -36,7 +36,13 @@ from animated_infographics.contracts.models import (
     TitleCardScene,
     Transcript,
 )
-from animated_infographics.contracts.templates import REGISTRY, TextThreadProps
+from animated_infographics.contracts.templates import (
+    REGISTRY,
+    EmotionBeatProps,
+    LocationProps,
+    SetPieceProps,
+    TextThreadProps,
+)
 from animated_infographics.planner.critic import (
     build_critic_request,
     critic_mismatches,
@@ -148,6 +154,45 @@ def build_deterministic_title_card(scene_id: str, beat_i: int, bible: Bible) -> 
         mute_sfx=False,
         rationale="deterministic title card",
     )
+
+
+def build_rhythm_picture(scene_id: str, beat_i: int, template: str, rhythm_id: str) -> Scene:
+    """Build a deterministic rhythm picture scene per design_planner.md §4.
+
+    Produces:
+    - EmotionBeatProps(cast_id=id, emotion="neutral")
+    - SetPieceProps(set_piece_id=id)
+    - LocationProps(place_id=id, era_label=None)
+    """
+    if template == "emotion_beat":
+        return EmotionBeatScene(
+            id=scene_id,
+            beat_i=beat_i,
+            template="emotion_beat",
+            props=EmotionBeatProps(cast_id=rhythm_id, emotion="neutral"),
+            mute_sfx=False,
+            rationale="rhythm picture",
+        )
+    elif template == "set_piece":
+        return SetPieceScene(
+            id=scene_id,
+            beat_i=beat_i,
+            template="set_piece",
+            props=SetPieceProps(set_piece_id=rhythm_id),
+            mute_sfx=False,
+            rationale="rhythm picture",
+        )
+    elif template == "location":
+        return LocationScene(
+            id=scene_id,
+            beat_i=beat_i,
+            template="location",
+            props=LocationProps(place_id=rhythm_id, era_label=None),
+            mute_sfx=False,
+            rationale="rhythm picture",
+        )
+    else:
+        raise ValueError(f"Unknown rhythm picture template: {template}")
 
 
 def narrow_schema_references(schema: dict[str, Any], template: str, bible: Bible) -> dict[str, Any]:
@@ -563,6 +608,29 @@ def plan_storyboard(
                 )
             )
             continue
+
+        if choice.rhythm_id is not None:
+            r_scene = build_rhythm_picture(scene_id, idx, prim_template, choice.rhythm_id)
+            ctx = PlanContext(transcript=transcript, bible=bible, beat=beat)
+            val_errors = validate_scene(r_scene, ctx)
+            if not val_errors:
+                scenes.append(r_scene)
+                plan_report_scenes.append(
+                    PlanReportScene(
+                        id=scene_id,
+                        primary=prim_template,
+                        alternate=alt_template,
+                        final_template=prim_template,
+                        fallback_level=0,
+                        attempts=0,
+                        errors=[],
+                        critic=CriticReport(status="not_applicable", mismatches=[], changed=False),
+                    )
+                )
+                continue
+            else:
+                prim_template = alt_template
+                alt_template = "kinetic_quote"
 
         accumulated_errors: list[str] = []
         scene_result: Scene | None = None
