@@ -46,6 +46,14 @@ from animated_infographics.planner.props import plan_storyboard
 from animated_infographics.planner.segment import plan_beats
 from animated_infographics.planner.validate import PlanContext, validate_plan
 from animated_infographics.planner.voice import select_voice
+from animated_infographics.planner.words import graphic_words
+
+WAVE_B_BASELINES: dict[str, dict[str, str]] = {
+    "molasses_flood": {"per_sec": "1.11", "light": "1/10 (10%)"},
+    "emu_war": {"per_sec": "1.51", "light": "3/25 (12%)"},
+    "story_recipe_box": {"per_sec": "1.91", "light": "3/32 (9%)"},
+    "story_room_12": {"per_sec": "1.76", "light": "1/33 (3%)"},
+}
 
 
 def _sha256_file(path: Path) -> str:
@@ -716,8 +724,37 @@ def run_eval(
         if fix_name == "story_recipe_box":
             time_bar_pass = wall_time <= 240.0
 
+        # Word density metrics (D4)
+        def _sc_props(sc: Any) -> Any:
+            return sc.props.model_dump() if hasattr(sc.props, "model_dump") else sc.props
+
+        graphic_words_total = sum(
+            graphic_words(s.template, _sc_props(s)) for s in storyboard.scenes
+        )
+        narration_words = len(transcript.words)
+        graphic_words_per_narration_word = (
+            graphic_words_total / narration_words if narration_words > 0 else 0.0
+        )
+        post_title_scenes = (
+            storyboard.scenes[1:]
+            if len(storyboard.scenes) > 1 and storyboard.scenes[0].template == "title_card"
+            else [s for s in storyboard.scenes if s.template != "title_card"]
+        )
+        m_post = len(post_title_scenes)
+        k_light = sum(1 for s in post_title_scenes if graphic_words(s.template, _sc_props(s)) <= 2)
+        light_share = (k_light / m_post) if m_post > 0 else 0.0
+        light_bar_pass = light_share >= (1.0 / 3.0)
+
+        r6_repairs = repairs_by_rule.get("R6", 0)
+        r7_repairs = repairs_by_rule.get("R7", 0)
+
         fixture_pass = (
-            voice_match and distinct_bar_pass and l2_bar_pass and violations_pass and time_bar_pass
+            voice_match
+            and distinct_bar_pass
+            and l2_bar_pass
+            and violations_pass
+            and time_bar_pass
+            and light_bar_pass
         )
         if not fixture_pass:
             all_passed = False
@@ -771,6 +808,15 @@ def run_eval(
             "llm_cache_hits": report.llm_cache_hits,
             "wall_time": wall_time,
             "time_bar_pass": time_bar_pass,
+            "graphic_words_total": graphic_words_total,
+            "narration_words": narration_words,
+            "graphic_words_per_narration_word": graphic_words_per_narration_word,
+            "k_light": k_light,
+            "m_post": m_post,
+            "light_share": light_share,
+            "light_bar_pass": light_bar_pass,
+            "r6_repairs": r6_repairs,
+            "r7_repairs": r7_repairs,
             "passed": fixture_pass,
         }
         results.append(fix_res)
@@ -816,9 +862,10 @@ def run_eval(
 
     table_header = (
         "| Fixture | Voice Match | Scenes | Distinct (Bar) | L2 % (≤15%) | "
-        "Violations (=0) | LLM Calls | Wall Time | Status |"
+        "Violations (=0) | Graphic Words (Total/Per Narr) | Light Share (≥1/3) [Wave B] | "
+        "R6 / R7 | LLM Calls | Wall Time | Status |"
     )
-    table_sep = "|---|---|---|---|---|---|---|---|---|"
+    table_sep = "|---|---|---|---|---|---|---|---|---|---|---|---|"
     md_lines.extend(["", "## Summary Table", "", table_header, table_sep])
 
     for r in results:
@@ -826,11 +873,17 @@ def run_eval(
         d_str = f"{r['distinct_templates']} (≥{r['min_distinct']})"
         l2_str = f"{r['l2_pct']:.1f}% ({r['l2_count']}/{r['n_scenes']})"
         viol_str = str(len(r["violations"]))
+        words_str = f"{r['graphic_words_total']} ({r['graphic_words_per_narration_word']:.2f})"
+        wb = WAVE_B_BASELINES.get(r["name"], {})
+        base_light = wb.get("light", "N/A")
+        light_str = f"{r['k_light']}/{r['m_post']} ({r['light_share'] * 100:.1f}%) [{base_light}]"
+        rhythm_str = f"{r['r6_repairs']} / {r['r7_repairs']}"
         status_str = "**PASS**" if r["passed"] else "**FAIL**"
         time_str = f"{r['wall_time']:.1f}s"
         row = (
             f"| `{r['name']}` | {v_str} | {r['n_scenes']} | {d_str} | {l2_str} | "
-            f"{viol_str} | {r['llm_calls']} | {time_str} | {status_str} |"
+            f"{viol_str} | {words_str} | {light_str} | {rhythm_str} | {r['llm_calls']} | "
+            f"{time_str} | {status_str} |"
         )
         md_lines.append(row)
 
@@ -840,6 +893,8 @@ def run_eval(
         v_reason = r["voice"]["reason"]
         v_ev = r["voice"]["evidence"]
         v_voice = r["voice"]["voice"]
+        wb = WAVE_B_BASELINES.get(r["name"], {})
+        base_light = wb.get("light", "N/A")
         voice_line = f"- **Voice**: `{v_voice}` (reason: `{v_reason}`, evidence: `{v_ev}`)"
         fb_line = (
             f"- **Fallback Levels**: L0={r['l0_count']}, L1={r['l1_count']}, "
@@ -856,6 +911,15 @@ def run_eval(
                 f"- **Distinct Templates**: {r['distinct_templates']} (Bar: ≥{r['min_distinct']})",
                 fb_line,
                 f"- **Rule Repairs**: {json.dumps(r['repairs_by_rule'])}",
+                f"- **Rhythm Repairs**: R6={r['r6_repairs']}, R7={r['r7_repairs']}",
+                (
+                    f"- **Word Density**: {r['graphic_words_total']} graphic words "
+                    f"({r['graphic_words_per_narration_word']:.2f} per narration word)"
+                ),
+                (
+                    f"- **Light Share**: {r['k_light']}/{r['m_post']} "
+                    f"({r['light_share'] * 100:.1f}%, Bar: ≥1/3) [Wave B: {base_light}]"
+                ),
                 f"- **Validation Violations**: {len(r['violations'])}",
                 (
                     f"- **Critic**: {r['critic_calls']} calls, {r['critic_agree']} agree, "
