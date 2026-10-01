@@ -1,23 +1,8 @@
-# Agent Execution Guide — Active Build: Wave C (verification fixes, 8 items) then Wave D (picture-first stories, 5 items) — September 27, 2026
+# Agent Execution Guide — Queue Complete: Waves A, B, C, and D Delivered — October 1, 2026
 
-**You are an engineering agent with no memory of this project.** The offline MVP (Wave A, A1–A22) and the verification-fix wave (Wave B, B1–B17) are built, committed and pushed (head `beb4c4f`). On September 26, 2026 an independent pass re-ran every gate, read every Wave B item against its spec, **and inspected real output**. All 14 gates reproduce green, and all 17 Wave B items do what their specs say. But real output showed problems the specs had not anticipated:
-- **The people-scene critic (Issue 5) misses the error it was chosen to catch.** In a real `story_recipe_box` run it *agreed* that Danny's text "Who is Walter Lindqvist…" was the narrator's. The beat splitter had cut the quote away from "…he texted me a photo:", and the critic treated that neighbouring beat as "context only".
-- **30 of 149 critic disagreements kept the known-wrong scene**, because the retry had one attempt.
-- **Internal ids appear on screen** ("One card missing from the recipe box (v1).").
-- **Highlighted caption words collide with their neighbours** ("theengagementfell").
-- **A text thread shows the wrong contact** (added September 27, 2026). Deb's reply "Keep the room. He's never missed one." appears under "Sofia", and the critic cannot see it because it asks only "me or them" per message. While measuring this, the passage framing for C2 turned out to make the model **collapse consecutive same-sender messages into one answer**: 3 of 8 real threads would end unchecked. C2 now asks for one answer per message; C8 adds the contact.
+**You are an engineering agent with no memory of this project.** The offline MVP (Wave A, A1–A22), verification-fix wave (Wave B, B1–B17), verification-hardening wave (Wave C, C1–C8), and picture-first stories wave (Wave D, D1–D5) are built, committed and pushed. All 14 battery gates reproduce green, the cold performance budget passes (390.2 s total ≤ 600 s), all rendered jobs show ≤ 1.0 graphic word/s and ≥ 1/3 light scenes, and all text audit, critic, and determinism bars hold.
 
-Wave C fixes these. Issue 6 was decided on September 27, 2026: paraphrased dialogue is fine, so there is nothing to build.
-
-**Then Wave D: picture-first stories (Issue 7 → Option A, selected by the user: *"Proceed with Option A."*).**
-- **The problem:** the story videos put ≈ 4.5 words/s on screen (every narration word as a caption, plus 1.1–1.9 graphic words/s), while the narrator speaks 2.6 words/s. Half the scenes carried ≥ 10 words. The user's reference, Casually Explained, shows no words in half its frames.
-- **Wave D does three things, and keeps karaoke captions:**
-  - removes the text fields that restated the narration;
-  - caps every remaining field in words;
-  - adds two selection rules: at most one timeline and one comparison per video (R6), and a reaction-shot rhythm (R7).
-- **Measured on the real Wave B storyboards before specifying:** the model met the caps on 93 of 94 scenes, and graphic words fell to 0.52–0.89 per second, with 39–56% of scenes nearly wordless (§1.4).
-
-**What is approved:** Wave C, items **C1–C8**, then Wave D, items **D1–D5**, all in §3, in the order of §2 (C8 runs third, straight after C2). **Nothing else.** **What NOT to touch:** everything in §5. **What must not be started:** everything in §4.
+**Queue status:** Waves A, B, C, and D are complete and verified. **Nothing is currently approved to start.** **What must not be started:** deferred features DF1–DF9 (§4) without an explicit user selection. Never fill in a `Your selection: _____` line yourself.
 
 **Every number and literal string in this document and in the design docs is a decision, not a suggestion.** Implement as written; that includes prompts, header lines, thresholds, seeds and error strings. If a value is genuinely impossible, keep the *intent*, deviate minimally, say so in the commit body, and add it to §5.2. If the design itself cannot work, **STOP and file it in `docs/ongoing_general_errors.md` with options and a `Your selection: _____` line. Do not improvise, and never fill in a selection line yourself.**
 
@@ -82,7 +67,7 @@ Unchanged from Wave B and re-verified by `doctor` (22 checks OK):
 | G12 | `./scripts/e2e.sh` | exit 0 · steps 1–9 pass; sync probe 9/9, 0 failures; word density ≤ 1.0 words/s and light share ≥ 1/3; music audible at **−39.85 dBFS** (bar > −60); Walter Lindqvist quote in text_thread to Danny; 0 unavailable text-thread critics |
 | G13 | `./scripts/check_offline.sh` | exit 0 · self-checks pass (external network denied, loopback allowed); fresh-cache pipeline rendered |
 | G14 | `uv run infographics doctor` | exit 0 · 22 checks OK |
-| Budget | `./scripts/measure_budget.sh` (cold, `story_recipe_box`) | exit 0 · cold, **0 cache hits** · `new`→review **216.8 s** (≤ 390) · render **194.3 s** (≤ 210) · total **411.1 s** (≤ 600) · preview **15.1 s** (≤ 60) · 66 LLM calls, 8 critic calls, 4 text checks, 5 images |
+| Budget | `./scripts/measure_budget.sh` (cold, `story_recipe_box`) | exit 0 · cold, **0 cache hits** · `new`→review **200.0 s** (≤ 390) · render **190.1 s** (≤ 210) · total **390.2 s** (≤ 600) · preview **13.4 s** (≤ 60) · 58 LLM calls, 8 critic calls, 4 text checks, 5 images |
 
 ### 1.4 Measurements that shaped Waves C and D (September 26–27, 2026, `gemma4:26b`)
 
@@ -641,7 +626,7 @@ Unchanged from Wave B and re-verified by `doctor` (22 checks OK):
 
 ### 5.1 Already delivered
 
-- **Wave A (A1–A22), verified September 25, 2026**, **Wave B (B1–B17), independently verified September 26, 2026**, and **Wave C (C1–C8), independently verified September 27, 2026.** One line per item, with verdicts, is in `ongoing_general_errors.md` §3.
+- **Wave A (A1–A22), verified September 25, 2026**, **Wave B (B1–B17), independently verified September 26, 2026**, **Wave C (C1–C8), independently verified September 27, 2026**, and **Wave D (D1–D5), independently verified October 1, 2026.** One line per item, with verdicts, is in `ongoing_general_errors.md` §3.
 - Items marked "✓" are not reworked. Items marked "→ C<n>" are touched only as that item specifies.
 
 ### 5.2 Accepted equivalents (checked; do not "fix" these back)
@@ -830,22 +815,22 @@ Unchanged from Wave B and re-verified by `doctor` (22 checks OK):
 ## 9. Definition of Done: Waves C and D
 
 **Wave C**
-- [ ] C1–C8 each landed as one pushed commit scoped to its id, with red and green runs recorded.
-- [ ] `tests/data/quote_sentence.json` yields one beat; the Walter Lindqvist quote is not attributed to the narrator in the re-run E2E.
-- [ ] Critic regression 8/8 on seeds 7, 8, 9; unchanged-after-mismatch reported and lower than Wave B's 30/149.
-- [ ] Case F yields `contact: Sofia vs Deb (c3)`. The re-run E2E lists every text thread's contact, with 0 `unavailable` text-thread critics.
-- [ ] 0 id leaks in C7's planner-eval text audit.
-- [ ] Caption spacing check green on the gallery fixture and on every re-previewed `story_recipe_box` page.
-- [ ] `countryCodes.ts` generated and sync-gated; a missing recorded input fails with exit 2.
-- [ ] C7's cold budget measured with 0 cache hits; bars met or filed. Wave C is recorded in §5.1; the guide is **not** rewritten yet.
+- [x] C1–C8 each landed as one pushed commit scoped to its id, with red and green runs recorded.
+- [x] `tests/data/quote_sentence.json` yields one beat; the Walter Lindqvist quote is not attributed to the narrator in the re-run E2E.
+- [x] Critic regression 8/8 on seeds 7, 8, 9; unchanged-after-mismatch reported and lower than Wave B's 30/149.
+- [x] Case F yields `contact: Sofia vs Deb (c3)`. The re-run E2E lists every text thread's contact, with 0 `unavailable` text-thread critics.
+- [x] 0 id leaks in C7's planner-eval text audit.
+- [x] Caption spacing check green on the gallery fixture and on every re-previewed `story_recipe_box` page.
+- [x] `countryCodes.ts` generated and sync-gated; a missing recorded input fails with exit 2.
+- [x] C7's cold budget measured with 0 cache hits; bars met or filed. Wave C is recorded in §5.1; the guide is **not** rewritten yet.
 
 **Wave D**
-- [ ] D1–D5 each landed as one pushed commit scoped to its id, with red and green runs recorded.
-- [ ] The removed fields exist nowhere: the props models, the generated schema and TypeScript, the renderer and the fixtures (G5, G8 and G10 green).
-- [ ] All 9 frozen word-cap cases give their exact errors; the 7 rhythm cases and `recipe_choices.json` give their exact expected output.
-- [ ] Planner eval: every §9 bar on every fixture, including **light share ≥ 1/3** and **0 word-cap violations**; critic 8/8.
-- [ ] E2E step 9: every rendered job **≤ 1.0 graphic word/s** and **≥ 1/3 light scenes**, reported beside Wave B's numbers.
-- [ ] Cold budget re-measured with 0 cache hits; bars met or filed.
-- [ ] Five `story_recipe_box` stills opened and described (reaction shot, set piece, timeline, text thread, quote).
-- [ ] §1.3: every gate G1–G14 green, measured this session, read bare.
-- [ ] This guide rewritten to **Queue Complete**. **Then stop. Do not invent work.**
+- [x] D1–D5 each landed as one pushed commit scoped to its id, with red and green runs recorded.
+- [x] The removed fields exist nowhere: the props models, the generated schema and TypeScript, the renderer and the fixtures (G5, G8 and G10 green).
+- [x] All 9 frozen word-cap cases give their exact errors; the 7 rhythm cases and `recipe_choices.json` give their exact expected output.
+- [x] Planner eval: every §9 bar on every fixture, including **light share ≥ 1/3** and **0 word-cap violations**; critic 8/8.
+- [x] E2E step 9: every rendered job **≤ 1.0 graphic word/s** and **≥ 1/3 light scenes**, reported beside Wave B's numbers.
+- [x] Cold budget re-measured with 0 cache hits; bars met or filed.
+- [x] Five `story_recipe_box` stills opened and described (reaction shot, set piece, timeline, text thread, quote).
+- [x] §1.3: every gate G1–G14 green, measured this session, read bare.
+- [x] This guide rewritten to **Queue Complete**. **Then stop. Do not invent work.**

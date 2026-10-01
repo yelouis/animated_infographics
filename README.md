@@ -4,7 +4,7 @@ Turn narration into an **animated explainer video**: flat editorial vector scene
 
 The long-term goal is **live**: speak in real time while the visuals build behind you, like live captioning but as infographics.
 
-> **Status: Wave B complete.** All 17 Wave B items implemented and verified against all 14 battery gates.
+> **Status: Waves A–D delivered.** All items implemented and verified against all 14 battery gates.
 
 ## How it works
 

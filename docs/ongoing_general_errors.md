@@ -16,11 +16,11 @@
 - **Issue 6:** paraphrase allowed; nothing to build.
 - **Issue 7 → Option A:** picture-first stories.
 
-**Wave D (D1–D5), specced in the same guide to run after Wave C, delivers Issue 7.** No question is open.
+**Wave D (D1–D5) was delivered and verified on October 1, 2026.** Every gate G1–G14 passed bare (254 passed), the cold budget measured 390.16 s (≤ 600 s), with 0 word-cap violations, 0 newlines, 0 completeness failures, 0 internal ID leaks, 8/8 critic regression, word density on all rendered jobs ≤ 1.0 graphic word/s, and light scene share ≥ 1/3 (33.3%–57.1%). Per-item resolutions are in §3.
 
 ## ⚠️ Unresolved Issues & Suggestions
 
-No open issues.
+**Queue Complete.** Waves A, B, C, and D are complete. No open issues. Deferred features DF1–DF9 remain deferred until user selection.
 
 ---
 
@@ -144,6 +144,7 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 - D2 — Planner word budget: validator item 9, writing rules, props.md, 12-word fallback, text audit, critic neutral — git log --grep "(d2)" — G1–G14 green bare, 246 passed (+4 tests), 29 slow passed (+5 tests); validator item 9 word_cap_errors enforces WORD_CAPS limits with rewrite prompt; too_long list error formatted per D2; registry writing_rules updated verbatim across 15 templates; prompts/props.md guidelines 3 & 4 updated and prompts/select.md icon_list rule updated; deterministic kinetic_quote capped at 12 words with ellipsis; critic emotion_beat supports neutral first; text audit tracks and enforces word_cap_violations_count == 0; 9 frozen cases in word_cap_cases.json verified and falsified (timeline events[].label to 99 -> red); 5 real beats in tests/slow/test_word_caps_live.py pass within 3 attempts on gemma4:26b with character_intro descriptor omitting cast member name.
 - D3 — Selection rules R6 and R7; deterministic pictures — git log --grep "(d3)" — G1–G14 green bare, 251 passed (+5 tests); timeline <= 1 and comparison <= 1 enforced in selection rule R6 and validate_plan; reaction-shot rhythm rule R7 (run >= 2 non-picture scenes in replaceable templates triggers deterministic rhythm target: narrator emotion_beat, named non-narrator cast member, named set_piece, or named location); kept templates and picture templates never replaced; quoted text excluded from first-person narrator match; Choice gains rhythm_id; props plan_storyboard builds deterministic neutral emotion_beat, set_piece, or location with 0 LLM calls; needs_critic bypasses deterministic rhythm picture scenes; recipe_choices.json exact repairs and choices verified; rhythm_cases.json 7/7 verified and falsified (dropping QUOTED stripping picks c1 -> red; dropping kept-class check replaces R7-e/R7-f -> red).
 - D4 — Word-density measurement: eval bar, evals/word_density.py, E2E step 9 — git log --grep "(d4)" — G1–G14 green bare, 254 passed (+3 tests); evals/planner.py computes graphic_words_total, graphic_words_per_narration_word, light_share (scenes after title card with graphic words <= 2 / m), and R6/R7 repairs; light_share >= 1/3 bar enforced in fixture_pass; planner report includes metrics and Wave B baselines; evals/word_density.py CLI loads timeline.json, calculates graphic words/s and light share, exits 1 if per_second > 1.0 or light < m/3; scripts/e2e.sh step 9 checks rendered jobs and logs word density lines to e2e report; unit tests on synthetic timeline pass; falsified by dividing duration_frames by 3 (exit 1 -> red) and light_share bar to 0.9 (eval fails -> red).
+- D5 — Re-measure; close-out of Wave D — git log --grep "(d5)" — G1–G14 green bare, 254 passed; cold planner eval passes all §9 bars (8/8 critic regression, 0 word-cap violations, 0 newlines, 0 completeness failures, 0 ID leaks, light share 33.3%–57.1% >= 1/3); G12 E2E step 9 passes with all rendered jobs <= 1.0 graphic word/s and >= 1/3 light share; cold budget 390.16 s (<= 600 s) with 0 cache hits; story_recipe_box stills verified (neutral reaction shot, name-only set piece, 3-event timeline, 3-message text thread, 8-word quote); README updated to Waves A–D delivered; agent execution guide rewritten to Queue Complete.
 
 
 ---
