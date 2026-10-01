@@ -25,15 +25,6 @@ const SUFFIX_SLOT: FitTextSlot = {
   box_width: 900,
 };
 
-const CAPTION_SLOT: FitTextSlot = {
-  font: "body",
-  weight: 600,
-  size_max: 44,
-  size_min: 32,
-  max_lines: 3,
-  box_width: 860,
-};
-
 export interface StatCalloutTemplateProps {
   sceneId: string;
   props: StatCalloutProps;
@@ -168,29 +159,6 @@ export const StatCallout: React.FC<StatCalloutTemplateProps> = ({
               style={{
                 textAlign: "center",
                 color: palette.highlight,
-              }}
-            />
-          </div>
-        )}
-
-        {props.caption && (
-          <div
-            style={{
-              marginTop: 32,
-              width: 860,
-            }}
-          >
-            <FitText
-              slot={CAPTION_SLOT}
-              text={props.caption}
-              sceneId={sceneId}
-              template="stat_callout"
-              slotName="caption"
-              debug={debug}
-              isGallery={isGallery}
-              style={{
-                textAlign: "center",
-                color: palette.inkMuted,
               }}
             />
           </div>

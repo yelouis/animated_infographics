@@ -125,7 +125,7 @@ def extract_scene_strings(
 def is_free_text_field(template: str, path: str) -> bool:
     """Determine whether path is a free-text field subjected to completeness checks.
 
-    Per §6 item 7: checked on title, subtitle, text, caption, descriptor, traits[],
+    Per §6 item 7: checked on title, subtitle, text, descriptor,
     label, heading, points[], kicker, contact_name, messages[].text, lines[].text,
     events[].label, markers[].label, edges[].label and non-empty suffix.
     Not on ids, enums, prefix, date_label or era_label.

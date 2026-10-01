@@ -244,7 +244,7 @@ def test_stat_callout_validation() -> None:
         id="s001",
         beat_i=1,
         template="stat_callout",
-        props=StatCalloutProps(value=150, decimals=0, caption="Injured people"),
+        props=StatCalloutProps(value=150, decimals=0),
     )
     assert len(validate_scene(valid, ctx)) == 0
 
@@ -253,7 +253,7 @@ def test_stat_callout_validation() -> None:
         id="s001",
         beat_i=1,
         template="stat_callout",
-        props=StatCalloutProps(value=1500, decimals=0, caption="Injured people"),
+        props=StatCalloutProps(value=1500, decimals=0),
     )
     errs = validate_scene(invalid, ctx)
     assert any("not grounded" in e for e in errs)
@@ -515,9 +515,7 @@ def test_meaning_rules_currency_and_ago() -> None:
         id="s001",
         beat_i=1,
         template="stat_callout",
-        props=StatCalloutProps(
-            value=150.0, decimals=0, display_scale="none", suffix="$", caption="Injured count"
-        ),
+        props=StatCalloutProps(value=150.0, decimals=0, display_scale="none", suffix="$"),
     )
     errs_dollar = validate_scene(scene_dollar, ctx)
     assert any("props.suffix: currency symbols belong in prefix" in e for e in errs_dollar)
@@ -526,9 +524,7 @@ def test_meaning_rules_currency_and_ago() -> None:
         id="s001",
         beat_i=1,
         template="stat_callout",
-        props=StatCalloutProps(
-            value=150.0, decimals=0, display_scale="none", suffix="£", caption="Injured count"
-        ),
+        props=StatCalloutProps(value=150.0, decimals=0, display_scale="none", suffix="£"),
     )
     errs_pound = validate_scene(scene_pound, ctx)
     assert any("props.suffix: currency symbols belong in prefix" in e for e in errs_pound)
@@ -537,9 +533,7 @@ def test_meaning_rules_currency_and_ago() -> None:
         id="s001",
         beat_i=1,
         template="stat_callout",
-        props=StatCalloutProps(
-            value=150.0, decimals=0, display_scale="none", suffix="€", caption="Injured count"
-        ),
+        props=StatCalloutProps(value=150.0, decimals=0, display_scale="none", suffix="€"),
     )
     errs_euro = validate_scene(scene_euro, ctx)
     assert any("props.suffix: currency symbols belong in prefix" in e for e in errs_euro)
@@ -553,7 +547,6 @@ def test_meaning_rules_currency_and_ago() -> None:
             decimals=0,
             display_scale="none",
             suffix="dollars",
-            caption="Injured count",
         ),
     )
     errs_word = validate_scene(scene_dollars_word, ctx)
@@ -564,7 +557,7 @@ def test_meaning_rules_currency_and_ago() -> None:
         id="s001",
         beat_i=1,
         template="location",
-        props=LocationProps(place_id="p1", caption=None, era_label="40 years ago"),
+        props=LocationProps(place_id="p1", era_label="40 years ago"),
     )
     errs_ago = validate_scene(loc_scene_ago, ctx)
     assert any('props.era_label: "ago" is not in the narration' in e for e in errs_ago)

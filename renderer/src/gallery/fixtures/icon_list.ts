@@ -11,7 +11,7 @@ export const iconListFixtures: Record<
     ],
   },
   typical: {
-    heading: "Key Factors in the Disaster",
+    heading: "Three Disaster Factors",
     items: [
       { icon: "Buildings", label: "Substandard Steel Tank" },
       { icon: "Thermometer", label: "Rapid Temperature Swing" },
@@ -19,12 +19,11 @@ export const iconListFixtures: Record<
     ],
   },
   max: {
-    heading: "MAXIMUM INDUSTRIAL CASUALTY DEMANDS",
+    heading: "WWWWWWWWWW MMMMMMMMMM WWWWWWWWWW",
     items: [
-      { icon: "Buildings", label: "EXCESSIVE UNTESTED MOLASSES LOAD" },
-      { icon: "Hammer", label: "CRITICAL STRUCTURAL DEFICIENCIES" },
-      { icon: "ShieldWarning", label: "IMMEDIATE EMERGENCY SYSTEM CRASH" },
-      { icon: "Scales", label: "COMPREHENSIVE MUNICIPAL LAWSUITS" },
+      { icon: "Buildings", label: "WWWWWWWW MMMMMMMM WWWWWWWW" },
+      { icon: "Hammer", label: "MMMMMMMM WWWWWWWW MMMMMMMM" },
+      { icon: "ShieldWarning", label: "WWWWWWWW MMMMMMMM WWWWWWWW" },
     ],
   },
 };

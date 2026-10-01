@@ -8,7 +8,7 @@ export const dialogueFixtures: Record<
     lines: [
       {
         cast_id: "c1",
-        text: "We have to leave now before the winter storms close the road.",
+        text: "We must leave now before the road closes.",
         tone: "neutral",
       },
     ],
@@ -17,12 +17,12 @@ export const dialogueFixtures: Record<
     lines: [
       {
         cast_id: "c1",
-        text: "Did you find Grandma Rose's missing recipe box in the cellar?",
+        text: "Did you find Grandma Rose's recipe box in the cellar?",
         tone: "happy",
       },
       {
         cast_id: "c2",
-        text: "Yes! It was tucked behind the old cedar chest all along.",
+        text: "Yes! It was tucked behind the old cedar chest.",
         tone: "shocked",
       },
     ],
@@ -31,18 +31,13 @@ export const dialogueFixtures: Record<
     lines: [
       {
         cast_id: "c1",
-        text: "MMMMWWWW We examined every single historical container and logged comprehensive reports.",
+        text: "MMMMWWWW We examined every single historical container and logged reports.",
         tone: "angry",
       },
       {
         cast_id: "c2",
         text: "MMMMWWWW The regional inspector verified unauthorized structural alterations across levels.",
         tone: "shocked",
-      },
-      {
-        cast_id: "c1",
-        text: "MMMMWWWW All official regulatory documentation confirms zero compliance from management.",
-        tone: "sarcastic",
       },
     ],
   },

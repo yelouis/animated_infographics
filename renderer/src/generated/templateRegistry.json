@@ -63,14 +63,6 @@
         "size_max": 96,
         "size_min": 64,
         "weight": 800
-      },
-      "trait": {
-        "box_width": 400,
-        "font": "body",
-        "max_lines": 1,
-        "size_max": 34,
-        "size_min": 28,
-        "weight": 700
       }
     },
     "spread": null,
@@ -167,16 +159,7 @@
       "set_pieces": false
     },
     "sfx_cues": [],
-    "slots": {
-      "caption": {
-        "box_width": 900,
-        "font": "display",
-        "max_lines": 2,
-        "size_max": 64,
-        "size_min": 44,
-        "weight": 800
-      }
-    },
+    "slots": {},
     "spread": null,
     "use_when": "a reaction or feeling is the point.",
     "writing_rules": [
@@ -217,7 +200,7 @@
       }
     },
     "spread": 0.5,
-    "use_when": "2-4 parallel things (demands, causes, items, reasons).",
+    "use_when": "2-3 parallel things (demands, causes, items, reasons).",
     "writing_rules": [
       "2 to 4 items",
       "items must have valid icon and label <= 32 chars"
@@ -274,14 +257,6 @@
       }
     ],
     "slots": {
-      "caption": {
-        "box_width": 880,
-        "font": "body",
-        "max_lines": 2,
-        "size_max": 40,
-        "size_min": 30,
-        "weight": 600
-      },
       "era": {
         "box_width": 240,
         "font": "display",
@@ -323,14 +298,6 @@
       }
     ],
     "slots": {
-      "caption": {
-        "box_width": 900,
-        "font": "body",
-        "max_lines": 2,
-        "size_max": 40,
-        "size_min": 30,
-        "weight": 600
-      },
       "marker_label": {
         "box_width": 360,
         "font": "display",
@@ -447,14 +414,6 @@
       }
     ],
     "slots": {
-      "caption": {
-        "box_width": 880,
-        "font": "body",
-        "max_lines": 2,
-        "size_max": 40,
-        "size_min": 30,
-        "weight": 600
-      },
       "name": {
         "box_width": 880,
         "font": "display",
@@ -486,14 +445,6 @@
       }
     ],
     "slots": {
-      "caption": {
-        "box_width": 860,
-        "font": "body",
-        "max_lines": 3,
-        "size_max": 44,
-        "size_min": 32,
-        "weight": 600
-      },
       "suffix": {
         "box_width": 900,
         "font": "display",
@@ -593,7 +544,7 @@
       }
     },
     "spread": 0.6,
-    "use_when": "3-6 dated events in sequence.",
+    "use_when": "3-4 dated events in sequence.",
     "writing_rules": [
       "3 to 6 events",
       "0 <= highlight_index < len(events)",

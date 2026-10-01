@@ -15,34 +15,26 @@ export const textThreadFixtures: Record<
     contact_name: "Danny",
     contact_cast_id: "c2",
     messages: [
-      { from: "them", text: "Look what I uncovered behind Grandma Rose's trunk!" },
-      { from: "me", text: "Is that the tin recipe box with the brass latch?" },
-      { from: "them", text: "Every single handwritten index card is intact inside." },
+      { from: "them", text: "Look what I uncovered behind Grandma's trunk!" },
+      { from: "me", text: "Is that the tin recipe box with brass?" },
+      { from: "them", text: "Every single handwritten card is intact inside." },
     ],
   },
   max: {
-    contact_name: "MMMMWWWW Dispatch Ops",
+    contact_name: "MMMMWWWW Dispatch Op",
     contact_cast_id: "c1",
     messages: [
       {
         from: "them",
-        text: "MMMMWWWW Initial status alert: structural report indicates major deviations.",
+        text: "MMMMWWWW Initial status alert: report indicates major structural deviations.",
       },
       {
         from: "me",
-        text: "MMMMWWWW Confirmed receipt of preliminary structural audit documents from regional team.",
+        text: "MMMMWWWW Confirmed receipt of preliminary structural audit documents today.",
       },
       {
         from: "them",
-        text: "MMMMWWWW Emergency committee summoned to inspect commercial facility premises today.",
-      },
-      {
-        from: "me",
-        text: "MMMMWWWW We will arrive on site with qualified engineering specialists by noon.",
-      },
-      {
-        from: "them",
-        text: "MMMMWWWW Secure all maintenance perimeter zones and log visitor access immediately.",
+        text: "MMMMWWWW Secure all maintenance perimeter zones and log visitors now.",
       },
     ],
   },

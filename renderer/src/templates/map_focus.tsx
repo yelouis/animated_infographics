@@ -5,7 +5,7 @@ import { FitText, type FitTextSlot } from "../components/FitText";
 import { MapView, type MapMarker } from "../components/MapView";
 import type { MapFocusProps, TimelineSceneTiming } from "../generated/contracts";
 import { usePlace } from "../story/entities";
-import { EASE_ENTER, EASE_EXIT } from "../theme/motion";
+import { EASE_EXIT } from "../theme/motion";
 import { palette } from "../theme/palette";
 
 const MARKER_LABEL_SLOT: FitTextSlot = {
@@ -15,15 +15,6 @@ const MARKER_LABEL_SLOT: FitTextSlot = {
   size_min: 30,
   max_lines: 1,
   box_width: 360,
-};
-
-const CAPTION_SLOT: FitTextSlot = {
-  font: "body",
-  weight: 600,
-  size_max: 40,
-  size_min: 30,
-  max_lines: 2,
-  box_width: 900,
 };
 
 export interface MapFocusTemplateProps {
@@ -62,17 +53,6 @@ export const MapFocus: React.FC<MapFocusTemplateProps> = ({
     [1.0, 1.04],
     { extrapolateRight: "clamp" }
   );
-
-  // Caption entrance at frame 12
-  const captionOpacity = interpolate(clock.frame, [12, 18], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const captionY = interpolate(clock.frame, [12, 18], [16, 0], {
-    easing: EASE_ENTER,
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
 
   const itemFrames = timing?.item_frames || [];
 
@@ -191,37 +171,6 @@ export const MapFocus: React.FC<MapFocusTemplateProps> = ({
           />
         </div>
       </div>
-
-      {/* Caption below panel at y 1090 */}
-      {props.caption && (
-        <div
-          style={{
-            position: "absolute",
-            left: 90,
-            top: 1090,
-            width: 900,
-            display: "flex",
-            justifyContent: "center",
-            opacity: captionOpacity,
-            transform: `translateY(${captionY}px)`,
-          }}
-        >
-          <FitText
-            slot={CAPTION_SLOT}
-            text={props.caption}
-            sceneId={sceneId}
-            template="map_focus"
-            slotName="caption"
-            debug={debug}
-            isGallery={isGallery}
-            style={{
-              color: palette.ink,
-              fontWeight: 600,
-              textAlign: "center",
-            }}
-          />
-        </div>
-      )}
     </div>
   );
 };

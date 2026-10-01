@@ -267,7 +267,7 @@ def test_needs_critic() -> None:
         id="s007",
         beat_i=7,
         template="stat_callout",
-        props=StatCalloutProps(value=42.0, decimals=0, caption="Meaning of life"),
+        props=StatCalloutProps(value=42.0, decimals=0),
     )
     assert needs_critic(stat_scene) is False
 
@@ -1095,9 +1095,9 @@ def test_r3_repair_calls_critic() -> None:
     transcript, beats = _make_transcript_and_beats(
         ["Title", "Danny arrived.", "I answered.", "Danny spoke up."]
     )
-    intro1 = {"cast_id": "c2", "descriptor": "Brother", "traits": ["Kind"]}
+    intro1 = {"cast_id": "c2", "descriptor": "Brother"}
     d1 = {"lines": [{"cast_id": "c1", "text": "I answered him", "tone": "neutral"}]}
-    intro2 = {"cast_id": "c2", "descriptor": "Brother", "traits": ["Kind"]}
+    intro2 = {"cast_id": "c2", "descriptor": "Brother"}
     d2 = {"lines": [{"cast_id": "c2", "text": "Hello there", "tone": "neutral"}]}
     critic_d1 = {"lines": [{"speaker": "c1", "tone": "neutral"}]}
     critic_d2 = {"lines": [{"speaker": "c2", "tone": "neutral"}]}

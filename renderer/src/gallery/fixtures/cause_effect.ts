@@ -12,28 +12,24 @@ export const causeEffectFixtures: Record<
   },
   typical: {
     nodes: [
-      { label: "Rapid temperature swing to 43°F", icon: "Thermometer" },
-      { label: "Fermentation released carbon dioxide", icon: "Fire" },
+      { label: "Rapid temperature swing", icon: "Thermometer" },
+      { label: "Fermentation gas buildup", icon: "Fire" },
       { label: "Catastrophic structural failure", icon: "Buildings" },
     ],
   },
   max: {
     nodes: [
       {
-        label: "EXCESSIVE UNTESTED CHEMICAL PRESSURE",
+        label: "MMMMWWWW UNTESTED MOLASSES",
         icon: "Drop",
       },
       {
-        label: "SYSTEMIC METALLURGICAL WALL FATIGUE",
+        label: "CRITICAL STRUCTURAL DEFICIENCIES",
         icon: "Hammer",
       },
       {
-        label: "CATASTROPHIC RIVET BURSTING WAVE",
+        label: "COMPREHENSIVE MUNICIPAL LAWSUITS",
         icon: "ShieldWarning",
-      },
-      {
-        label: "UNPRECEDENTED URBAN MOLASSES FLOOD",
-        icon: "Buildings",
       },
     ],
   },

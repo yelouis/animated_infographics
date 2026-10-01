@@ -151,8 +151,6 @@ def normalize_props_text(template_name: str, props: dict[str, Any]) -> dict[str,
     elif template_name == "stat_callout":
         if "suffix" in p and isinstance(p["suffix"], str):
             p["suffix"] = normalize_text(p["suffix"])
-        if "caption" in p and isinstance(p["caption"], str):
-            p["caption"] = normalize_text(p["caption"])
     elif template_name == "icon_list":
         if "heading" in p and isinstance(p["heading"], str):
             p["heading"] = normalize_text(p["heading"])
@@ -198,8 +196,6 @@ def normalize_props_text(template_name: str, props: dict[str, Any]) -> dict[str,
     elif template_name == "character_intro":
         if "descriptor" in p and isinstance(p["descriptor"], str):
             p["descriptor"] = normalize_text(p["descriptor"])
-        if "traits" in p and isinstance(p["traits"], list):
-            p["traits"] = [normalize_text(tr) if isinstance(tr, str) else tr for tr in p["traits"]]
     elif template_name == "dialogue":
         if "lines" in p and isinstance(p["lines"], list):
             new_lines = []
@@ -226,9 +222,7 @@ def normalize_props_text(template_name: str, props: dict[str, Any]) -> dict[str,
                 else:
                     new_msgs.append(msg)
             p["messages"] = new_msgs
-    elif template_name in ("emotion_beat", "location", "set_piece"):
-        if "caption" in p and isinstance(p["caption"], str):
-            p["caption"] = normalize_text(p["caption"])
+
     elif template_name == "relationship_map":
         if "edges" in p and isinstance(p["edges"], list):
             new_edges = []
@@ -242,8 +236,6 @@ def normalize_props_text(template_name: str, props: dict[str, Any]) -> dict[str,
                     new_edges.append(edge)
             p["edges"] = new_edges
     elif template_name == "map_focus":
-        if "caption" in p and isinstance(p["caption"], str):
-            p["caption"] = normalize_text(p["caption"])
         if "markers" in p and isinstance(p["markers"], list):
             new_markers = []
             for marker in p["markers"]:
@@ -417,12 +409,9 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
             rendered_val += f" {props.display_scale}"
         errors.extend(_check_slot("props.value", rendered_val, slots["value"]))
         errors.extend(_check_slot("props.suffix", props.suffix, slots["suffix"]))
-        errors.extend(_check_slot("props.caption", props.caption, slots["caption"]))
         if props.suffix:
             errors.extend(text_complete_errors("props.suffix", props.suffix))
             errors.extend(internal_id_errors("props.suffix", props.suffix, bible))
-        errors.extend(text_complete_errors("props.caption", props.caption))
-        errors.extend(internal_id_errors("props.caption", props.caption, bible))
         # Grounding
         if not is_stat_grounded(props.value, props.display_scale, beat_text):
             errors.append(
@@ -483,10 +472,6 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
         errors.extend(_check_slot("props.descriptor", props.descriptor, slots["descriptor"]))
         errors.extend(text_complete_errors("props.descriptor", props.descriptor))
         errors.extend(internal_id_errors("props.descriptor", props.descriptor, bible))
-        for idx, trait in enumerate(props.traits):
-            errors.extend(_check_slot(f"props.traits[{idx}]", trait, slots["trait"]))
-            errors.extend(text_complete_errors(f"props.traits[{idx}]", trait))
-            errors.extend(internal_id_errors(f"props.traits[{idx}]", trait, bible))
 
     elif isinstance(props, DialogueProps):
         for idx, line in enumerate(props.lines):
@@ -514,9 +499,6 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
     elif isinstance(props, EmotionBeatProps):
         if props.cast_id not in cast_map:
             errors.append(f"props.cast_id: cast '{props.cast_id}' not found in bible")
-        errors.extend(_check_slot("props.caption", props.caption, slots["caption"]))
-        errors.extend(text_complete_errors("props.caption", props.caption))
-        errors.extend(internal_id_errors("props.caption", props.caption, bible))
 
     elif isinstance(props, RelationshipMapProps):
         for idx, cid in enumerate(props.cast_ids):
@@ -556,10 +538,7 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
             errors.extend(
                 _check_slot("bible.places.name", places_map[props.place_id].name, slots["name"])
             )
-        errors.extend(_check_slot("props.caption", props.caption, slots["caption"]))
         errors.extend(_check_slot("props.era_label", props.era_label, slots["era"]))
-        errors.extend(text_complete_errors("props.caption", props.caption))
-        errors.extend(internal_id_errors("props.caption", props.caption, bible))
         if props.era_label:
             if re.search(r"\bago\b", props.era_label, re.IGNORECASE) and not re.search(
                 r"\bago\b", full_transcript, re.IGNORECASE
@@ -584,9 +563,6 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
                     slots["name"],
                 )
             )
-        errors.extend(_check_slot("props.caption", props.caption, slots["caption"]))
-        errors.extend(text_complete_errors("props.caption", props.caption))
-        errors.extend(internal_id_errors("props.caption", props.caption, bible))
 
     elif isinstance(props, MapFocusProps):
         marker_countries: set[str] = set()
@@ -614,9 +590,6 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
                 f"props.region: region '{props.region}' does not match any marker place's "
                 f"country_iso3 ({marker_countries})"
             )
-        errors.extend(_check_slot("props.caption", props.caption, slots["caption"]))
-        errors.extend(text_complete_errors("props.caption", props.caption))
-        errors.extend(internal_id_errors("props.caption", props.caption, bible))
 
     elif isinstance(props, TimelineProps):
         if not (0 <= props.highlight_index < len(props.events)):

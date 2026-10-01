@@ -10,10 +10,10 @@ export const revealFixtures: Record<
   },
   typical: {
     kicker: "PLOT TWIST",
-    text: "The company blamed anarchists for planting a bomb.",
+    text: "The company blamed an anarchist bomb.",
   },
   max: {
     kicker: "SHOCKING HISTORIC TWIST",
-    text: "THE TANK HAD NEVER ONCE BEEN TESTED SAFELY WITH FULL WATER.",
+    text: "MMMMWWWW TANK NEVER TESTED COMPREHENSIVELY SAFELY",
   },
 };

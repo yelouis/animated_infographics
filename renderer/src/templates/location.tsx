@@ -18,15 +18,6 @@ const NAME_SLOT: FitTextSlot = {
   box_width: 880,
 };
 
-const CAPTION_SLOT: FitTextSlot = {
-  font: "body",
-  weight: 600,
-  size_max: 40,
-  size_min: 30,
-  max_lines: 2,
-  box_width: 880,
-};
-
 const ERA_SLOT: FitTextSlot = {
   font: "display",
   weight: 800,
@@ -229,23 +220,6 @@ export const Location: React.FC<LocationTemplateProps> = ({
           transform: `translateY(${textY}px)`,
         }}
       >
-        {props.caption && (
-          <div style={{ marginBottom: 12 }}>
-            <FitText
-              slot={CAPTION_SLOT}
-              text={props.caption}
-              sceneId={sceneId}
-              template="location"
-              slotName="caption"
-              debug={debug}
-              isGallery={isGallery}
-              style={{
-                color: palette.inkMuted,
-                fontWeight: 600,
-              }}
-            />
-          </div>
-        )}
 
         <div>
           <FitText

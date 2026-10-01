@@ -28,7 +28,6 @@
       "prefix": "",
       "display_scale": "million",
       "suffix": "gallons",
-      "caption": "Flooding the streets",
       "icon": "Drop"
     },
     "invalid": {
@@ -103,13 +102,11 @@
   "character_intro": {
     "valid": {
       "cast_id": "c1",
-      "descriptor": "Boston firefighter chief",
-      "traits": ["Brave", "First on scene"]
+      "descriptor": "Boston firefighter chief"
     },
     "invalid": {
       "cast_id": "c9",
-      "descriptor": "Invalid cast id",
-      "traits": []
+      "descriptor": "Invalid cast id"
     }
   },
   "dialogue": {
@@ -141,13 +138,11 @@
   "emotion_beat": {
     "valid": {
       "cast_id": "c1",
-      "emotion": "shocked",
-      "caption": "Total disbelief"
+      "emotion": "shocked"
     },
     "invalid": {
       "cast_id": "c1",
-      "emotion": "unsupported_emotion",
-      "caption": "Total disbelief"
+      "emotion": "unsupported_emotion"
     }
   },
   "relationship_map": {
@@ -167,22 +162,18 @@
   "location": {
     "valid": {
       "place_id": "p1",
-      "caption": "North End, Boston",
       "era_label": "1919"
     },
     "invalid": {
-      "place_id": "p5",
-      "caption": "Invalid place id"
+      "place_id": "p5"
     }
   },
   "set_piece": {
     "valid": {
-      "set_piece_id": "v1",
-      "caption": "The molasses tank at Commercial Street"
+      "set_piece_id": "v1"
     },
     "invalid": {
-      "set_piece_id": "v5",
-      "caption": "Invalid set piece id"
+      "set_piece_id": "v5"
     }
   },
   "map_focus": {
@@ -191,8 +182,7 @@
       "markers": [
         {"place_id": "p1", "label": "Boston"}
       ],
-      "path": false,
-      "caption": "Boston Harbor waterfront"
+      "path": false
     },
     "invalid": {
       "region": "united_states",

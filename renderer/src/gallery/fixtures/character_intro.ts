@@ -7,16 +7,13 @@ export const characterIntroFixtures: Record<
   min: {
     cast_id: "c1",
     descriptor: "Lead character",
-    traits: [],
   },
   typical: {
     cast_id: "c1",
-    descriptor: "Matriarch and master baker from Duluth",
-    traits: ["Warm", "Perfectionist"],
+    descriptor: "Master baker from Duluth",
   },
   max: {
     cast_id: "c1",
-    descriptor: "MMMMWWWW Chief Senior Historical Research Officer",
-    traits: ["Hyper-Organized", "Relentless Focus", "Unflappable Grit"],
+    descriptor: "WWWWWWWWWW MMMMMMMMMM WWWWWWWWWW MMMMMMMMMM",
   },
 };

@@ -6,6 +6,12 @@ if [ "${1:-}" = "--fast" ]; then
   FAST=1
 fi
 
+if [ -z "${HF_HOME:-}" ] || [ ! -d "${HF_HOME}/hub/models--hexgrad--Kokoro-82M" ]; then
+  if [ -d "$HOME/.cache/huggingface/hub/models--hexgrad--Kokoro-82M" ]; then
+    export HF_HOME="$HOME/.cache/huggingface"
+  fi
+fi
+
 mkdir -p artifacts/battery
 
 failed=0

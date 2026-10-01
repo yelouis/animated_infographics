@@ -10,12 +10,10 @@ export const emotionBeatFixtures: Record<
   },
   typical: {
     cast_id: "c2",
-    emotion: "shocked",
-    caption: "Danny stood completely frozen in disbelief",
+    emotion: "neutral",
   },
   max: {
     cast_id: "c1",
     emotion: "angry",
-    caption: "MMMMWWWW Outraged by the audit findings",
   },
 };

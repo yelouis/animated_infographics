@@ -330,7 +330,7 @@
           "items": {
             "$ref": "#/$defs/CauseEffectNode"
           },
-          "maxItems": 4,
+          "maxItems": 3,
           "minItems": 2,
           "title": "Nodes",
           "type": "array"
@@ -355,16 +355,6 @@
           "minLength": 1,
           "title": "Descriptor",
           "type": "string"
-        },
-        "traits": {
-          "items": {
-            "maxLength": 18,
-            "minLength": 1,
-            "type": "string"
-          },
-          "maxItems": 3,
-          "title": "Traits",
-          "type": "array"
         }
       },
       "required": [
@@ -573,7 +563,7 @@
             "minLength": 1,
             "type": "string"
           },
-          "maxItems": 4,
+          "maxItems": 2,
           "minItems": 1,
           "title": "Points",
           "type": "array"
@@ -645,7 +635,7 @@
           "items": {
             "$ref": "#/$defs/DialogueLine"
           },
-          "maxItems": 3,
+          "maxItems": 2,
           "minItems": 1,
           "title": "Lines",
           "type": "array"
@@ -660,20 +650,6 @@
     "EmotionBeatProps": {
       "additionalProperties": false,
       "properties": {
-        "caption": {
-          "anyOf": [
-            {
-              "maxLength": 40,
-              "minLength": 1,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Caption"
-        },
         "cast_id": {
           "pattern": "^c[1-8]$",
           "title": "Cast Id",
@@ -681,6 +657,7 @@
         },
         "emotion": {
           "enum": [
+            "neutral",
             "happy",
             "sad",
             "angry",
@@ -901,7 +878,7 @@
           "items": {
             "$ref": "#/$defs/IconListItem"
           },
-          "maxItems": 4,
+          "maxItems": 3,
           "minItems": 2,
           "title": "Items",
           "type": "array"
@@ -955,20 +932,6 @@
     "LocationProps": {
       "additionalProperties": false,
       "properties": {
-        "caption": {
-          "anyOf": [
-            {
-              "maxLength": 48,
-              "minLength": 1,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Caption"
-        },
         "era_label": {
           "anyOf": [
             {
@@ -998,20 +961,6 @@
     "MapFocusProps": {
       "additionalProperties": false,
       "properties": {
-        "caption": {
-          "anyOf": [
-            {
-              "maxLength": 60,
-              "minLength": 1,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Caption"
-        },
         "markers": {
           "items": {
             "$ref": "#/$defs/MapMarker"
@@ -1155,20 +1104,6 @@
     "SetPieceProps": {
       "additionalProperties": false,
       "properties": {
-        "caption": {
-          "anyOf": [
-            {
-              "maxLength": 48,
-              "minLength": 1,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Caption"
-        },
         "set_piece_id": {
           "pattern": "^v[1-3]$",
           "title": "Set Piece Id",
@@ -1184,20 +1119,6 @@
     "StatCalloutProps": {
       "additionalProperties": false,
       "properties": {
-        "caption": {
-          "anyOf": [
-            {
-              "maxLength": 70,
-              "minLength": 1,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Caption"
-        },
         "decimals": {
           "enum": [
             0,
@@ -1472,7 +1393,7 @@
           "items": {
             "$ref": "#/$defs/TextMessage"
           },
-          "maxItems": 5,
+          "maxItems": 3,
           "minItems": 2,
           "title": "Messages",
           "type": "array"
@@ -2282,7 +2203,7 @@
           "items": {
             "$ref": "#/$defs/TimelineEvent"
           },
-          "maxItems": 6,
+          "maxItems": 4,
           "minItems": 3,
           "title": "Events",
           "type": "array"

@@ -23,7 +23,6 @@ export const mapFocusFixtures: Record<"min" | "typical" | "max", MapFocusProps> 
       },
     ],
     path: true,
-    caption: "190 miles north along the rocky shoreline",
   },
   max: {
     region: "world",
@@ -43,7 +42,6 @@ export const mapFocusFixtures: Record<"min" | "typical" | "max", MapFocusProps> 
     ],
 
     path: true,
-    caption: "From the high Arctic outpost across the coast to the equator",
   },
 };
 

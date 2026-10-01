@@ -26,15 +26,6 @@ const DESCRIPTOR_SLOT: FitTextSlot = {
   box_width: 860,
 };
 
-const TRAIT_SLOT: FitTextSlot = {
-  font: "body",
-  weight: 700,
-  size_max: 34,
-  size_min: 28,
-  max_lines: 1,
-  box_width: 400,
-};
-
 export interface CharacterIntroTemplateProps {
   sceneId: string;
   props: CharacterIntroProps;
@@ -108,8 +99,6 @@ export const CharacterIntro: React.FC<CharacterIntroTemplateProps> = ({
 
   // Hold motion: gentle breathing float across the scene (for hold-motion test between f60 and f105)
   const holdFloatY = Math.sin((clock.frame / 90) * 2 * Math.PI) * 5;
-
-  const traits = props.traits || [];
 
   return (
     <div
@@ -217,75 +206,6 @@ export const CharacterIntro: React.FC<CharacterIntroTemplateProps> = ({
             }}
           />
         </div>
-
-        {/* Trait chips 32 px below that: fill = cast colour, text navy, radius 999, padding 18/28 */}
-        {traits.length > 0 && (
-          <div
-            style={{
-              marginTop: 32,
-              display: "flex",
-              flexWrap: "wrap",
-              justifyContent: "center",
-              gap: 16,
-              maxWidth: 900,
-            }}
-          >
-            {traits.map((trait, idx) => {
-              const chipStartFrame = 14 + idx * 4;
-              const chipOpacity = interpolate(
-                clock.frame,
-                [chipStartFrame, chipStartFrame + 6],
-                [0, 1],
-                {
-                  extrapolateLeft: "clamp",
-                  extrapolateRight: "clamp",
-                }
-              );
-              const chipY = interpolate(
-                clock.frame,
-                [chipStartFrame, chipStartFrame + 6],
-                [12, 0],
-                {
-                  easing: EASE_ENTER,
-                  extrapolateLeft: "clamp",
-                  extrapolateRight: "clamp",
-                }
-              );
-
-              return (
-                <div
-                  key={`${idx}-${trait}`}
-                  style={{
-                    backgroundColor: castColor,
-                    borderRadius: 999,
-                    padding: "18px 28px",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    opacity: chipOpacity,
-                    transform: `translateY(${chipY}px)`,
-                    boxSizing: "border-box",
-                  }}
-                >
-                  <FitText
-                    slot={TRAIT_SLOT}
-                    text={trait}
-                    sceneId={sceneId}
-                    template="character_intro"
-                    slotName="trait"
-                    debug={debug}
-                    isGallery={isGallery}
-                    style={{
-                      color: palette.bg,
-                      textAlign: "center",
-                      whiteSpace: "nowrap",
-                    }}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        )}
       </div>
     </div>
   );

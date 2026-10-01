@@ -1,6 +1,6 @@
 """Template specifications, registry, and props models for all 16 templates."""
 
-from typing import Annotated, Literal
+from typing import Annotated, Final, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -79,7 +79,6 @@ class StatCalloutProps(BaseModel):
     prefix: Literal["", "$", "£", "€", "~", "#"] = ""
     display_scale: Literal["none", "thousand", "million", "billion"] = "none"
     suffix: str = Field(default="", max_length=14)
-    caption: str | None = Field(default=None, min_length=1, max_length=70)
     icon: IconName | None = None
 
 
@@ -95,7 +94,7 @@ class IconListProps(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     heading: str | None = Field(default=None, min_length=1, max_length=36)
-    items: list[IconListItem] = Field(min_length=2, max_length=4)
+    items: list[IconListItem] = Field(min_length=2, max_length=3)
 
 
 # 2.5 reveal
@@ -117,7 +116,7 @@ class CauseEffectNode(BaseModel):
 class CauseEffectProps(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    nodes: list[CauseEffectNode] = Field(min_length=2, max_length=4)
+    nodes: list[CauseEffectNode] = Field(min_length=2, max_length=3)
 
 
 # 2.7 comparison
@@ -128,7 +127,7 @@ class ComparisonPanel(BaseModel):
     cast_id: str | None = Field(default=None, pattern=r"^c[1-8]$")
     icon: IconName | None = None
     points: list[Annotated[str, Field(min_length=1, max_length=32)]] = Field(
-        min_length=1, max_length=4
+        min_length=1, max_length=2
     )
 
 
@@ -145,9 +144,6 @@ class CharacterIntroProps(BaseModel):
 
     cast_id: str = Field(pattern=r"^c[1-8]$")
     descriptor: str = Field(min_length=1, max_length=48)
-    traits: list[Annotated[str, Field(min_length=1, max_length=18)]] = Field(
-        default_factory=list, max_length=3
-    )
 
 
 # 2.9 dialogue
@@ -162,7 +158,7 @@ class DialogueLine(BaseModel):
 class DialogueProps(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    lines: list[DialogueLine] = Field(min_length=1, max_length=3)
+    lines: list[DialogueLine] = Field(min_length=1, max_length=2)
 
 
 # 2.10 text_thread
@@ -178,7 +174,7 @@ class TextThreadProps(BaseModel):
 
     contact_name: str = Field(min_length=1, max_length=20)
     contact_cast_id: str | None = Field(default=None, pattern=r"^c[1-8]$")
-    messages: list[TextMessage] = Field(min_length=2, max_length=5)
+    messages: list[TextMessage] = Field(min_length=2, max_length=3)
 
 
 # 2.11 emotion_beat
@@ -186,8 +182,7 @@ class EmotionBeatProps(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     cast_id: str = Field(pattern=r"^c[1-8]$")
-    emotion: Literal["happy", "sad", "angry", "shocked", "confused", "smug", "nervous"]
-    caption: str | None = Field(default=None, min_length=1, max_length=40)
+    emotion: Literal["neutral", "happy", "sad", "angry", "shocked", "confused", "smug", "nervous"]
 
 
 # 2.12 relationship_map
@@ -231,7 +226,6 @@ class LocationProps(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     place_id: str = Field(pattern=r"^p[1-4]$")
-    caption: str | None = Field(default=None, min_length=1, max_length=48)
     era_label: str | None = Field(default=None, min_length=1, max_length=12)
 
 
@@ -240,7 +234,6 @@ class SetPieceProps(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     set_piece_id: str = Field(pattern=r"^v[1-3]$")
-    caption: str | None = Field(default=None, min_length=1, max_length=48)
 
 
 # 2.15 map_focus
@@ -257,7 +250,6 @@ class MapFocusProps(BaseModel):
     region: str = Field(pattern=r"^(world|[A-Z]{3})$")
     markers: list[MapMarker] = Field(min_length=1, max_length=3)
     path: bool = False
-    caption: str | None = Field(default=None, min_length=1, max_length=60)
 
 
 # 2.16 timeline
@@ -271,7 +263,7 @@ class TimelineEvent(BaseModel):
 class TimelineProps(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    events: list[TimelineEvent] = Field(min_length=3, max_length=6)
+    events: list[TimelineEvent] = Field(min_length=3, max_length=4)
     highlight_index: int = Field(ge=0)
 
     @model_validator(mode="after")
@@ -364,9 +356,6 @@ REGISTRY: dict[str, TemplateSpec] = {
             "suffix": TextSlot(
                 font="display", weight=700, size_max=64, size_min=44, max_lines=1, box_width=900
             ),
-            "caption": TextSlot(
-                font="body", weight=600, size_max=44, size_min=32, max_lines=3, box_width=860
-            ),
         },
         sfx_cues=[SfxCue(role="ding", at="count_end")],
         spread=0.4,
@@ -376,7 +365,7 @@ REGISTRY: dict[str, TemplateSpec] = {
         name="icon_list",
         category="statement",
         props_model=IconListProps,
-        use_when="2-4 parallel things (demands, causes, items, reasons).",
+        use_when="2-3 parallel things (demands, causes, items, reasons).",
         writing_rules=["2 to 4 items", "items must have valid icon and label <= 32 chars"],
         slots={
             "heading": TextSlot(
@@ -462,9 +451,6 @@ REGISTRY: dict[str, TemplateSpec] = {
             "descriptor": TextSlot(
                 font="body", weight=600, size_max=44, size_min=32, max_lines=2, box_width=860
             ),
-            "trait": TextSlot(
-                font="body", weight=700, size_max=34, size_min=28, max_lines=1, box_width=400
-            ),
         },
         sfx_cues=[SfxCue(role="pop", at="start")],
         spread=None,
@@ -513,11 +499,7 @@ REGISTRY: dict[str, TemplateSpec] = {
         props_model=EmotionBeatProps,
         use_when="a reaction or feeling is the point.",
         writing_rules=["caption <= 40 chars"],
-        slots={
-            "caption": TextSlot(
-                font="display", weight=800, size_max=64, size_min=44, max_lines=2, box_width=900
-            ),
-        },
+        slots={},
         sfx_cues=[],
         spread=None,
         requires={"cast": True, "places": False, "set_pieces": False, "geo": False},
@@ -555,9 +537,6 @@ REGISTRY: dict[str, TemplateSpec] = {
             "name": TextSlot(
                 font="display", weight=800, size_max=72, size_min=48, max_lines=2, box_width=880
             ),
-            "caption": TextSlot(
-                font="body", weight=600, size_max=40, size_min=30, max_lines=2, box_width=880
-            ),
             "era": TextSlot(
                 font="display", weight=800, size_max=44, size_min=32, max_lines=1, box_width=240
             ),
@@ -575,9 +554,6 @@ REGISTRY: dict[str, TemplateSpec] = {
         slots={
             "name": TextSlot(
                 font="display", weight=800, size_max=72, size_min=48, max_lines=2, box_width=880
-            ),
-            "caption": TextSlot(
-                font="body", weight=600, size_max=40, size_min=30, max_lines=2, box_width=880
             ),
         },
         sfx_cues=[SfxCue(role="whoosh", at="start")],
@@ -598,9 +574,6 @@ REGISTRY: dict[str, TemplateSpec] = {
             "marker_label": TextSlot(
                 font="display", weight=800, size_max=40, size_min=30, max_lines=1, box_width=360
             ),
-            "caption": TextSlot(
-                font="body", weight=600, size_max=40, size_min=30, max_lines=2, box_width=900
-            ),
         },
         sfx_cues=[SfxCue(role="pop", at="item")],
         spread=0.3,
@@ -610,7 +583,7 @@ REGISTRY: dict[str, TemplateSpec] = {
         name="timeline",
         category="place_time",
         props_model=TimelineProps,
-        use_when="3-6 dated events in sequence.",
+        use_when="3-4 dated events in sequence.",
         writing_rules=[
             "3 to 6 events",
             "0 <= highlight_index < len(events)",
@@ -637,3 +610,29 @@ REGISTRY: dict[str, TemplateSpec] = {
         requires={"cast": False, "places": False, "set_pieces": False, "geo": False},
     ),
 }
+
+WORD_CAPS: Final[dict[str, dict[str, int]]] = {
+    "kinetic_quote": {"text": 12},
+    "stat_callout": {"suffix": 2},
+    "icon_list": {"heading": 3, "items[].label": 3},
+    "reveal": {"kicker": 3, "text": 6},
+    "cause_effect": {"nodes[].label": 3},
+    "comparison": {"a.heading": 3, "b.heading": 3, "a.points[]": 3, "b.points[]": 3},
+    "character_intro": {"descriptor": 4},
+    "dialogue": {"lines[].text": 10},
+    "text_thread": {"contact_name": 3, "messages[].text": 8},
+    "relationship_map": {"edges[].label": 3},
+    "location": {"era_label": 2},
+    "map_focus": {"markers[].label": 3},
+    "timeline": {"events[].date_label": 3, "events[].label": 3},
+}
+
+PICTURE_TEMPLATES: Final[frozenset[str]] = frozenset(
+    {"emotion_beat", "set_piece", "location", "stat_callout", "map_focus"}
+)
+REPLACEABLE_TEMPLATES: Final[frozenset[str]] = frozenset(
+    {"kinetic_quote", "cause_effect", "icon_list", "comparison", "timeline", "relationship_map"}
+)
+KEPT_TEMPLATES: Final[frozenset[str]] = frozenset(
+    {"title_card", "character_intro", "dialogue", "text_thread", "reveal"}
+)

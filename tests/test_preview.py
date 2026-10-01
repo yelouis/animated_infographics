@@ -295,7 +295,7 @@ def test_contact_sheet_and_storyboard_flag_failed_images(
         start_frame=0,
         end_frame=60,
         timing=TimelineSceneTiming(),
-        props=SetPieceProps(set_piece_id="v1", caption="Lewis Gun"),
+        props=SetPieceProps(set_piece_id="v1"),
     )
     timeline = Timeline(
         duration_frames=60,

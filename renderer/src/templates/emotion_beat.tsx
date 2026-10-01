@@ -2,21 +2,11 @@ import React from "react";
 import { interpolate } from "remotion";
 import { useSceneClock } from "../clock/SceneClockContext";
 import { Avatar, type AvatarExpression } from "../components/Avatar";
-import { FitText, type FitTextSlot } from "../components/FitText";
 import { Icon } from "../components/Icon";
 import type { EmotionBeatProps, TimelineSceneTiming } from "../generated/contracts";
 import { useCast } from "../story/entities";
 import { EASE_EXIT } from "../theme/motion";
 import { palette } from "../theme/palette";
-
-const CAPTION_SLOT: FitTextSlot = {
-  font: "display",
-  weight: 800,
-  size_max: 64,
-  size_min: 44,
-  max_lines: 2,
-  box_width: 900,
-};
 
 const GLYPH_MAP: Record<string, string> = {
   happy: "Smiley",
@@ -37,10 +27,7 @@ export interface EmotionBeatTemplateProps {
 }
 
 export const EmotionBeat: React.FC<EmotionBeatTemplateProps> = ({
-  sceneId,
   props,
-  debug = false,
-  isGallery = false,
 }) => {
   const clock = useSceneClock();
   const cast = useCast(props.cast_id);
@@ -70,6 +57,12 @@ export const EmotionBeat: React.FC<EmotionBeatTemplateProps> = ({
     extrapolateRight: "clamp",
   });
 
+  // Hold: avatar blinks at frames 45 and 135 (3 frames duration)
+  const isBlinking =
+    (clock.frame >= 45 && clock.frame <= 47) ||
+    (clock.frame >= 135 && clock.frame <= 137);
+  const eyeScaleY = isBlinking ? 0.1 : 1.0;
+
   // Glyph bobs 8 px, period 36 frames
   const glyphBobY = Math.sin((clock.frame / 36) * 2 * Math.PI) * 8;
   const glyphScale = interpolate(clock.frame, [4, 12], [0, 1], {
@@ -95,6 +88,7 @@ export const EmotionBeat: React.FC<EmotionBeatTemplateProps> = ({
     holdTransform = `translateY(${floatY}px)`;
   }
 
+  const isNeutral = props.emotion === "neutral";
   const iconName = GLYPH_MAP[props.emotion] || "Smiley";
 
   return (
@@ -110,12 +104,12 @@ export const EmotionBeat: React.FC<EmotionBeatTemplateProps> = ({
         pointerEvents: "none",
       }}
     >
-      {/* Avatar 520 px, expression = emotion, centred at x 540, top y 200, ring in cast colour */}
+      {/* Avatar 520 px, expression = emotion, centred at x 540, top y 400, ring in cast colour */}
       <div
         style={{
           position: "absolute",
           left: 280,
-          top: 200,
+          top: 400,
           width: 520,
           height: 520,
           opacity: avatarOpacity,
@@ -140,6 +134,7 @@ export const EmotionBeat: React.FC<EmotionBeatTemplateProps> = ({
             color={castColor}
             size={496}
             expression={props.emotion as AvatarExpression}
+            eyeScaleY={eyeScaleY}
             style={{
               position: "absolute",
               left: 0,
@@ -149,49 +144,23 @@ export const EmotionBeat: React.FC<EmotionBeatTemplateProps> = ({
         </div>
       </div>
 
-      {/* Emotion glyph 140 px at (800, 220) */}
-      <div
-        style={{
-          position: "absolute",
-          left: 730,
-          top: 150,
-          width: 140,
-          height: 140,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          transform: `translateY(${glyphBobY}px) scale(${glyphScale})`,
-          filter: "drop-shadow(0 8px 16px rgba(0,0,0,0.35))",
-        }}
-      >
-        <Icon name={iconName} size={140} color={palette.highlight} />
-      </div>
-
-      {/* Caption top y 800 */}
-      {props.caption && (
+      {/* Emotion glyph 140 px centred at (800, 420) -> top 350, left 730; omitted for neutral */}
+      {!isNeutral && (
         <div
           style={{
             position: "absolute",
-            left: 90,
-            top: 800,
-            width: 900,
+            left: 730,
+            top: 350,
+            width: 140,
+            height: 140,
             display: "flex",
+            alignItems: "center",
             justifyContent: "center",
+            transform: `translateY(${glyphBobY}px) scale(${glyphScale})`,
+            filter: "drop-shadow(0 8px 16px rgba(0,0,0,0.35))",
           }}
         >
-          <FitText
-            slot={CAPTION_SLOT}
-            text={props.caption}
-            sceneId={sceneId}
-            template="emotion_beat"
-            slotName="caption"
-            debug={debug}
-            isGallery={isGallery}
-            style={{
-              textAlign: "center",
-              color: palette.ink,
-            }}
-          />
+          <Icon name={iconName} size={140} color={palette.highlight} />
         </div>
       )}
     </div>

@@ -19,14 +19,12 @@ export const timelineFixtures: Record<"min" | "typical" | "max", TimelineProps> 
     ],
   },
   max: {
-    highlight_index: 4,
+    highlight_index: 2,
     events: [
-      { date_label: "Dec 1915", label: "Tank constructed in Boston" },
-      { date_label: "Summer 1916", label: "Tank groans and leaks" },
-      { date_label: "Jan 15, 1919", label: "Disaster strikes the city" },
-      { date_label: "Feb 1919", label: "Harbor cleanup operation" },
-      { date_label: "Apr 1925", label: "Master files guilt report" },
-      { date_label: "Dec 1926", label: "Victims receive damages" },
+      { date_label: "WWWW MMM WWWW", label: "WWWWWWWW MMMMMMMM WWWWWWWW" },
+      { date_label: "MMMM WWW MMMM", label: "MMMMMMMM WWWWWWWW MMMMMMMM" },
+      { date_label: "WWWW MMM WWWW", label: "WWWWWWWW MMMMMMMM WWWWWWWW" },
+      { date_label: "MMMM WWW MMMM", label: "MMMMMMMM WWWWWWWW MMMMMMMM" },
     ],
   },
 };

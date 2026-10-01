@@ -9,13 +9,13 @@ export const kineticQuoteFixtures: Record<
     emphasis: ["Never"],
   },
   typical: {
-    text: "In three words I can sum up everything I've learned about life: it goes on.",
+    text: "Everything I have learned about life can be summed up: it goes on.",
     emphasis: ["life", "goes", "on"],
     attribution_cast_id: "c1",
   },
   max: {
-    text: "The only limit to our realization of tomorrow will be our doubts of today. Move.",
-    emphasis: ["tomorrow", "doubts", "Move"],
+    text: "The only limit to our realization of tomorrow will be doubts of today.",
+    emphasis: ["tomorrow", "doubts", "today"],
     attribution_cast_id: "c1",
   },
 };

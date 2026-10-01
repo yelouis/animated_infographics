@@ -383,7 +383,6 @@ export type Template1 = "kinetic_quote";
 export type EndFrame4 = number;
 export type HideCaptions2 = boolean;
 export type Id2 = string;
-export type Caption = string | null;
 export type Decimals = 0 | 1 | 2;
 export type DisplayScale = "none" | "thousand" | "million" | "billion";
 export type Icon2 =
@@ -558,12 +557,9 @@ export type Id3 = string;
 export type Heading = string | null;
 /**
  * @minItems 2
- * @maxItems 4
+ * @maxItems 3
  */
-export type Items =
-  | [IconListItem, IconListItem]
-  | [IconListItem, IconListItem, IconListItem]
-  | [IconListItem, IconListItem, IconListItem, IconListItem];
+export type Items = [IconListItem, IconListItem] | [IconListItem, IconListItem, IconListItem];
 export type Icon3 =
   | "Airplane"
   | "Armchair"
@@ -737,12 +733,9 @@ export type HideCaptions5 = boolean;
 export type Id5 = string;
 /**
  * @minItems 2
- * @maxItems 4
+ * @maxItems 3
  */
-export type Nodes =
-  | [CauseEffectNode, CauseEffectNode]
-  | [CauseEffectNode, CauseEffectNode, CauseEffectNode]
-  | [CauseEffectNode, CauseEffectNode, CauseEffectNode, CauseEffectNode];
+export type Nodes = [CauseEffectNode, CauseEffectNode] | [CauseEffectNode, CauseEffectNode, CauseEffectNode];
 export type Icon4 =
   | (
       | "Airplane"
@@ -1075,9 +1068,9 @@ export type Icon5 =
   | null;
 /**
  * @minItems 1
- * @maxItems 4
+ * @maxItems 2
  */
-export type Points = [string] | [string, string] | [string, string, string] | [string, string, string, string];
+export type Points = [string] | [string, string];
 export type StartFrame8 = number;
 export type Template6 = "comparison";
 export type EndFrame9 = number;
@@ -1085,10 +1078,6 @@ export type HideCaptions7 = boolean;
 export type Id7 = string;
 export type CastId1 = string;
 export type Descriptor = string;
-/**
- * @maxItems 3
- */
-export type Traits = [] | [string] | [string, string] | [string, string, string];
 export type StartFrame9 = number;
 export type Template7 = "character_intro";
 export type EndFrame10 = number;
@@ -1096,9 +1085,9 @@ export type HideCaptions8 = boolean;
 export type Id8 = string;
 /**
  * @minItems 1
- * @maxItems 3
+ * @maxItems 2
  */
-export type Lines = [DialogueLine] | [DialogueLine, DialogueLine] | [DialogueLine, DialogueLine, DialogueLine];
+export type Lines = [DialogueLine] | [DialogueLine, DialogueLine];
 export type CastId2 = string;
 export type Text3 = string;
 export type Tone = "neutral" | "angry" | "happy" | "sad" | "shocked" | "sarcastic";
@@ -1111,13 +1100,9 @@ export type ContactCastId = string | null;
 export type ContactName = string;
 /**
  * @minItems 2
- * @maxItems 5
+ * @maxItems 3
  */
-export type Messages =
-  | [TextMessage, TextMessage]
-  | [TextMessage, TextMessage, TextMessage]
-  | [TextMessage, TextMessage, TextMessage, TextMessage]
-  | [TextMessage, TextMessage, TextMessage, TextMessage, TextMessage];
+export type Messages = [TextMessage, TextMessage] | [TextMessage, TextMessage, TextMessage];
 export type From = "me" | "them";
 export type Text4 = string;
 export type StartFrame11 = number;
@@ -1125,9 +1110,8 @@ export type Template9 = "text_thread";
 export type EndFrame12 = number;
 export type HideCaptions10 = boolean;
 export type Id10 = string;
-export type Caption1 = string | null;
 export type CastId3 = string;
-export type Emotion = "happy" | "sad" | "angry" | "shocked" | "confused" | "smug" | "nervous";
+export type Emotion = "neutral" | "happy" | "sad" | "angry" | "shocked" | "confused" | "smug" | "nervous";
 export type StartFrame12 = number;
 export type Template10 = "emotion_beat";
 export type EndFrame13 = number;
@@ -1162,7 +1146,6 @@ export type Template11 = "relationship_map";
 export type EndFrame14 = number;
 export type HideCaptions12 = boolean;
 export type Id12 = string;
-export type Caption2 = string | null;
 export type EraLabel = string | null;
 export type PlaceId = string;
 export type StartFrame14 = number;
@@ -1170,14 +1153,12 @@ export type Template12 = "location";
 export type EndFrame15 = number;
 export type HideCaptions13 = boolean;
 export type Id13 = string;
-export type Caption3 = string | null;
 export type SetPieceId = string;
 export type StartFrame15 = number;
 export type Template13 = "set_piece";
 export type EndFrame16 = number;
 export type HideCaptions14 = boolean;
 export type Id14 = string;
-export type Caption4 = string | null;
 /**
  * @minItems 1
  * @maxItems 3
@@ -1194,13 +1175,10 @@ export type HideCaptions15 = boolean;
 export type Id15 = string;
 /**
  * @minItems 3
- * @maxItems 6
+ * @maxItems 4
  */
 export type Events =
-  | [TimelineEvent, TimelineEvent, TimelineEvent]
-  | [TimelineEvent, TimelineEvent, TimelineEvent, TimelineEvent]
-  | [TimelineEvent, TimelineEvent, TimelineEvent, TimelineEvent, TimelineEvent]
-  | [TimelineEvent, TimelineEvent, TimelineEvent, TimelineEvent, TimelineEvent, TimelineEvent];
+  [TimelineEvent, TimelineEvent, TimelineEvent] | [TimelineEvent, TimelineEvent, TimelineEvent, TimelineEvent];
 export type DateLabel = string;
 export type Label4 = string;
 export type HighlightIndex = number;
@@ -1507,7 +1485,6 @@ export interface TimelineStatCalloutScene {
   timing?: TimelineSceneTiming;
 }
 export interface StatCalloutProps {
-  caption?: Caption;
   decimals: Decimals;
   display_scale?: DisplayScale;
   icon?: Icon2;
@@ -1592,7 +1569,6 @@ export interface TimelineCharacterIntroScene {
 export interface CharacterIntroProps {
   cast_id: CastId1;
   descriptor: Descriptor;
-  traits?: Traits;
 }
 export interface TimelineDialogueScene {
   end_frame: EndFrame10;
@@ -1639,7 +1615,6 @@ export interface TimelineEmotionBeatScene {
   timing?: TimelineSceneTiming;
 }
 export interface EmotionBeatProps {
-  caption?: Caption1;
   cast_id: CastId3;
   emotion: Emotion;
 }
@@ -1672,7 +1647,6 @@ export interface TimelineLocationScene {
   timing?: TimelineSceneTiming;
 }
 export interface LocationProps {
-  caption?: Caption2;
   era_label?: EraLabel;
   place_id: PlaceId;
 }
@@ -1686,7 +1660,6 @@ export interface TimelineSetPieceScene {
   timing?: TimelineSceneTiming;
 }
 export interface SetPieceProps {
-  caption?: Caption3;
   set_piece_id: SetPieceId;
 }
 export interface TimelineMapFocusScene {
@@ -1699,7 +1672,6 @@ export interface TimelineMapFocusScene {
   timing?: TimelineSceneTiming;
 }
 export interface MapFocusProps {
-  caption?: Caption4;
   markers: Markers;
   path?: Path;
   region: Region;

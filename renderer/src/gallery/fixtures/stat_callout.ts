@@ -17,7 +17,6 @@ export const statCalloutFixtures: Record<
     prefix: "",
     display_scale: "million",
     suffix: "gallons",
-    caption: "of molasses swept through the streets at 35 miles per hour",
     icon: "Drop",
   },
   max: {
@@ -25,8 +24,7 @@ export const statCalloutFixtures: Record<
     decimals: 1,
     prefix: "$",
     display_scale: "billion",
-    suffix: "TOTAL VALUATION",
-    caption: "Maximum estimated cumulative liability assessed across all historic regional claims",
+    suffix: "WWWWWW MMMMMM",
     icon: "Coins",
   },
 };

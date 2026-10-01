@@ -6,17 +6,14 @@ export const locationFixtures: Record<"min" | "typical" | "max" | "worst", Locat
   },
   typical: {
     place_id: "p1",
-    caption: "Home of Grandma Rose",
     era_label: "1961",
   },
   max: {
     place_id: "p1",
-    caption: "A rugged estate on the shore of Lake Superior",
     era_label: "Circa 1961",
   },
   worst: {
     place_id: "p1",
-    caption: "MMMMWWWW A rugged estate on the shore of Lake WW",
   },
 };
 
