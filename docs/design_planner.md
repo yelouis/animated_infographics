@@ -143,7 +143,7 @@ spoken exchange → `dialogue`; texts/messages → `text_thread`; a person's fir
 run = 1                                   # scene 0 (title_card) counts as worded
 for i in 1 .. n-1:
     t = choices[i].primary
-    if run >= 2 and t in REPLACEABLE:
+    if run >= 2 and t in REPLACEABLE and not QUOTED.search(beats[i].text):   # quoted speech: added October 3, 2026
         target = rhythm_target(beats[i].text, bible,
                                prev=choices[i-1].primary,
                                next=choices[i+1].primary if i+1 < n else None)
@@ -175,9 +175,12 @@ If it fails `validate_scene`, the scene goes through the normal ladder with its 
 - Given the reaction-shot beats R7 picks, the props model invented feelings for plain beats: "smug" for "…I think I got the better deal.", "confused" for "I asked if he minded me using it.", and "angry" for "Meredith was impressed by his opponent."
 - The blind critic's emotion readings were no steadier. Across 9 real beats its answers differed from the props in person or feeling on 6. Asked to prefer "neutral", it answered "neutral" on all 27 calls, which tells us nothing.
 - A neutral face invents nothing, which is what the reaction shot is for.
-- Quoted spans are removed before the first-person test, because Walt's line "I've been waiting for someone to call about the pie." would otherwise pick the narrator. That beat now gets the blueberry pie.
+- Quoted spans are removed before the first-person test, because Walt's line "I've been waiting for someone to call about the pie." would otherwise pick the narrator.
 - Kept templates are never replaced (`design_templates.md` §5.4).
-- The real cases are frozen in `tests/data/rhythm_cases.json` (R7-a…g).
+- **A beat that contains quoted speech or writing is never replaced** (`QUOTED` matches; added October 3, 2026). The quoted words are story content, not restated narration.
+  - Measured in Wave D's final E2E: R7 replaced the `kinetic_quote` of Rose's note — "It was always yours. Give it to whoever comes asking.", the story's climax — with a neutral reaction shot of Grandma Rose. That was 2 of 10 R7 repairs across 26 Wave D jobs.
+  - Case R7-b (Walt's line) is therefore no longer replaced either.
+- The real cases are frozen in `tests/data/rhythm_cases.json` (R7-a…h; R7-h is Rose's note).
 
 **Scope:** R6 and R7 are offline rules. Live presentations want timelines and repeated graphics (`design_future_live_and_video.md` §4).
 
@@ -198,7 +201,16 @@ If it fails `validate_scene`, the scene goes through the normal ladder with its 
 3. Length: Stay within every word and item limit in the writing rules. Fewer words is better.
 4. Style: The viewer hears the narration, so on-screen words must not repeat it. Write names, labels and numbers, not sentences. Do not copy sentences unless required by kinetic_quote.
 ```
-Each template's registry `writing_rules` state its word caps and list maxima (`design_templates.md` §5.3); the exact strings are in `agent_execution_guide.md` item D2. The removed fields (`design_templates.md` §5.2) are no longer in the props models, so the schema cannot ask for them. The measured effect is in `design_templates.md` §5.5.
+Each template's registry `writing_rules` state its word caps and list maxima (`design_templates.md` §5.3); the exact strings were in the Wave D guide's item D2 and now live in the registry.
+
+**Allowed icon names in the props prompt (added October 3, 2026).** For templates with an `icon` field (`stat_callout`, `icon_list`, `cause_effect`, `comparison`), the user message ends with this block, verbatim, followed by every name of the icon allow-list in its `contracts/icons.py` order, separated by `", "`:
+```
+
+# Icons
+Every icon field must be one of these names. Pick the one that depicts the label; if none does and the field is optional, leave it out.
+```
+- **Why:** the prompt never showed the 157 allowed names. The model guessed a name, and the schema's `enum` snapped the guess to an allowed one. "Armchair", second in the list, became the most-used icon in every wave: 9% of icons in Wave A, 18% in Wave D's final run ("Machine Guns", "Trampled crops", "Farmers" and "986 emus killed" all showed an armchair).
+- **Measured** October 3, 2026, by re-planning all 27 icon-bearing scenes of Wave D's final E2E with and without the block: Armchair **8 of 54 → 0 of 56** icons. Picks became depictions: "Rescuers" `Users`, "Trampled crops" `Plant`, "Machine Guns" `Bomb`, "deaths" `Skull`, "emus" `Bird`. The removed fields (`design_templates.md` §5.2) are no longer in the props models, so the schema cannot ask for them. The measured effect is in `design_templates.md` §5.5.
 
 **Dialogue and text messages may paraphrase (Issue 6 → Option D; the user, September 27, 2026, after watching both story renders: *"I think the paraphrasing is fine."*).** `dialogue` lines and `text_thread` messages may paraphrase or dramatise what the beat reports, in every genre. Only `kinetic_quote` needs a verbatim span (§8). **Do not add a verbatim or word-overlap check to `dialogue` or `text_thread`.** *Who* says each line is still checked by the critic (§11).
 
@@ -235,6 +247,14 @@ The **same functions** run on LLM output (inside the ladder) and on human edits 
 6. **Meaning rules that code can decide (Issue 5 → Option A, part 1; selected September 25, 2026):**
    - `stat_callout.suffix` must not contain `$`, `£` or `€`. Error: `props.suffix: currency symbols belong in prefix`.
    - `location.era_label` may contain the whole word "ago" (casefolded) only if the whole transcript does. Error: `props.era_label: "ago" is not in the narration`.
+   - **A year is not a stat (added October 3, 2026).** It is an error when all of these hold:
+     - a `stat_callout` has `decimals` 0 and `display_scale` `"none"`;
+     - its `value` is an integer from 1000 to 2100;
+     - the beat contains that number as a bare four-digit token: `(?<![\d,.])<value>(?![\d]|,\d)`.
+
+     Error: `props.value: <value> is a year in this beat; a year belongs in a timeline or an era label, not a stat`.
+     - **Measured:** Wave D's R6 demoted `story_room_12`'s second timeline to its alternate `stat_callout`, which rendered "She had died in 2016…" as **"2,016"** counting up from 0, under an armchair icon. Given a unit field, the model wrote "Year died" instead. That is the only year-like stat in every run since Wave A.
+     - Counts from 1000 to 2100 written without a thousands separator are treated as years; the ladder then uses the alternate template.
    - `timeline.events[].date_label`: see §8 (Issue 4).
 7. **Text completeness (added September 25, 2026)**, for every free-text string field (not ids, enums, `prefix`, or `date_label`/`era_label`):
    - **Repair (not an error):** runs of whitespace, including `\n`, collapse to one space; strip the ends.
@@ -450,7 +470,10 @@ Before validation, the planner **fills** a null `contact_cast_id` with rule 2's 
 - **Who** (speaker, sender, `cast_id`): a mismatch iff the critic's value is not `unknown` **and** differs from the props. For `kinetic_quote`, `narration` agrees only with the narrator's cast id. A speaker the critic cannot resolve (`unknown`) is **never** a mismatch.
 - **Contact** (`text_thread`, added September 27, 2026): a mismatch iff the critic's `contact` is not `unknown` **and** differs from the props contact (none counts as different). It is recorded as `contact: <contact_name> vs <critic's cast name> (<critic's id>)`, e.g. `contact: Sofia vs Deb (c3)`, so the retry message names the person.
 - **Dialogue tone:** a mismatch iff (the critic's tone is not `unknown` and differs from the props) **or** (the critic's tone is `unknown` and the props' tone is not `neutral`). A strong tone the text does not show is an error.
-- **Emotion** (`emotion_beat`): a mismatch iff the critic's value is not `unknown` and differs from the props.
+- **Emotion** (`emotion_beat`; **revised October 3, 2026**, now that `neutral` exists): a mismatch iff (the critic's emotion is not `unknown` and differs from the props) **or** (the critic's emotion is `unknown` and the props' emotion is not `neutral`). This is the dialogue-tone rule: a strong feeling the text does not show is an error.
+  - **Why:** under the old rule, "unknown" was never a mismatch, so unsupported feelings passed as "agree".
+  - **Measured** October 3, 2026, on the 13 model-planned emotion beats of the Wave C/D E2E runs, seeds 7–9, all three seeds identical: the critic read `unknown` on 4 beats whose props showed "angry" for "Meredith was impressed by his opponent.", "angry" for "I called the number I found online, expecting nothing." and "shocked"/"angry" for "…he was quiet for a long time."
+  - All 4 were unsupported; no beat whose feeling the text shows was read as `unknown`.
 
 **On mismatch:** exactly **one** props retry for the same template, with an added user message:
 
@@ -462,13 +485,25 @@ Fix the props if that reading fits the beat text better; otherwise keep yours.
 
 The retry is one `run_with_retries` round with its **normal 3 attempts** (for format and validation). The first implementation allowed 1 attempt, and 30 of 149 critic mismatches across Wave B's runs ended with the known-wrong original kept. The retry result must pass `validate_scene`. If it does, it replaces the scene, **with no second critic call** (no loops).
 
-If all attempts fail:
-- **Deterministic tone repair:** if **every** mismatch is a dialogue tone where the critic answered `unknown`, set those lines' tone to `neutral`. The rule itself makes `neutral` the only acceptable value there. Record `repair: "tone_neutral"`, `changed: true`.
-- Otherwise the original validated scene stands. Its retry errors are recorded, never silently discarded.
+If all attempts fail, the original validated scene stands. Its retry errors are recorded, never silently discarded.
+
+**Enforcement after the round (revised October 3, 2026; replaces the "only if every attempt fails" tone repair).** After a mismatch, whichever scene stands is checked against the critic's **original reading** (the answer that produced the mismatch). This happens whether the retry succeeded or failed:
+- **`dialogue`:** a line `i` keeps a non-`neutral` tone only if the reading's line `i` has the **same** tone. Otherwise its tone becomes `neutral` (`repair: "tone_neutral"`).
+- **`emotion_beat`:** a non-`neutral` emotion is kept only if the reading's emotion is the **same**. Otherwise it becomes `neutral` (`repair: "emotion_neutral"`).
+- **`kinetic_quote`:** the attribution is **removed** (`attribution_cast_id: null`, `repair: "attribution_dropped"`) when the reading names a speaker that disagrees with it: a cast id other than the props', or `narration` when the props name anyone but the narrator. An `unknown` reading never removes anything.
+
+These repairs only ever **remove** a claim: a feeling, a tone or a face. They never assert the critic's own reading, which can be wrong (case C). Assigning the critic's speaker stays rejected. The enforced scene is re-validated, and `changed` compares the final props with the original.
+
+**Why (measured October 3, 2026, 48 E2E jobs of Waves C and D):**
+- **35 of 87** flagged tones survived a retry that "succeeded" by keeping them. The model is told "otherwise keep yours", and it does.
+  - In the final run, Rose's farewell note "It was always yours." / "Give it to whoever comes asking." was drawn as **sarcastic**.
+  - Another retry, triggered by a speaker mismatch, rewrote a line as "Rose?" said **angry**, which is Wave A's regression case B. Nothing re-checked it.
+- **7 of 8** disputed quote attributions were kept, because the retry returned identical props. For example, the narration line "The first attack came on November 2." was credited to The Soldiers (reading: `narration`), and Mr. Alvarez's list item to Sofia (reading: `c2`).
+- The real cases, with the critic's readings on seeds 7–9 (identical), are frozen in `tests/data/critic_enforcement_cases.json`.
 
 If the critic call itself fails entirely, the scene is accepted with critic status `unavailable`.
 
-**Recorded** in `plan_report.json` per scene: `critic: {"status": "not_applicable"|"agree"|"mismatch_retried"|"unavailable", "mismatches": ["lines[0].tone: angry vs unknown"], "changed": bool, "repair": "tone_neutral"|null, "retry_errors": [str]}` (`design_data_contracts.md` §6). `changed` is true **only if the final props differ** from the original. An identical retry is not a change.
+**Recorded** in `plan_report.json` per scene: `critic: {"status": "not_applicable"|"agree"|"mismatch_retried"|"unavailable", "mismatches": ["lines[0].tone: angry vs unknown"], "changed": bool, "repair": "tone_neutral"|"emotion_neutral"|"attribution_dropped"|null, "retry_errors": [str]}` (`design_data_contracts.md` §6). `changed` is true **only if the final props differ** from the original. An identical retry is not a change.
 
 **Measured September 25, 2026** with `gemma4:26b`, seeds 7, 8 and 9, all consistent. These four cases are the **critic regression set**, run as slow tests with the cast `c1 Me (narrator)`, `c2 Danny`, `c3 Walt`, `c4 Deb`:
 

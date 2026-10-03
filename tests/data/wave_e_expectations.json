@@ -1,0 +1,229 @@
+{
+  "source": "Verification of October 3, 2026 (Wave E item E2). Merge into the existing frozen files as described in agent_execution_guide.md E2; no test reads this file directly.",
+  "rhythm_cases_changes": {
+    "R7-b": {
+      "expected": null,
+      "why": "the beat is quoted speech (Walt's line): a beat with a quoted span is never replaced"
+    },
+    "add": [
+      {
+        "case": "R7-h",
+        "job": "story-recipe-box-20261003-170932",
+        "beat_i": 24,
+        "beat": "Rose had mailed it to him the week before she died, with a note: \"It was always yours. Give it to whoever comes asking.\"",
+        "entities": {
+          "cast": [
+            {
+              "id": "c1",
+              "name": "Me",
+              "is_narrator": true
+            },
+            {
+              "id": "c2",
+              "name": "Grandma Rose",
+              "is_narrator": false
+            },
+            {
+              "id": "c3",
+              "name": "Danny",
+              "is_narrator": false
+            },
+            {
+              "id": "c4",
+              "name": "Walt",
+              "is_narrator": false
+            }
+          ],
+          "places": [
+            {
+              "id": "p1",
+              "name": "Duluth"
+            },
+            {
+              "id": "p2",
+              "name": "Thunder Bay"
+            }
+          ],
+          "set_pieces": [
+            {
+              "id": "v1",
+              "name": "The Recipe Box"
+            },
+            {
+              "id": "v2",
+              "name": "The Blueberry Pie"
+            },
+            {
+              "id": "v3",
+              "name": "The Diner"
+            }
+          ]
+        },
+        "template_before": "kinetic_quote",
+        "prev_template": "kinetic_quote",
+        "next_template": "kinetic_quote",
+        "expected": null,
+        "why": "quoted writing (Rose's note, the story's climax) is story content: a beat with a quoted span is never replaced"
+      }
+    ]
+  },
+  "recipe_choices_expected": {
+    "choices": [
+      {
+        "primary": "title_card",
+        "alternate": "title_card"
+      },
+      {
+        "primary": "timeline",
+        "alternate": "character_intro"
+      },
+      {
+        "primary": "emotion_beat",
+        "alternate": "comparison",
+        "rhythm_id": "c1"
+      },
+      {
+        "primary": "stat_callout",
+        "alternate": "set_piece"
+      },
+      {
+        "primary": "location",
+        "alternate": "timeline"
+      },
+      {
+        "primary": "reveal",
+        "alternate": "emotion_beat"
+      },
+      {
+        "primary": "set_piece",
+        "alternate": "cause_effect"
+      },
+      {
+        "primary": "reveal",
+        "alternate": "set_piece"
+      },
+      {
+        "primary": "dialogue",
+        "alternate": "dialogue"
+      },
+      {
+        "primary": "set_piece",
+        "alternate": "timeline"
+      },
+      {
+        "primary": "location",
+        "alternate": "location"
+      },
+      {
+        "primary": "text_thread",
+        "alternate": "set_piece"
+      },
+      {
+        "primary": "kinetic_quote",
+        "alternate": "reveal"
+      },
+      {
+        "primary": "map_focus",
+        "alternate": "location"
+      },
+      {
+        "primary": "text_thread",
+        "alternate": "emotion_beat"
+      },
+      {
+        "primary": "dialogue",
+        "alternate": "emotion_beat"
+      },
+      {
+        "primary": "kinetic_quote",
+        "alternate": "reveal"
+      },
+      {
+        "primary": "location",
+        "alternate": "timeline"
+      },
+      {
+        "primary": "character_intro",
+        "alternate": "icon_list"
+      },
+      {
+        "primary": "dialogue",
+        "alternate": "timeline"
+      },
+      {
+        "primary": "cause_effect",
+        "alternate": "timeline"
+      },
+      {
+        "primary": "set_piece",
+        "alternate": "icon_list"
+      },
+      {
+        "primary": "kinetic_quote",
+        "alternate": "dialogue"
+      },
+      {
+        "primary": "stat_callout",
+        "alternate": "stat_callout"
+      },
+      {
+        "primary": "icon_list",
+        "alternate": "set_piece"
+      },
+      {
+        "primary": "set_piece",
+        "alternate": "reveal"
+      },
+      {
+        "primary": "cause_effect",
+        "alternate": "text_thread"
+      },
+      {
+        "primary": "kinetic_quote",
+        "alternate": "dialogue"
+      },
+      {
+        "primary": "dialogue",
+        "alternate": "emotion_beat"
+      },
+      {
+        "primary": "dialogue",
+        "alternate": "emotion_beat"
+      },
+      {
+        "primary": "location",
+        "alternate": "timeline"
+      },
+      {
+        "primary": "set_piece",
+        "alternate": "dialogue"
+      }
+    ],
+    "rule_repairs": [
+      {
+        "rule": "R6",
+        "scene": "s010",
+        "from": "timeline",
+        "to": "location"
+      },
+      {
+        "rule": "R6",
+        "scene": "s023",
+        "from": "timeline",
+        "to": "stat_callout"
+      },
+      {
+        "rule": "R6",
+        "scene": "s008",
+        "from": "comparison",
+        "to": "dialogue"
+      },
+      {
+        "rule": "R7",
+        "scene": "s002",
+        "from": "comparison",
+        "to": "emotion_beat"
+      }
+    ]
+  }
+}

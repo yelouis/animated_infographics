@@ -1,0 +1,1150 @@
+{
+  "source": "Wave D E2E run 20261003_100530 (verification of October 3, 2026); critic readings measured with the current critic on gemma4:26b",
+  "cases": [
+    {
+      "case": "story-recipe-box:s025",
+      "job": "story-recipe-box-20261003-171946",
+      "template": "dialogue",
+      "scene": {
+        "id": "s025",
+        "beat_i": 25,
+        "template": "dialogue",
+        "props": {
+          "lines": [
+            {
+              "cast_id": "c2",
+              "text": "It was always yours.",
+              "tone": "sarcastic"
+            },
+            {
+              "cast_id": "c2",
+              "text": "Give it to whoever comes asking.",
+              "tone": "sarcastic"
+            }
+          ]
+        },
+        "mute_sfx": false,
+        "rationale": "llm planned"
+      },
+      "bible": {
+        "schema_version": 1,
+        "title": "The Missing Recipe Card",
+        "logline": "A granddaughter discovers a mysterious note in her late grandmother's recipe box that leads her to a long-lost family secret.",
+        "genre": "personal_story",
+        "cast": [
+          {
+            "id": "c1",
+            "name": "Me",
+            "role": "The granddaughter searching for the reci",
+            "is_narrator": true,
+            "color_slot": 0,
+            "avatar": {
+              "skin": 2,
+              "hair_style": "long",
+              "hair_color": "brown",
+              "facial_hair": "none",
+              "headwear": "none",
+              "glasses": false,
+              "age": "adult"
+            }
+          },
+          {
+            "id": "c2",
+            "name": "Grandma Rose",
+            "role": "The late diner owner and grandmother",
+            "is_narrator": false,
+            "color_slot": 1,
+            "avatar": {
+              "skin": 1,
+              "hair_style": "bun",
+              "hair_color": "gray",
+              "facial_hair": "none",
+              "headwear": "none",
+              "glasses": true,
+              "age": "elder"
+            }
+          },
+          {
+            "id": "c3",
+            "name": "Danny",
+            "role": "The narrator's brother",
+            "is_narrator": false,
+            "color_slot": 2,
+            "avatar": {
+              "skin": 3,
+              "hair_style": "short",
+              "hair_color": "brown",
+              "facial_hair": "none",
+              "headwear": "none",
+              "glasses": false,
+              "age": "adult"
+            }
+          },
+          {
+            "id": "c4",
+            "name": "Walt",
+            "role": "Rose's former fiancé",
+            "is_narrator": false,
+            "color_slot": 3,
+            "avatar": {
+              "skin": 2,
+              "hair_style": "bald",
+              "hair_color": "white",
+              "facial_hair": "none",
+              "headwear": "none",
+              "glasses": true,
+              "age": "elder"
+            }
+          }
+        ],
+        "places": [
+          {
+            "id": "p1",
+            "name": "Duluth",
+            "kind": "real",
+            "country_iso3": "USA",
+            "lat": 46.78327,
+            "lon": -92.10658,
+            "geo_source": "gazetteer",
+            "visual_description": "A lakeside city with historic homes and a view of the water.",
+            "icon": "MapPin"
+          },
+          {
+            "id": "p2",
+            "name": "Thunder Bay",
+            "kind": "real",
+            "country_iso3": "CAN",
+            "lat": 48.38202,
+            "lon": -89.25018,
+            "geo_source": "gazetteer",
+            "visual_description": "A northern city near the shores of Lake Superior.",
+            "icon": "MapPin"
+          }
+        ],
+        "set_pieces": [
+          {
+            "id": "v1",
+            "name": "The Recipe Box",
+            "visual_description": "A wooden box filled with many small, handwritten paper cards.",
+            "icon": "Notebook"
+          },
+          {
+            "id": "v2",
+            "name": "Blueberry Pie",
+            "visual_description": "A golden-crusted pie filled with deep purple blueberry filling.",
+            "icon": "Cake"
+          },
+          {
+            "id": "v3",
+            "name": "The Diner",
+            "visual_description": "A cozy, nostalgic small-town diner with a counter and booths.",
+            "icon": "Storefront"
+          }
+        ]
+      },
+      "beats": {
+        "before_previous": "She baked it from memory and mailed Walt a photo of every Sunday pie.",
+        "previous": "Then Walt opened a kitchen drawer and handed me the missing card.",
+        "current": "Rose had mailed it to him the week before she died, with a note: \"It was always yours. Give it to whoever comes asking.\"",
+        "next": "I asked if he minded me using it."
+      },
+      "critic_readings_seeds_7_8_9": [
+        {
+          "lines": [
+            {
+              "speaker": "c2",
+              "tone": "unknown"
+            },
+            {
+              "speaker": "c2",
+              "tone": "unknown"
+            }
+          ]
+        },
+        {
+          "lines": [
+            {
+              "speaker": "c2",
+              "tone": "unknown"
+            },
+            {
+              "speaker": "c2",
+              "tone": "unknown"
+            }
+          ]
+        },
+        {
+          "lines": [
+            {
+              "speaker": "c2",
+              "tone": "unknown"
+            },
+            {
+              "speaker": "c2",
+              "tone": "unknown"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "story-recipe-box:s007",
+      "job": "story-recipe-box-20261003-170932",
+      "template": "dialogue",
+      "scene": {
+        "id": "s007",
+        "beat_i": 7,
+        "template": "dialogue",
+        "props": {
+          "lines": [
+            {
+              "cast_id": "c3",
+              "text": "It's a joke.",
+              "tone": "sarcastic"
+            },
+            {
+              "cast_id": "c1",
+              "text": "Mom thought it was a supplier.",
+              "tone": "neutral"
+            }
+          ]
+        },
+        "mute_sfx": false,
+        "rationale": "llm planned"
+      },
+      "bible": {
+        "schema_version": 1,
+        "title": "The Missing Recipe Card",
+        "logline": "A granddaughter discovers a mysterious note in her late grandmother's recipe box that leads her to a long-lost family secret.",
+        "genre": "personal_story",
+        "cast": [
+          {
+            "id": "c1",
+            "name": "Me",
+            "role": "narrator",
+            "is_narrator": true,
+            "color_slot": 0,
+            "avatar": {
+              "skin": 2,
+              "hair_style": "long",
+              "hair_color": "brown",
+              "facial_hair": "none",
+              "headwear": "none",
+              "glasses": false,
+              "age": "adult"
+            }
+          },
+          {
+            "id": "c2",
+            "name": "Grandma Rose",
+            "role": "character",
+            "is_narrator": false,
+            "color_slot": 1,
+            "avatar": {
+              "skin": 1,
+              "hair_style": "bun",
+              "hair_color": "gray",
+              "facial_hair": "none",
+              "headwear": "none",
+              "glasses": true,
+              "age": "elder"
+            }
+          },
+          {
+            "id": "c3",
+            "name": "Danny",
+            "role": "character",
+            "is_narrator": false,
+            "color_slot": 2,
+            "avatar": {
+              "skin": 3,
+              "hair_style": "short",
+              "hair_color": "brown",
+              "facial_hair": "none",
+              "headwear": "none",
+              "glasses": false,
+              "age": "adult"
+            }
+          },
+          {
+            "id": "c4",
+            "name": "Walt",
+            "role": "character",
+            "is_narrator": false,
+            "color_slot": 3,
+            "avatar": {
+              "skin": 2,
+              "hair_style": "bald",
+              "hair_color": "white",
+              "facial_hair": "none",
+              "headwear": "none",
+              "glasses": true,
+              "age": "elder"
+            }
+          }
+        ],
+        "places": [
+          {
+            "id": "p1",
+            "name": "Duluth",
+            "kind": "real",
+            "country_iso3": "USA",
+            "lat": 46.78327,
+            "lon": -92.10658,
+            "geo_source": "gazetteer",
+            "visual_description": "A lakeside city with historic buildings and a view of the water.",
+            "icon": "MapPin"
+          },
+          {
+            "id": "p2",
+            "name": "Thunder Bay",
+            "kind": "real",
+            "country_iso3": "CAN",
+            "lat": 48.38202,
+            "lon": -89.25018,
+            "geo_source": "gazetteer",
+            "visual_description": "A northern city near the coast of Lake Superior.",
+            "icon": "MapPin"
+          }
+        ],
+        "set_pieces": [
+          {
+            "id": "v1",
+            "name": "The Recipe Box",
+            "visual_description": "A wooden box filled with many small, handwritten paper cards.",
+            "icon": "Notebook"
+          },
+          {
+            "id": "v2",
+            "name": "The Blueberry Pie",
+            "visual_description": "A delicious, steaming blueberry pie with a golden crust.",
+            "icon": "Cake"
+          },
+          {
+            "id": "v3",
+            "name": "The Diner",
+            "visual_description": "A cozy, classic small-town diner with a counter and stools.",
+            "icon": "Storefront"
+          }
+        ]
+      },
+      "beats": {
+        "before_previous": "Every card was there except one.",
+        "previous": "Rose's blueberry pie was the reason people lined up outside the diner on Sundays, and where its card should have been, there was a slip of paper with two words on it: \"Ask Walt.\"",
+        "current": "Nobody in the family knew a Walt. Danny thought it was a joke. My mom thought it was a supplier.",
+        "next": "I kept that slip on my fridge for eleven years."
+      },
+      "critic_readings_seeds_7_8_9": [
+        {
+          "lines": [
+            {
+              "speaker": "c3",
+              "tone": "unknown"
+            },
+            {
+              "speaker": "c1",
+              "tone": "unknown"
+            }
+          ]
+        },
+        {
+          "lines": [
+            {
+              "speaker": "c3",
+              "tone": "unknown"
+            },
+            {
+              "speaker": "c1",
+              "tone": "unknown"
+            }
+          ]
+        },
+        {
+          "lines": [
+            {
+              "speaker": "c3",
+              "tone": "unknown"
+            },
+            {
+              "speaker": "c1",
+              "tone": "unknown"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "story-recipe-box:s013",
+      "job": "story-recipe-box-20261003-170932",
+      "template": "dialogue",
+      "scene": {
+        "id": "s013",
+        "beat_i": 13,
+        "template": "dialogue",
+        "props": {
+          "lines": [
+            {
+              "cast_id": "c1",
+              "text": "Rose?",
+              "tone": "angry"
+            }
+          ]
+        },
+        "mute_sfx": false,
+        "rationale": "llm planned"
+      },
+      "bible": {
+        "schema_version": 1,
+        "title": "The Missing Recipe Card",
+        "logline": "A granddaughter discovers a mysterious note in her late grandmother's recipe box that leads her to a long-lost family secret.",
+        "genre": "personal_story",
+        "cast": [
+          {
+            "id": "c1",
+            "name": "Me",
+            "role": "narrator",
+            "is_narrator": true,
+            "color_slot": 0,
+            "avatar": {
+              "skin": 2,
+              "hair_style": "long",
+              "hair_color": "brown",
+              "facial_hair": "none",
+              "headwear": "none",
+              "glasses": false,
+              "age": "adult"
+            }
+          },
+          {
+            "id": "c2",
+            "name": "Grandma Rose",
+            "role": "character",
+            "is_narrator": false,
+            "color_slot": 1,
+            "avatar": {
+              "skin": 1,
+              "hair_style": "bun",
+              "hair_color": "gray",
+              "facial_hair": "none",
+              "headwear": "none",
+              "glasses": true,
+              "age": "elder"
+            }
+          },
+          {
+            "id": "c3",
+            "name": "Danny",
+            "role": "character",
+            "is_narrator": false,
+            "color_slot": 2,
+            "avatar": {
+              "skin": 3,
+              "hair_style": "short",
+              "hair_color": "brown",
+              "facial_hair": "none",
+              "headwear": "none",
+              "glasses": false,
+              "age": "adult"
+            }
+          },
+          {
+            "id": "c4",
+            "name": "Walt",
+            "role": "character",
+            "is_narrator": false,
+            "color_slot": 3,
+            "avatar": {
+              "skin": 2,
+              "hair_style": "bald",
+              "hair_color": "white",
+              "facial_hair": "none",
+              "headwear": "none",
+              "glasses": true,
+              "age": "elder"
+            }
+          }
+        ],
+        "places": [
+          {
+            "id": "p1",
+            "name": "Duluth",
+            "kind": "real",
+            "country_iso3": "USA",
+            "lat": 46.78327,
+            "lon": -92.10658,
+            "geo_source": "gazetteer",
+            "visual_description": "A lakeside city with historic buildings and a view of the water.",
+            "icon": "MapPin"
+          },
+          {
+            "id": "p2",
+            "name": "Thunder Bay",
+            "kind": "real",
+            "country_iso3": "CAN",
+            "lat": 48.38202,
+            "lon": -89.25018,
+            "geo_source": "gazetteer",
+            "visual_description": "A northern city near the coast of Lake Superior.",
+            "icon": "MapPin"
+          }
+        ],
+        "set_pieces": [
+          {
+            "id": "v1",
+            "name": "The Recipe Box",
+            "visual_description": "A wooden box filled with many small, handwritten paper cards.",
+            "icon": "Notebook"
+          },
+          {
+            "id": "v2",
+            "name": "The Blueberry Pie",
+            "visual_description": "A delicious, steaming blueberry pie with a golden crust.",
+            "icon": "Cake"
+          },
+          {
+            "id": "v3",
+            "name": "The Diner",
+            "visual_description": "A cozy, classic small-town diner with a counter and stools.",
+            "icon": "Storefront"
+          }
+        ]
+      },
+      "beats": {
+        "before_previous": "The return address was in Thunder Bay, Ontario, about 190 miles up the shore.",
+        "previous": "I called the number I found online, expecting nothing.",
+        "current": "A man answered, and when I said Rose's name, he was quiet for a long time.",
+        "next": "Then he said, \"I've been waiting for someone to call about the pie.\""
+      },
+      "critic_readings_seeds_7_8_9": [
+        {
+          "lines": [
+            {
+              "speaker": "c1",
+              "tone": "unknown"
+            }
+          ]
+        },
+        {
+          "lines": [
+            {
+              "speaker": "c1",
+              "tone": "unknown"
+            }
+          ]
+        },
+        {
+          "lines": [
+            {
+              "speaker": "c1",
+              "tone": "unknown"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "emu-war:s010",
+      "job": "emu-war-20261003-171646",
+      "template": "kinetic_quote",
+      "scene": {
+        "id": "s010",
+        "beat_i": 10,
+        "template": "kinetic_quote",
+        "props": {
+          "text": "The first attack came on November 2.",
+          "emphasis": [],
+          "attribution_cast_id": "c2"
+        },
+        "mute_sfx": false,
+        "rationale": "llm planned"
+      },
+      "bible": {
+        "schema_version": 1,
+        "title": "The Great Emu War",
+        "logline": "In 1932, the Australian military faced off against a massive invasion of emus destroying wheat crops in Western Australia.",
+        "genre": "history",
+        "cast": [
+          {
+            "id": "c1",
+            "name": "Major Meredith",
+            "role": "Leader of the military operation",
+            "is_narrator": false,
+            "color_slot": 0,
+            "avatar": {
+              "skin": 2,
+              "hair_style": "short",
+              "hair_color": "brown",
+              "facial_hair": "mustache",
+              "headwear": "military_cap",
+              "glasses": false,
+              "age": "adult"
+            }
+          },
+          {
+            "id": "c2",
+            "name": "The Soldiers",
+            "role": "Army personnel assisting Meredith",
+            "is_narrator": false,
+            "color_slot": 1,
+            "avatar": {
+              "skin": 2,
+              "hair_style": "short",
+              "hair_color": "brown",
+              "facial_hair": "none",
+              "headwear": "military_cap",
+              "glasses": false,
+              "age": "adult"
+            }
+          },
+          {
+            "id": "c3",
+            "name": "The Farmers",
+            "role": "Soldiers from WWI turned wheat growers",
+            "is_narrator": false,
+            "color_slot": 2,
+            "avatar": {
+              "skin": 3,
+              "hair_style": "short",
+              "hair_color": "brown",
+              "facial_hair": "beard",
+              "headwear": "hat",
+              "glasses": false,
+              "age": "adult"
+            }
+          },
+          {
+            "id": "c4",
+            "name": "The Emus",
+            "role": "The feathered 'enemy' invading the farms",
+            "is_narrator": false,
+            "color_slot": 3,
+            "avatar": {
+              "skin": 0,
+              "hair_style": "short",
+              "hair_color": "brown",
+              "facial_hair": "none",
+              "headwear": "none",
+              "glasses": false,
+              "age": "adult"
+            }
+          }
+        ],
+        "places": [
+          {
+            "id": "p1",
+            "name": "Western Australia",
+            "kind": "real",
+            "country_iso3": "AUS",
+            "lat": null,
+            "lon": null,
+            "geo_source": "none",
+            "visual_description": "Vast, dry wheat fields and arid landscapes under a bright sun.",
+            "icon": "MapPin"
+          },
+          {
+            "id": "p2",
+            "name": "Campion",
+            "kind": "real",
+            "country_iso3": "AUS",
+            "lat": null,
+            "lon": null,
+            "geo_source": "none",
+            "visual_description": "Rural district with wheat farms and dusty roads.",
+            "icon": "MapPin"
+          }
+        ],
+        "set_pieces": [
+          {
+            "id": "v1",
+            "name": "Lewis Machine Gun",
+            "visual_description": "A vintage early 20th-century light machine gun used by the soldiers.",
+            "icon": "Target"
+          },
+          {
+            "id": "v2",
+            "name": "Wheat Field",
+            "visual_description": "A large field of golden wheat being trampled by birds.",
+            "icon": "Sparkle"
+          },
+          {
+            "id": "v3",
+            "name": "The Dam",
+            "visual_description": "A water source where large groups of emus gather.",
+            "icon": "Drop"
+          }
+        ]
+      },
+      "beats": {
+        "before_previous": "Major G. P. W. Meredith of the Royal Australian Artillery arrived in the Campion district with two soldiers,",
+        "previous": "two Lewis machine guns, and 10,000 rounds of ammunition.",
+        "current": "The first attack came on November 2. The soldiers spotted about fifty emus and opened fire.",
+        "next": "The birds split into small groups and ran out of range."
+      },
+      "critic_readings_seeds_7_8_9": [
+        {
+          "speaker": "narration"
+        },
+        {
+          "speaker": "narration"
+        },
+        {
+          "speaker": "narration"
+        }
+      ]
+    },
+    {
+      "case": "story-room-12:s022",
+      "job": "story-room-12-20261003-171300",
+      "template": "kinetic_quote",
+      "scene": {
+        "id": "s022",
+        "beat_i": 22,
+        "template": "kinetic_quote",
+        "props": {
+          "text": "Stay in room 12 on March 3rd and thank the night clerk.",
+          "emphasis": [],
+          "attribution_cast_id": "c4"
+        },
+        "mute_sfx": false,
+        "rationale": "llm planned"
+      },
+      "bible": {
+        "schema_version": 1,
+        "title": "The Guest in Room 12",
+        "logline": "A night clerk at a Texas motel learns the touching reason behind a regular guest's annual visit to a specific room.",
+        "genre": "personal_story",
+        "cast": [
+          {
+            "id": "c1",
+            "name": "Me",
+            "role": "The night clerk and eventual owner",
+            "is_narrator": true,
+            "color_slot": 0,
+            "avatar": {
+              "skin": 2,
+              "hair_style": "short",
+              "hair_color": "brown",
+              "facial_hair": "none",
+              "headwear": "none",
+              "glasses": false,
+              "age": "adult"
+            }
+          },
+          {
+            "id": "c2",
+            "name": "Mr. Alvarez",
+            "role": "The annual guest",
+            "is_narrator": false,
+            "color_slot": 1,
+            "avatar": {
+              "skin": 3,
+              "hair_style": "short",
+              "hair_color": "gray",
+              "facial_hair": "none",
+              "headwear": "none",
+              "glasses": false,
+              "age": "elder"
+            }
+          },
+          {
+            "id": "c3",
+            "name": "Deb",
+            "role": "The motel manager",
+            "is_narrator": false,
+            "color_slot": 2,
+            "avatar": {
+              "skin": 2,
+              "hair_style": "short",
+              "hair_color": "blonde",
+              "facial_hair": "none",
+              "headwear": "none",
+              "glasses": true,
+              "age": "adult"
+            }
+          },
+          {
+            "id": "c4",
+            "name": "Sofia",
+            "role": "Mr. Alvarez's daughter",
+            "is_narrator": false,
+            "color_slot": 3,
+            "avatar": {
+              "skin": 3,
+              "hair_style": "long",
+              "hair_color": "black",
+              "facial_hair": "none",
+              "headwear": "none",
+              "glasses": false,
+              "age": "adult"
+            }
+          }
+        ],
+        "places": [
+          {
+            "id": "p1",
+            "name": "Amarillo",
+            "kind": "real",
+            "country_iso3": "USA",
+            "lat": 35.222,
+            "lon": -101.8313,
+            "geo_source": "gazetteer",
+            "visual_description": "A wide, flat landscape typical of the Texas Panhandle under a vast sky.",
+            "icon": "MapPin"
+          },
+          {
+            "id": "p2",
+            "name": "The Sundowner",
+            "kind": "fictional",
+            "country_iso3": null,
+            "lat": null,
+            "lon": null,
+            "geo_source": "none",
+            "visual_description": "A classic Route 66 motel with a neon sign and a long row of single-story rooms.",
+            "icon": "Bed"
+          }
+        ],
+        "set_pieces": [
+          {
+            "id": "v1",
+            "name": "Room 12",
+            "visual_description": "A cozy motel room with fresh flowers on the nightstand, warm lighting, and plush towels.",
+            "icon": "Door"
+          },
+          {
+            "id": "v2",
+            "name": "The Envelope",
+            "visual_description": "A handwritten note and an old, faded photograph of a couple from 1974.",
+            "icon": "Envelope"
+          },
+          {
+            "id": "v3",
+            "name": "The Night Desk",
+            "visual_description": "A wooden counter with a telephone, a crossword book, and knitting supplies.",
+            "icon": "Briefcase"
+          }
+        ]
+      },
+      "beats": {
+        "before_previous": "She introduced herself as Sofia, his daughter.",
+        "previous": "Her father had passed away in January, and he had left her a list of things to do.",
+        "current": "Number four was \"Stay in room 12 on March 3rd and thank the night clerk.\"",
+        "next": "She handed me an envelope."
+      },
+      "critic_readings_seeds_7_8_9": [
+        {
+          "speaker": "c2"
+        },
+        {
+          "speaker": "c2"
+        },
+        {
+          "speaker": "c2"
+        }
+      ]
+    },
+    {
+      "case": "emu-war:s018",
+      "job": "emu-war-20261003-171646",
+      "template": "emotion_beat",
+      "scene": {
+        "id": "s018",
+        "beat_i": 18,
+        "template": "emotion_beat",
+        "props": {
+          "cast_id": "c1",
+          "emotion": "angry"
+        },
+        "mute_sfx": false,
+        "rationale": "llm planned"
+      },
+      "bible": {
+        "schema_version": 1,
+        "title": "The Great Emu War",
+        "logline": "In 1932, the Australian military faced off against a massive invasion of emus destroying wheat crops in Western Australia.",
+        "genre": "history",
+        "cast": [
+          {
+            "id": "c1",
+            "name": "Major Meredith",
+            "role": "Leader of the military operation",
+            "is_narrator": false,
+            "color_slot": 0,
+            "avatar": {
+              "skin": 2,
+              "hair_style": "short",
+              "hair_color": "brown",
+              "facial_hair": "mustache",
+              "headwear": "military_cap",
+              "glasses": false,
+              "age": "adult"
+            }
+          },
+          {
+            "id": "c2",
+            "name": "The Soldiers",
+            "role": "Army personnel assisting Meredith",
+            "is_narrator": false,
+            "color_slot": 1,
+            "avatar": {
+              "skin": 2,
+              "hair_style": "short",
+              "hair_color": "brown",
+              "facial_hair": "none",
+              "headwear": "military_cap",
+              "glasses": false,
+              "age": "adult"
+            }
+          },
+          {
+            "id": "c3",
+            "name": "The Farmers",
+            "role": "Soldiers from WWI turned wheat growers",
+            "is_narrator": false,
+            "color_slot": 2,
+            "avatar": {
+              "skin": 3,
+              "hair_style": "short",
+              "hair_color": "brown",
+              "facial_hair": "beard",
+              "headwear": "hat",
+              "glasses": false,
+              "age": "adult"
+            }
+          },
+          {
+            "id": "c4",
+            "name": "The Emus",
+            "role": "The feathered 'enemy' invading the farms",
+            "is_narrator": false,
+            "color_slot": 3,
+            "avatar": {
+              "skin": 0,
+              "hair_style": "short",
+              "hair_color": "brown",
+              "facial_hair": "none",
+              "headwear": "none",
+              "glasses": false,
+              "age": "adult"
+            }
+          }
+        ],
+        "places": [
+          {
+            "id": "p1",
+            "name": "Western Australia",
+            "kind": "real",
+            "country_iso3": "AUS",
+            "lat": null,
+            "lon": null,
+            "geo_source": "none",
+            "visual_description": "Vast, dry wheat fields and arid landscapes under a bright sun.",
+            "icon": "MapPin"
+          },
+          {
+            "id": "p2",
+            "name": "Campion",
+            "kind": "real",
+            "country_iso3": "AUS",
+            "lat": null,
+            "lon": null,
+            "geo_source": "none",
+            "visual_description": "Rural district with wheat farms and dusty roads.",
+            "icon": "MapPin"
+          }
+        ],
+        "set_pieces": [
+          {
+            "id": "v1",
+            "name": "Lewis Machine Gun",
+            "visual_description": "A vintage early 20th-century light machine gun used by the soldiers.",
+            "icon": "Target"
+          },
+          {
+            "id": "v2",
+            "name": "Wheat Field",
+            "visual_description": "A large field of golden wheat being trampled by birds.",
+            "icon": "Sparkle"
+          },
+          {
+            "id": "v3",
+            "name": "The Dam",
+            "visual_description": "A water source where large groups of emus gather.",
+            "icon": "Drop"
+          }
+        ]
+      },
+      "beats": {
+        "before_previous": "By then his men had fired 9,860 rounds and claimed 986 kills.",
+        "previous": "That is about ten bullets for every bird.",
+        "current": "Meredith was impressed by his opponent.",
+        "next": "He said that if he had a division of soldiers with the bullet-carrying capacity of these birds,"
+      },
+      "critic_readings_seeds_7_8_9": [
+        {
+          "cast_id": "c1",
+          "emotion": "unknown"
+        },
+        {
+          "cast_id": "c1",
+          "emotion": "unknown"
+        },
+        {
+          "cast_id": "c1",
+          "emotion": "unknown"
+        }
+      ]
+    },
+    {
+      "case": "story-recipe-box:s012",
+      "job": "story-recipe-box-20261003-170932",
+      "template": "emotion_beat",
+      "scene": {
+        "id": "s012",
+        "beat_i": 12,
+        "template": "emotion_beat",
+        "props": {
+          "cast_id": "c1",
+          "emotion": "angry"
+        },
+        "mute_sfx": false,
+        "rationale": "llm planned"
+      },
+      "bible": {
+        "schema_version": 1,
+        "title": "The Missing Recipe Card",
+        "logline": "A granddaughter discovers a mysterious note in her late grandmother's recipe box that leads her to a long-lost family secret.",
+        "genre": "personal_story",
+        "cast": [
+          {
+            "id": "c1",
+            "name": "Me",
+            "role": "narrator",
+            "is_narrator": true,
+            "color_slot": 0,
+            "avatar": {
+              "skin": 2,
+              "hair_style": "long",
+              "hair_color": "brown",
+              "facial_hair": "none",
+              "headwear": "none",
+              "glasses": false,
+              "age": "adult"
+            }
+          },
+          {
+            "id": "c2",
+            "name": "Grandma Rose",
+            "role": "character",
+            "is_narrator": false,
+            "color_slot": 1,
+            "avatar": {
+              "skin": 1,
+              "hair_style": "bun",
+              "hair_color": "gray",
+              "facial_hair": "none",
+              "headwear": "none",
+              "glasses": true,
+              "age": "elder"
+            }
+          },
+          {
+            "id": "c3",
+            "name": "Danny",
+            "role": "character",
+            "is_narrator": false,
+            "color_slot": 2,
+            "avatar": {
+              "skin": 3,
+              "hair_style": "short",
+              "hair_color": "brown",
+              "facial_hair": "none",
+              "headwear": "none",
+              "glasses": false,
+              "age": "adult"
+            }
+          },
+          {
+            "id": "c4",
+            "name": "Walt",
+            "role": "character",
+            "is_narrator": false,
+            "color_slot": 3,
+            "avatar": {
+              "skin": 2,
+              "hair_style": "bald",
+              "hair_color": "white",
+              "facial_hair": "none",
+              "headwear": "none",
+              "glasses": true,
+              "age": "elder"
+            }
+          }
+        ],
+        "places": [
+          {
+            "id": "p1",
+            "name": "Duluth",
+            "kind": "real",
+            "country_iso3": "USA",
+            "lat": 46.78327,
+            "lon": -92.10658,
+            "geo_source": "gazetteer",
+            "visual_description": "A lakeside city with historic buildings and a view of the water.",
+            "icon": "MapPin"
+          },
+          {
+            "id": "p2",
+            "name": "Thunder Bay",
+            "kind": "real",
+            "country_iso3": "CAN",
+            "lat": 48.38202,
+            "lon": -89.25018,
+            "geo_source": "gazetteer",
+            "visual_description": "A northern city near the coast of Lake Superior.",
+            "icon": "MapPin"
+          }
+        ],
+        "set_pieces": [
+          {
+            "id": "v1",
+            "name": "The Recipe Box",
+            "visual_description": "A wooden box filled with many small, handwritten paper cards.",
+            "icon": "Notebook"
+          },
+          {
+            "id": "v2",
+            "name": "The Blueberry Pie",
+            "visual_description": "A delicious, steaming blueberry pie with a golden crust.",
+            "icon": "Cake"
+          },
+          {
+            "id": "v3",
+            "name": "The Diner",
+            "visual_description": "A cozy, classic small-town diner with a counter and stools.",
+            "icon": "Storefront"
+          }
+        ]
+      },
+      "beats": {
+        "before_previous": "While clearing the attic, he found a shoebox of letters and texted me a photo: \"Who is Walter Lindqvist and why did he write to Grandma 60 times?\"",
+        "previous": "The return address was in Thunder Bay, Ontario, about 190 miles up the shore.",
+        "current": "I called the number I found online, expecting nothing.",
+        "next": "A man answered, and when I said Rose's name, he was quiet for a long time."
+      },
+      "critic_readings_seeds_7_8_9": [
+        {
+          "cast_id": "c1",
+          "emotion": "unknown"
+        },
+        {
+          "cast_id": "c1",
+          "emotion": "unknown"
+        },
+        {
+          "cast_id": "c1",
+          "emotion": "unknown"
+        }
+      ]
+    }
+  ]
+}

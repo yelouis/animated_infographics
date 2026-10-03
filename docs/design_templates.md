@@ -229,7 +229,7 @@ Character limits are unchanged. Per-video limits (at most one `timeline` and one
 |---|---|---|
 | **picture** | `emotion_beat`, `set_piece`, `location`, `stat_callout`, `map_focus` | ≤ 2 graphic words by contract (map markers are labels on a picture). They end a run of worded scenes. |
 | **replaceable** | `kinetic_quote`, `cause_effect`, `icon_list`, `comparison`, `timeline`, `relationship_map` | Their words restate the narration. R7 may replace one with a picture. |
-| **kept** | `title_card`, `character_intro`, `dialogue`, `text_thread`, `reveal` | Words the story itself contains (speech, texts, a punchline) or a first appearance. They count as worded but are **never replaced**. Measured: without this class, R7 turned Major Meredith's introduction into a reaction shot, and Deb's reply "Keep the room. He's never missed one." into a picture of Room 12. |
+| **kept** | `title_card`, `character_intro`, `dialogue`, `text_thread`, `reveal` — and, from October 3, 2026, **any scene whose beat contains quoted speech or writing** | Words the story itself contains (speech, texts, a punchline) or a first appearance. They count as worded but are **never replaced**. Measured: without this class, R7 turned Major Meredith's introduction into a reaction shot, and Deb's reply "Keep the room. He's never missed one." into a picture of Room 12. |
 
 ### 5.5 Measured (September 27, 2026, `gemma4:26b`, the Wave B E2E storyboards)
 

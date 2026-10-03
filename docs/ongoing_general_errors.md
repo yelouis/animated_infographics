@@ -10,17 +10,26 @@
 
 **Wave B (B1–B17) was delivered as 17 commits (`cad065d`…`beb4c4f`) and independently verified on September 26, 2026.** Every gate G1–G14 was re-run bare in a separate session (numbers in `agent_execution_guide.md` §1), and the cold budget was re-measured. Each item's source was read against its spec: **all 17 do what their specs say** (per-item verdicts in §3).
 
-**Wave C (C1–C8) was delivered and verified on September 27, 2026.** Every gate G1–G14 passed bare (237 passed), the cold budget measured 411.10 s (≤ 600 s), with 0 newlines, 0 completeness failures, 0 internal ID leaks, 0 unavailable text-thread critics, and the critic regression set 8/8. Per-item resolutions are in §3.
+**Waves C (C1–C8) and D (D1–D5) were delivered as 13 commits (`12209d2`…`98db684`) and independently verified on October 3, 2026.**
+- Every gate G1–G14 was re-run bare in a separate session: 254 fast tests, the slow suite, the E2E (913 s), the offline gate and the cold budget (199.2 s / 191.6 s / 390.8 s, 0 cache hits). All green; numbers in `agent_execution_guide.md` §1.
+- Each item's source was read against its spec: **all 13 do what their specs say** (verdicts in §3).
+- The Wave D bars hold on real renders: every job ≤ 1.0 graphic word/s (0.49–0.81) with ≥ 1/3 light scenes.
 
-**Issues 6 and 7 were decided on September 27, 2026** (§3):
-- **Issue 6:** paraphrase allowed; nothing to build.
-- **Issue 7 → Option A:** picture-first stories.
+**The verification also read the rendered stories as a viewer, and found problems no gate covers.** Four come from gaps in my own Wave C/D specs, one is long-standing, and one is implementation hygiene. They are specced as **Wave E (E1–E6)** in `agent_execution_guide.md`. Each fix stays within behaviour the user already approved (Issue 5 → A, Issue 7 → A):
+- **The critic's findings do not stick.**
+  - 35 of 87 flagged tones survived a retry that "succeeded" by keeping them. Rose's farewell note was drawn as **sarcastic** dialogue, and a retry introduced "Rose?" said **angry**.
+  - An emotion read as "unknown" never counted, so "Meredith was impressed" stayed **angry**.
+  - 7 of 8 disputed quote speakers were kept; for example, a narration line was credited to The Soldiers. (E1)
+- **The rhythm rule replaced the story's climax.** Rose's quoted note became a neutral face. (E2)
+- **A year rendered as a count:** "She had died in 2016" became **"2,016"**. (E3)
+- **Icons:** the props prompt never listed the allowed names, so the model's guesses were snapped to "Armchair" (18% of all icons): "Machine Guns", "Trampled crops" and "Farmers" all showed an armchair. Listing the names removed it, 8/54 → 0/56. (E4)
+- **Hygiene:** D1 slipped an import-time `HF_HOME` override into the package, which hides the misconfiguration `doctor` exists to report; there are also two stale comments. (E5)
 
-**Wave D (D1–D5) was delivered and verified on October 1, 2026.** Every gate G1–G14 passed bare (254 passed), the cold budget measured 390.16 s (≤ 600 s), with 0 word-cap violations, 0 newlines, 0 completeness failures, 0 internal ID leaks, 8/8 critic regression, word density on all rendered jobs ≤ 1.0 graphic word/s, and light scene share ≥ 1/3 (33.3%–57.1%). Per-item resolutions are in §3.
+**No question is open for the user.**
 
 ## ⚠️ Unresolved Issues & Suggestions
 
-**Queue Complete.** Waves A, B, C, and D are complete. No open issues. Deferred features DF1–DF9 remain deferred until user selection.
+No open issues.
 
 ---
 
@@ -64,6 +73,15 @@ The critic's regression set scored 4/4 on every seed. Every case had the speaker
 #### 2.9 A list whose length the model chooses can silently shrink
 
 With a JSON array for "one sender per message", `gemma4:26b` merged consecutive identical answers: 2–3 "them" messages came back as one element on every seed. The length check made each reply a failed attempt, so the scene ended `unavailable`, unchecked, and **3 of 8** real text threads would have lost their critic. **When the count is known in advance, ask for one required key per item**, and measure answer completeness on real cases whenever a prompt changes. Contract: `design_planner.md` §11.
+
+
+#### 2.10 A retry the model may decline is not a repair
+
+The critic-triggered retry tells the model "fix the props if that reading fits better; otherwise keep yours". It kept the flagged tone in 35 of 87 cases and the disputed quote speaker in 7 of 8. Each of those retries counted as a success, so the deterministic fallback, which ran only when every attempt *failed*, never fired. **When a rule decides what is acceptable, enforce the rule on the final result, not on the path that produced it.** Contract: `design_planner.md` §11 ("Enforcement after the round").
+
+#### 2.11 A choice list the model never sees becomes a default
+
+The props schema's `enum` held 157 icon names, but the prompt listed none. The model guessed, and constrained decoding snapped each unknown guess to an early allowed name: "Armchair" was 9–18% of all icons in every wave and was never noticed, because the icon was valid. **Show the model the names it must choose from, and measure the distribution of what it picks, not just its validity.** Contract: `design_planner.md` §5.
 
 ---
 
@@ -126,6 +144,8 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 - B15 — README accuracy — git log --grep "(b15)" — G1–G14 green bare; README updated with Wave B in progress status, accurate audio mix specs (-16 LUFS, -18 dB / volume 0.126, 1s fade-in, 2s fade-out, no ducking), template-accurate SFX role mappings, font credits restricted to Poppins and Inter, Natural Earth lakes dataset credited, and automatic checks section added; banned terms grep returns 0 matches.
 - B16 — E2E: computed counts, audible music — git log --grep "(b16)" — G1–G14 green bare, 218 passed (+4 tests); check-sync outputs JSON {"checked", "expected", "failures"} and asserts equality to len(scenes) - 1 with 0 failures (falsified by --skip-boundary 1 -> exit 1); voice lines read dynamically from voice.json across all fixtures; step 4 final MP4 audio RMS in [duration - 1.4s, duration - 1.0s] measured at -39.85 dBFS (> -60.0 dBFS required; falsified on music-less re-render at -91.16 dBFS -> exit 1); Remotion AudioLayer audio volume clamped to >= 0.001 to prevent unregistering render asset, and RemotionAudioCue passes loop and loopVolumeCurveBehavior="extend" to Audio; report lists critic counts and text_check statuses per fixture.
 - B17 — Cold-cache performance budget; close-out — git log --grep "(b17)" — G1–G14 green bare; scripts/measure_budget.sh created and verified on story_recipe_box (~3 min story); cold new->awaiting_review 252.29 s (<= 390 s), render 197.01 s (<= 210 s), total 449.30 s (<= 600 s), warm preview 15.25 s (<= 60 s); verified 0 cache hits; critic 10 calls, text checks 4 calls, 5 images generated; docs/evals/budget_2026-09-26.md generated and committed; full battery G1–G14 exits 0 bare.
+
+**Waves C and D — delivered; independently verified October 3, 2026.** Verdicts: C1 ✓ (quote tracking resets per sentence, so a quotation spanning two sentences can still be split between them; the spec allowed it, and it is recorded as a known limitation) · C2 ✓ (the critic prompt drops the `Cast:` label; accepted equivalent, regression 8/8) · C8 ✓ · C3 ✓ to spec, but the spec had a gap → E1 · C4 ✓ · C5 ✓ · C6 ✓ · C7 ✓ · D1 ✓ (plus an out-of-scope `HF_HOME` override in `__init__.py` → E5) · D2 ✓ · D3 ✓ to spec, but the spec had a gap → E2; R6's alternates exposed a year-as-stat → E3 · D4 ✓ · D5 ✓.
 
 **Wave C:**
 
@@ -233,4 +253,26 @@ Wave C (C1–C7) specced. Issue 6 filed for the user.
   - `design_planner.md` §4 (R6, R7), §5, §6 item 9, §9 and §11;
   - `design_testing_and_validation.md` §2 and §4 (step 9);
   - `design_data_contracts.md` §5 and §6.
+
+**October 3, 2026: verification of Waves C and D (designer).**
+- Every gate G1–G14 and the cold budget reproduce bare, and all 13 items match their specs.
+- **Real-output review found:**
+  - the critic's findings do not stick after a retry (35/87 tones, 7/8 quote speakers);
+  - unknown emotions never count;
+  - R7 replaced quoted speech;
+  - a year rendered as "2,016";
+  - "Armchair" as the default icon (the prompt never listed the names);
+  - an import-time `HF_HOME` override.
+- **Each was measured before specifying.**
+  - The emotion rule was checked on 13 real beats (4 unsupported feelings read "unknown", none supported).
+  - The icon list was checked on 27 real scenes (Armchair 8/54 → 0/56).
+  - The critic's readings on the frozen cases were identical across seeds 7–9.
+  - A reference implementation reproduced the committed R7 expectations exactly before computing the new ones.
+- **Contracts updated:**
+  - `design_planner.md` §4 (R7 never replaces quoted speech), §5 (the icon block), §6 item 6 (a year is not a stat) and §11 (the emotion rule; enforcement after the round);
+  - `design_templates.md` §5.4;
+  - `design_data_contracts.md` §6;
+  - `design_testing_and_validation.md` §2.
+- **New frozen data:** `tests/data/critic_enforcement_cases.json` and `tests/data/wave_e_expectations.json`.
+- Wave E (E1–E6) specced. **No question for the user.**
 
