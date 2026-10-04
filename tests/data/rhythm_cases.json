@@ -119,11 +119,8 @@
       "template_before": "kinetic_quote",
       "prev_template": "kinetic_quote",
       "next_template": "kinetic_quote",
-      "expected": {
-        "template": "set_piece",
-        "id": "v2"
-      },
-      "why": "the only first-person words are inside the quote (Walt speaking), so no narrator; 'pie' names set piece v2"
+      "expected": null,
+      "why": "the beat is quoted speech (Walt's line): a beat with a quoted span is never replaced"
     },
     {
       "case": "R7-c",
@@ -418,6 +415,65 @@
       "next_template": "kinetic_quote",
       "expected": null,
       "why": "a replaceable template, but no first person and no cast member, set piece or place named: no target, the rule waits"
+    },
+    {
+      "case": "R7-h",
+      "job": "story-recipe-box-20261003-170932",
+      "beat_i": 24,
+      "beat": "Rose had mailed it to him the week before she died, with a note: \"It was always yours. Give it to whoever comes asking.\"",
+      "entities": {
+        "cast": [
+          {
+            "id": "c1",
+            "name": "Me",
+            "is_narrator": true
+          },
+          {
+            "id": "c2",
+            "name": "Grandma Rose",
+            "is_narrator": false
+          },
+          {
+            "id": "c3",
+            "name": "Danny",
+            "is_narrator": false
+          },
+          {
+            "id": "c4",
+            "name": "Walt",
+            "is_narrator": false
+          }
+        ],
+        "places": [
+          {
+            "id": "p1",
+            "name": "Duluth"
+          },
+          {
+            "id": "p2",
+            "name": "Thunder Bay"
+          }
+        ],
+        "set_pieces": [
+          {
+            "id": "v1",
+            "name": "The Recipe Box"
+          },
+          {
+            "id": "v2",
+            "name": "The Blueberry Pie"
+          },
+          {
+            "id": "v3",
+            "name": "The Diner"
+          }
+        ]
+      },
+      "template_before": "kinetic_quote",
+      "prev_template": "kinetic_quote",
+      "next_template": "kinetic_quote",
+      "expected": null,
+      "why": "quoted writing (Rose's note, the story's climax) is story content: a beat with a quoted span is never replaced"
     }
   ]
 }

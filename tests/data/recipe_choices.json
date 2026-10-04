@@ -280,9 +280,8 @@
         "alternate": "emotion_beat"
       },
       {
-        "primary": "set_piece",
-        "alternate": "kinetic_quote",
-        "rhythm_id": "v2"
+        "primary": "kinetic_quote",
+        "alternate": "reveal"
       },
       {
         "primary": "location",
@@ -369,12 +368,6 @@
         "scene": "s002",
         "from": "comparison",
         "to": "emotion_beat"
-      },
-      {
-        "rule": "R7",
-        "scene": "s016",
-        "from": "kinetic_quote",
-        "to": "set_piece"
       }
     ]
   }

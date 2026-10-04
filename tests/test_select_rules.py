@@ -305,21 +305,23 @@ def test_recipe_choices_exact() -> None:
     assert actual_choice_dicts == exp_choice_dicts
 
 
-def test_rhythm_cases_all_seven() -> None:
-    """Verify all seven cases in tests/data/rhythm_cases.json."""
+def test_rhythm_cases() -> None:
+    """Verify all eight cases in tests/data/rhythm_cases.json."""
     import json
     from pathlib import Path
 
     from animated_infographics.contracts.templates import REPLACEABLE_TEMPLATES
-    from animated_infographics.planner.rhythm import rhythm_target
+    from animated_infographics.planner.rhythm import QUOTED, rhythm_target
 
     data_path = Path(__file__).resolve().parent / "data" / "rhythm_cases.json"
     data = json.loads(data_path.read_text(encoding="utf-8"))
+    assert len(data["cases"]) == 8
 
     for case in data["cases"]:
         template_before = case["template_before"]
-        if template_before not in REPLACEABLE_TEMPLATES:
-            # Kept or Picture templates are never replaced by R7
+        if template_before not in REPLACEABLE_TEMPLATES or QUOTED.search(case["beat"]):
+            # Kept or Picture templates are never replaced by R7;
+            # beats with quoted speech are never replaced
             assert case["expected"] is None
         else:
             bible_data = {

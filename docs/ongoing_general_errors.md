@@ -169,6 +169,7 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 **Wave E:**
 
 - E1 — Critic findings stick: enforcement after the round, the emotion rule, disputed quote speakers removed — git log --grep "(e1)" — G1–G14 green bare, 255 passed (+1 test), live slow tests pass (6/6 emotion mismatch on seeds 7, 8, 9; critic regression 8/8); critic_mismatches treats unknown emotion against non-neutral as mismatch; enforce_reading repairs unconfirmed dialogue tones to neutral ("tone_neutral"), unconfirmed emotions to neutral ("emotion_neutral"), and disputed kinetic_quote attributions to null ("attribution_dropped"); _evaluate_scene_critic applies enforce_reading to standing scene post-round; CriticReport.repair schema updated; evals/planner.py reports all three repair types; all 7 frozen cases verified; falsified by skipping enforce_reading on successful retry (Rose note sarcastic -> red) and reverting emotion rule (angry vs unknown -> agree -> red).
+- E2 — R7 never replaces quoted speech — git log --grep "(e2)" — G1–G14 green bare, 255 passed; R7 condition in planner/select.py updated with not QUOTED.search(beat_text); frozen data updated (rhythm_cases.json R7-b expected null, R7-h added; recipe_choices.json s016 repair removed); test_rhythm_cases asserts 8 cases; falsified by removing QUOTED condition (R7-b, R7-h, and recipe choices exact go red bare).
 
 
 ---

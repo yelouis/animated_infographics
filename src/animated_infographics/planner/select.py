@@ -19,7 +19,7 @@ from animated_infographics.contracts.templates import (
     REPLACEABLE_TEMPLATES,
 )
 from animated_infographics.planner.llm import LLMBackend, run_with_retries
-from animated_infographics.planner.rhythm import rhythm_target
+from animated_infographics.planner.rhythm import QUOTED, rhythm_target
 
 
 class Choice(BaseModel):
@@ -171,10 +171,10 @@ def apply_rules(
         n = len(res)
         for i in range(1, n):
             t = res[i].primary
-            if run >= 2 and t in REPLACEABLE_TEMPLATES:
+            beat_text = beats[i].text if i < len(beats) else ""
+            if run >= 2 and t in REPLACEABLE_TEMPLATES and not QUOTED.search(beat_text):
                 prev_t = res[i - 1].primary
                 next_t = res[i + 1].primary if i + 1 < n else None
-                beat_text = beats[i].text if i < len(beats) else ""
                 rhythm_cand = rhythm_target(beat_text, bible, prev=prev_t, next=next_t)
                 if rhythm_cand is not None:
                     tmpl, eid = rhythm_cand
