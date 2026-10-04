@@ -764,6 +764,8 @@ def run_eval(
         critic_mismatches = 0
         critic_changed = 0
         critic_tone_neutral_repairs = 0
+        critic_emotion_neutral_repairs = 0
+        critic_attribution_dropped_repairs = 0
         critic_unchanged_after_mismatch = 0
         for s in report.scenes:
             if s.critic is not None:
@@ -776,6 +778,10 @@ def run_eval(
                     critic_changed += 1
                 if s.critic.repair == "tone_neutral":
                     critic_tone_neutral_repairs += 1
+                elif s.critic.repair == "emotion_neutral":
+                    critic_emotion_neutral_repairs += 1
+                elif s.critic.repair == "attribution_dropped":
+                    critic_attribution_dropped_repairs += 1
                 if s.critic.status == "mismatch_retried" and not s.critic.changed:
                     critic_unchanged_after_mismatch += 1
 
@@ -803,6 +809,8 @@ def run_eval(
             "critic_mismatches": critic_mismatches,
             "critic_changed": critic_changed,
             "critic_tone_neutral_repairs": critic_tone_neutral_repairs,
+            "critic_emotion_neutral_repairs": critic_emotion_neutral_repairs,
+            "critic_attribution_dropped_repairs": critic_attribution_dropped_repairs,
             "critic_unchanged_after_mismatch": critic_unchanged_after_mismatch,
             "llm_calls": report.llm_calls,
             "llm_cache_hits": report.llm_cache_hits,
@@ -924,7 +932,9 @@ def run_eval(
                 (
                     f"- **Critic**: {r['critic_calls']} calls, {r['critic_agree']} agree, "
                     f"{r['critic_changed']} changed, "
-                    f"{r['critic_tone_neutral_repairs']} tone_neutral repairs, "
+                    f"{r['critic_tone_neutral_repairs']} tone_neutral, "
+                    f"{r['critic_emotion_neutral_repairs']} emotion_neutral, "
+                    f"{r['critic_attribution_dropped_repairs']} attribution_dropped repairs, "
                     f"{r['critic_unchanged_after_mismatch']} unchanged-after-mismatch "
                     f"({r['critic_mismatches']} mismatches)"
                 ),

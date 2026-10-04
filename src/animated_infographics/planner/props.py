@@ -1,6 +1,5 @@
 """Props planning with fallback ladder, schema narrowing, and deterministic repairs."""
 
-import re
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
@@ -46,6 +45,7 @@ from animated_infographics.contracts.templates import (
 from animated_infographics.planner.critic import (
     build_critic_request,
     critic_mismatches,
+    enforce_reading,
     format_disagreement_message,
     needs_critic,
     resolve_contact,
@@ -475,62 +475,28 @@ def _evaluate_scene_critic(
     )
     extra_calls = critic_calls + retry_attempts
 
-    if retry_scene is not None:
-        changed = candidate_scene.props.model_dump() != retry_scene.props.model_dump()
-        return (
-            retry_scene,
-            CriticReport(
-                status="mismatch_retried",
-                mismatches=mismatches,
-                changed=changed,
-                repair=None,
-                retry_errors=[],
-            ),
-            extra_calls,
-        )
+    standing_scene = retry_scene if retry_scene is not None else candidate_scene
+    accumulated_retry_errors = list(retry_errors) if retry_scene is None else []
 
-    # Retry failed: check for deterministic tone repair
-    if isinstance(candidate_scene, DialogueScene) and mismatches:
-        parsed_indices: list[int] = []
-        all_tone_vs_unknown = True
-        for m in mismatches:
-            match = re.match(r"^lines\[(\d+)\]\.tone: (.+) vs unknown$", m)
-            if match:
-                parsed_indices.append(int(match.group(1)))
-            else:
-                all_tone_vs_unknown = False
-                break
+    enforced_scene, repair_name = enforce_reading(standing_scene, critic_res, bible)
+    ctx = PlanContext(transcript=transcript, bible=bible, beat=beat)
+    val_errs = validate_scene(enforced_scene, ctx)
+    if val_errs:
+        final_scene = standing_scene
+        repair_name = None
+        accumulated_retry_errors.extend(val_errs)
+    else:
+        final_scene = enforced_scene
 
-        if all_tone_vs_unknown:
-            new_lines = list(candidate_scene.props.lines)
-            for l_idx in parsed_indices:
-                new_lines[l_idx] = new_lines[l_idx].model_copy(update={"tone": "neutral"})
-            repaired_props = candidate_scene.props.model_copy(update={"lines": new_lines})
-            repaired_scene = candidate_scene.model_copy(update={"props": repaired_props})
-            ctx = PlanContext(transcript=transcript, bible=bible, beat=beat)
-            val_errs = validate_scene(repaired_scene, ctx)
-            if not val_errs:
-                changed = candidate_scene.props.model_dump() != repaired_scene.props.model_dump()
-                return (
-                    repaired_scene,
-                    CriticReport(
-                        status="mismatch_retried",
-                        mismatches=mismatches,
-                        changed=changed,
-                        repair="tone_neutral",
-                        retry_errors=retry_errors,
-                    ),
-                    extra_calls,
-                )
-
+    changed = candidate_scene.props.model_dump() != final_scene.props.model_dump()
     return (
-        candidate_scene,
+        final_scene,
         CriticReport(
             status="mismatch_retried",
             mismatches=mismatches,
-            changed=False,
-            repair=None,
-            retry_errors=retry_errors,
+            changed=changed,
+            repair=repair_name,  # type: ignore[arg-type]
+            retry_errors=accumulated_retry_errors,
         ),
         extra_calls,
     )

@@ -1,5 +1,7 @@
 """Tests for people-scene critic (Issue 5 / Option A)."""
 
+import json
+from pathlib import Path
 from typing import Any
 
 from animated_infographics.contracts.models import (
@@ -10,6 +12,7 @@ from animated_infographics.contracts.models import (
     DialogueScene,
     EmotionBeatScene,
     KineticQuoteScene,
+    Scene,
     StatCalloutScene,
     TextThreadScene,
     Transcript,
@@ -28,12 +31,17 @@ from animated_infographics.contracts.templates import (
 from animated_infographics.planner.critic import (
     build_critic_request,
     critic_mismatches,
+    enforce_reading,
     format_disagreement_message,
     needs_critic,
     resolve_contact,
     validate_critic_answer,
 )
-from animated_infographics.planner.props import plan_single_template_props, plan_storyboard
+from animated_infographics.planner.props import (
+    _evaluate_scene_critic,
+    plan_single_template_props,
+    plan_storyboard,
+)
 
 
 class StubLLMBackend:
@@ -325,14 +333,25 @@ def test_critic_mismatch_rules_unit() -> None:
     mismatches_narration = critic_mismatches(kq_non_narrator, {"speaker": "narration"}, bible)
     assert mismatches_narration == ["attribution_cast_id: c2 vs narration"]
 
-    # 6. emotion unknown -> agree
+    # 6. emotion unknown + non-neutral -> mismatch
     eb_scene = EmotionBeatScene(
         id="s006",
         beat_i=6,
         template="emotion_beat",
         props=EmotionBeatProps(cast_id="c1", emotion="happy"),
     )
-    assert critic_mismatches(eb_scene, {"cast_id": "c1", "emotion": "unknown"}, bible) == []
+    assert critic_mismatches(eb_scene, {"cast_id": "c1", "emotion": "unknown"}, bible) == [
+        "emotion: happy vs unknown"
+    ]
+
+    # 6b. emotion unknown + neutral -> agree
+    eb_neutral = EmotionBeatScene(
+        id="s007",
+        beat_i=6,
+        template="emotion_beat",
+        props=EmotionBeatProps(cast_id="c1", emotion="neutral"),
+    )
+    assert critic_mismatches(eb_neutral, {"cast_id": "c1", "emotion": "unknown"}, bible) == []
 
     # 7. emotion mismatch -> mismatch
     mismatches_eb = critic_mismatches(eb_scene, {"cast_id": "c1", "emotion": "sad"}, bible)
@@ -1023,21 +1042,24 @@ def test_critic_tone_neutral_repair_when_retry_exhausted() -> None:
     assert scene.props.lines[0].tone == "neutral"
 
 
-def test_critic_non_tone_mismatch_keeps_original_and_records_retry_errors() -> None:
-    """Verify non-tone mismatch keeps original scene and records retry_errors on failure."""
+def test_critic_text_thread_mismatch_keeps_original_and_records_retry_errors() -> None:
+    """Verify un-enforced mismatch keeps original scene and records retry_errors on failure."""
     bible = _make_critic_test_bible()
-    transcript, beats = _make_transcript_and_beats(["Title", "A quote from Danny"])
-    initial_props = {"text": "A quote from Danny", "emphasis": [], "attribution_cast_id": "c1"}
-    critic_answer = {"speaker": "c2"}
+    transcript, beats = _make_transcript_and_beats(["Title", "A text message"])
+    initial_props = {
+        "contact_name": "Danny",
+        "contact_cast_id": "c2",
+        "messages": [
+            {"from_": "me", "text": "Hello"},
+            {"from_": "them", "text": "Hi there"},
+        ],
+    }
+    critic_answer = {"message_1": "them", "message_2": "them", "contact": "c2"}
     # All retry attempts fail
     backend = StubLLMBackend(
         {
             "select": [
-                {
-                    "choices": [
-                        {"beat_i": 1, "primary": "kinetic_quote", "alternate": "stat_callout"}
-                    ]
-                }
+                {"choices": [{"beat_i": 1, "primary": "text_thread", "alternate": "stat_callout"}]}
             ],
             "props": [initial_props, {}, {}, {}],
             "critic": [critic_answer],
@@ -1052,30 +1074,28 @@ def test_critic_non_tone_mismatch_keeps_original_and_records_retry_errors() -> N
     assert rep_scene.critic.changed is False
     assert getattr(rep_scene.critic, "repair", None) is None
     assert len(getattr(rep_scene.critic, "retry_errors", [])) > 0
-    assert scene.props.attribution_cast_id == "c1"
+    assert scene.props.messages[0].from_ == "me"
 
 
 def test_critic_identical_retry_changed_is_false() -> None:
-    """Verify identical retry sets changed=False."""
+    """Verify identical retry sets changed=False when no enforcement alters props."""
     bible = _make_critic_test_bible()
-    transcript, beats = _make_transcript_and_beats(["Title", "A quote from Danny"])
-    initial_props = {"text": "A quote from Danny", "emphasis": [], "attribution_cast_id": "c1"}
-    critic_answer = {"speaker": "c2"}
-    # Retry returns identical props
-    identical_retry_props = {
-        "text": "A quote from Danny",
-        "emphasis": [],
-        "attribution_cast_id": "c1",
+    transcript, beats = _make_transcript_and_beats(["Title", "A text message"])
+    initial_props = {
+        "contact_name": "Danny",
+        "contact_cast_id": "c2",
+        "messages": [
+            {"from_": "me", "text": "Hello"},
+            {"from_": "them", "text": "Hi there"},
+        ],
     }
+    critic_answer = {"message_1": "them", "message_2": "them", "contact": "c2"}
+    identical_retry_props = dict(initial_props)
 
     backend = StubLLMBackend(
         {
             "select": [
-                {
-                    "choices": [
-                        {"beat_i": 1, "primary": "kinetic_quote", "alternate": "stat_callout"}
-                    ]
-                }
+                {"choices": [{"beat_i": 1, "primary": "text_thread", "alternate": "stat_callout"}]}
             ],
             "props": [initial_props, identical_retry_props],
             "critic": [critic_answer],
@@ -1124,3 +1144,147 @@ def test_r3_repair_calls_critic() -> None:
     assert rep_scene3.final_template == "dialogue"
     # R3 replaced intro with dialogue, which needs_critic. Must NOT be not_applicable!
     assert rep_scene3.critic.status == "agree"
+
+
+def test_critic_enforcement_frozen_cases() -> None:
+    """Verify critic enforcement on 7 frozen cases from critic_enforcement_cases.json per E1."""
+    cases_path = Path(__file__).resolve().parent / "data" / "critic_enforcement_cases.json"
+    with open(cases_path, encoding="utf-8") as f:
+        data = json.load(f)
+
+    transcript = Transcript(
+        schema_version=1, source="tts", audio_path="", duration_ms=10000, sentences=[], words=[]
+    )
+
+    for case_data in data["cases"]:
+        case_id = case_data["case"]
+        bible = Bible.model_validate(case_data["bible"])
+        template = case_data["template"]
+        props_dict = case_data["scene"]["props"]
+        beats_dict = case_data["beats"]
+        reading = case_data["critic_readings_seeds_7_8_9"][0]
+
+        if template == "dialogue":
+            scene: Scene = DialogueScene(
+                id=case_data["scene"]["id"],
+                beat_i=case_data["scene"]["beat_i"],
+                template="dialogue",
+                props=DialogueProps.model_validate(props_dict),
+            )
+        elif template == "kinetic_quote":
+            scene = KineticQuoteScene(
+                id=case_data["scene"]["id"],
+                beat_i=case_data["scene"]["beat_i"],
+                template="kinetic_quote",
+                props=KineticQuoteProps.model_validate(props_dict),
+            )
+        elif template == "emotion_beat":
+            scene = EmotionBeatScene(
+                id=case_data["scene"]["id"],
+                beat_i=case_data["scene"]["beat_i"],
+                template="emotion_beat",
+                props=EmotionBeatProps.model_validate(props_dict),
+            )
+        else:
+            raise ValueError(f"Unexpected template {template}")
+
+        # The stub backend returns recorded reading on critic call, and SAME props on retry
+        backend = StubLLMBackend({"critic": [reading], "props": [props_dict]})
+        b_bp = Beat(
+            i=0,
+            text=beats_dict["before_previous"],
+            start_ms=0,
+            end_ms=1000,
+            word_start=0,
+            word_end=10,
+        )
+        b_p = Beat(
+            i=1, text=beats_dict["previous"], start_ms=1000, end_ms=2000, word_start=10, word_end=20
+        )
+        b_curr = Beat(
+            i=2, text=beats_dict["current"], start_ms=2000, end_ms=3000, word_start=20, word_end=30
+        )
+        b_n = Beat(
+            i=3, text=beats_dict["next"], start_ms=3000, end_ms=4000, word_start=30, word_end=40
+        )
+
+        final_scene, rep, _ = _evaluate_scene_critic(
+            scene, b_curr, b_p, b_n, transcript, bible, backend, "", "", before_prev_beat=b_bp
+        )
+
+        assert rep.status == "mismatch_retried"
+        assert rep.changed is True
+
+        if case_id == "story-recipe-box:s025":
+            assert rep.repair == "tone_neutral"
+            assert isinstance(final_scene, DialogueScene)
+            assert [line.tone for line in final_scene.props.lines] == ["neutral", "neutral"]
+        elif case_id == "story-recipe-box:s007":
+            assert rep.repair == "tone_neutral"
+            assert isinstance(final_scene, DialogueScene)
+            assert final_scene.props.lines[0].tone == "neutral"
+            assert final_scene.props.lines[1].tone == "neutral"
+        elif case_id == "story-recipe-box:s013":
+            assert rep.repair == "tone_neutral"
+            assert isinstance(final_scene, DialogueScene)
+            assert final_scene.props.lines[0].tone == "neutral"
+        elif case_id in ("emu-war:s010", "story-room-12:s022"):
+            assert rep.repair == "attribution_dropped"
+            assert isinstance(final_scene, KineticQuoteScene)
+            assert final_scene.props.attribution_cast_id is None
+        elif case_id in ("emu-war:s018", "story-recipe-box:s012"):
+            assert rep.repair == "emotion_neutral"
+            assert isinstance(final_scene, EmotionBeatScene)
+            assert final_scene.props.emotion == "neutral"
+
+    # Additional assertions required by E1:
+    b_test = _make_critic_test_bible()
+
+    # 1. A tone the reading confirms survives
+    d_scene = DialogueScene(
+        id="s001",
+        beat_i=1,
+        template="dialogue",
+        props=DialogueProps(lines=[DialogueLine(cast_id="c1", text="Yes!", tone="happy")]),
+    )
+    res_confirmed, rep_name = enforce_reading(
+        d_scene, {"lines": [{"speaker": "c1", "tone": "happy"}]}, b_test
+    )
+    assert rep_name is None
+    assert isinstance(res_confirmed, DialogueScene)
+    assert res_confirmed.props.lines[0].tone == "happy"
+
+    # 2. An unknown quote reading removes nothing
+    kq_scene = KineticQuoteScene(
+        id="s002",
+        beat_i=2,
+        template="kinetic_quote",
+        props=KineticQuoteProps(text="Quote", emphasis=[], attribution_cast_id="c2"),
+    )
+    res_kq, rep_kq = enforce_reading(kq_scene, {"speaker": "unknown"}, b_test)
+    assert rep_kq is None
+    assert isinstance(res_kq, KineticQuoteScene)
+    assert res_kq.props.attribution_cast_id == "c2"
+
+    # 3. A retry that fixes the scene needs no enforcement (repair: null)
+    kq_init = KineticQuoteScene(
+        id="s003",
+        beat_i=3,
+        template="kinetic_quote",
+        props=KineticQuoteProps(text="Quote", emphasis=[], attribution_cast_id="c2"),
+    )
+    backend_fixed = StubLLMBackend(
+        {
+            "critic": [{"speaker": "c3"}],
+            "props": [{"text": "Quote", "emphasis": [], "attribution_cast_id": "c3"}],
+        }
+    )
+    beat_dummy = Beat(i=3, text="Quote", start_ms=0, end_ms=1000, word_start=0, word_end=1)
+    final_fixed, rep_fixed, _ = _evaluate_scene_critic(
+        kq_init, beat_dummy, None, None, transcript, b_test, backend_fixed, "", ""
+    )
+    assert rep_fixed.status == "mismatch_retried"
+    assert rep_fixed.changed is True
+    assert rep_fixed.repair is None
+    assert isinstance(final_fixed, KineticQuoteScene)
+    assert final_fixed.props.attribution_cast_id == "c3"

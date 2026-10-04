@@ -68,9 +68,9 @@ The battery was run with `HF_HOME=$HOME/.cache/huggingface` exported in the shel
 | # | Gate | Result |
 |---|---|---|
 | G1 | `uv run ruff check .` | exit 0 |
-| G2 | `uv run ruff format --check .` | exit 0 · 114 files |
+| G2 | `uv run ruff format --check .` | exit 0 · 115 files |
 | G3 | `uv run mypy src` | exit 0 · 58 source files |
-| G4 | `uv run pytest -q -m "not slow"` | exit 0 · **254 passed** |
+| G4 | `uv run pytest -q -m "not slow"` | exit 0 · **255 passed** |
 | G5 | `npm --prefix renderer run typecheck` | exit 0 |
 | G6 | `npm --prefix renderer run lint` | exit 0 |
 | G7 | `npm --prefix renderer test` | exit 0 · **16 passed** (4 files) |

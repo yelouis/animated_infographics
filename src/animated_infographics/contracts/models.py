@@ -603,7 +603,7 @@ class CriticReport(BaseModel):
     status: Literal["not_applicable", "agree", "mismatch_retried", "unavailable"] = "not_applicable"
     mismatches: list[str] = Field(default_factory=list)
     changed: bool = False
-    repair: Literal["tone_neutral"] | None = None
+    repair: Literal["tone_neutral", "emotion_neutral", "attribution_dropped"] | None = None
     retry_errors: list[str] = Field(default_factory=list)
 
 

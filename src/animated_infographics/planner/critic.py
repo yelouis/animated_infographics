@@ -14,7 +14,7 @@ from animated_infographics.contracts.models import (
     Scene,
     TextThreadScene,
 )
-from animated_infographics.contracts.templates import TextThreadProps
+from animated_infographics.contracts.templates import DialogueLine, TextThreadProps
 
 CRITIC_SYSTEM_PROMPT: str = (
     "You check who says or feels what in a story beat. "
@@ -331,14 +331,79 @@ def critic_mismatches(scene: Scene, answer: dict[str, Any], bible: Bible) -> lis
             mismatches.append(f"cast_id: {scene.props.cast_id} vs {critic_cast}")
 
         critic_emotion = answer.get("emotion")
-        if (
-            critic_emotion is not None
-            and critic_emotion != "unknown"
-            and critic_emotion != scene.props.emotion
-        ):
-            mismatches.append(f"emotion: {scene.props.emotion} vs {critic_emotion}")
+        if critic_emotion is not None:
+            if (critic_emotion != "unknown" and critic_emotion != scene.props.emotion) or (
+                critic_emotion == "unknown" and scene.props.emotion != "neutral"
+            ):
+                mismatches.append(f"emotion: {scene.props.emotion} vs {critic_emotion}")
 
     return mismatches
+
+
+def enforce_reading(
+    scene: Scene, reading: dict[str, Any], bible: Bible
+) -> tuple[Scene, str | None]:
+    """Enforce critic reading on standing scene after mismatch per design_planner.md §11.
+
+    Returns:
+        (enforced_scene, repair_name) where repair_name is one of
+        "tone_neutral", "emotion_neutral", "attribution_dropped", or None.
+    """
+    if isinstance(scene, DialogueScene):
+        ans_lines = reading.get("lines", [])
+        new_lines: list[DialogueLine] = []
+        any_changed = False
+        for i, line in enumerate(scene.props.lines):
+            if line.tone != "neutral":
+                critic_line_tone = (
+                    ans_lines[i].get("tone")
+                    if (
+                        isinstance(ans_lines, list)
+                        and i < len(ans_lines)
+                        and isinstance(ans_lines[i], dict)
+                    )
+                    else None
+                )
+                if critic_line_tone == line.tone:
+                    new_lines.append(line)
+                else:
+                    new_lines.append(line.model_copy(update={"tone": "neutral"}))
+                    any_changed = True
+            else:
+                new_lines.append(line)
+        if any_changed:
+            new_props = scene.props.model_copy(update={"lines": new_lines})
+            return scene.model_copy(update={"props": new_props}), "tone_neutral"
+        return scene, None
+
+    elif isinstance(scene, EmotionBeatScene):
+        critic_emotion = reading.get("emotion")
+        if scene.props.emotion != "neutral" and scene.props.emotion != critic_emotion:
+            new_eb_props = scene.props.model_copy(update={"emotion": "neutral"})
+            return scene.model_copy(update={"props": new_eb_props}), "emotion_neutral"
+        return scene, None
+
+    elif isinstance(scene, KineticQuoteScene):
+        attr_id = scene.props.attribution_cast_id
+        if attr_id is not None:
+            r = reading.get("speaker")
+            if r is not None and r != "unknown":
+                cast_ids = {c.id for c in bible.cast}
+                narrator = next((c for c in bible.cast if c.is_narrator), None)
+                narrator_id = narrator.id if narrator else None
+
+                should_drop = False
+                if r in cast_ids and r != attr_id:
+                    should_drop = True
+                elif r == "narration" and attr_id != narrator_id:
+                    should_drop = True
+
+                if should_drop:
+                    new_kq_props = scene.props.model_copy(update={"attribution_cast_id": None})
+                    return scene.model_copy(update={"props": new_kq_props}), "attribution_dropped"
+        return scene, None
+
+    return scene, None
 
 
 def format_disagreement_message(mismatches: list[str]) -> str:
