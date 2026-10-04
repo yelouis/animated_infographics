@@ -748,6 +748,11 @@ def run_eval(
         r6_repairs = repairs_by_rule.get("R6", 0)
         r7_repairs = repairs_by_rule.get("R7", 0)
 
+        armchair_count = sum(
+            json.dumps(s.props.model_dump()).count('"Armchair"') for s in storyboard.scenes
+        )
+        armchair_bar_pass = armchair_count == 0
+
         fixture_pass = (
             voice_match
             and distinct_bar_pass
@@ -755,6 +760,7 @@ def run_eval(
             and violations_pass
             and time_bar_pass
             and light_bar_pass
+            and armchair_bar_pass
         )
         if not fixture_pass:
             all_passed = False
@@ -825,6 +831,7 @@ def run_eval(
             "light_bar_pass": light_bar_pass,
             "r6_repairs": r6_repairs,
             "r7_repairs": r7_repairs,
+            "armchair_count": armchair_count,
             "passed": fixture_pass,
         }
         results.append(fix_res)
@@ -929,6 +936,7 @@ def run_eval(
                     f"({r['light_share'] * 100:.1f}%, Bar: ≥1/3) [Wave B: {base_light}]"
                 ),
                 f"- **Validation Violations**: {len(r['violations'])}",
+                f"- **Armchair Icons**: {r['armchair_count']} (Bar: 0)",
                 (
                     f"- **Critic**: {r['critic_calls']} calls, {r['critic_agree']} agree, "
                     f"{r['critic_changed']} changed, "
@@ -983,6 +991,7 @@ def run_eval(
                 "- **Word-Cap Violations**: "
                 f"{text_audit_result.get('word_cap_violations_count', 0)} (Bar: 0)"
             ),
+            f"- **Armchair Icons (Total)**: {sum(r['armchair_count'] for r in results)} (Bar: 0)",
             f"- **Text Audit Status**: {'**PASS**' if audit_passed else '**FAIL**'}",
             "",
         ]

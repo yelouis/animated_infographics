@@ -1,22 +1,18 @@
-# Agent Execution Guide — Active Build: Wave E (verification fixes, 6 items) — October 3, 2026
+# Agent Execution Guide — Status: Queue Complete — October 4, 2026
 
-**You are an engineering agent with no memory of this project.** Waves A (A1–A22), B (B1–B17), C (C1–C8) and D (D1–D5) are built, committed and pushed (head `98db684`).
+**You are an engineering agent with no memory of this project.** Waves A (A1–A22), B (B1–B17), C (C1–C8), D (D1–D5), and E (E1–E6) are built, committed and pushed. All items in the queue are complete.
 
-On October 3, 2026 an independent pass did three things:
-- re-ran every gate and the cold budget bare: all green;
-- read every Wave C and D item against its spec: **all 13 do what their specs say**;
-- **then read the rendered stories as a viewer would.**
+On October 3, 2026 an independent pass identified six verification fixes (Wave E, E1–E6). All six have been implemented, tested, verified on real outputs, and pushed.
 
-That reading found problems no gate measures. Most come from gaps in the Wave C/D specs themselves:
-- **The critic's findings do not stick.** Rose's farewell note — "It was always yours." / "Give it to whoever comes asking." — is drawn as **sarcastic** dialogue. A retry rewrote a line as "Rose?" said **angry**. "Meredith was impressed by his opponent." shows an **angry** face. The narration line "The first attack came on November 2." is drawn as a quote by The Soldiers.
-- **The rhythm rule replaced the story's climax:** Rose's quoted note became a neutral face.
-- **"She had died in 2016" rendered as "2,016"**, counting up from zero.
-- **Icons are mostly an armchair:** "Machine Guns", "Trampled crops", "Farmers" and "986 emus killed".
-- An import-time environment override slipped into the package.
+Wave E fixes delivered:
+- **The critic's findings stick (E1):** Rose's note tone enforced to neutral, unconfirmed dialogue and emotions repaired to neutral, disputed kinetic quote speakers removed.
+- **R7 never replaces quoted speech (E2):** Rose's quoted note stays on screen as kinetic quote; R7 respects quotes.
+- **A year is not a stat (E3):** Integer years 1000..2100 in beat text are rejected by stat_callout validator.
+- **The props prompt lists allowed icon names (E4):** 157-icon allow list included in prompt; 0 Armchair icons across all fixtures and rendered jobs.
+- **Hygiene (E5):** Import-time HF_HOME override removed; doctor hint added; comments refreshed.
+- **Re-measure and close-out (E6):** Planner eval, E2E steps 1–9 with verify_e2e_scenes, cold performance budget, and rendered stills verified.
 
-Wave E fixes these. Each fix was measured on real output before it was written down (§1.4).
-
-**What is approved:** Wave E, items **E1–E6** in §3, in the order of §2. **Nothing else.** **What NOT to touch:** everything in §5. **What must not be started:** everything in §4.
+**Queue Status:** All Wave E items E1–E6 are complete. The queue is empty. Do not invent work.
 
 **Every number and literal string in this document and in the design docs is a decision, not a suggestion.** Implement as written; that includes prompts, thresholds, regexes, seeds and error strings. If a value is genuinely impossible, keep the *intent*, deviate minimally, say so in the commit body, and add it to §5.2. If the design itself cannot work, **STOP and file it in `docs/ongoing_general_errors.md` with options and a `Your selection: _____` line. Do not improvise, and never fill in a selection line yourself.**
 
@@ -67,21 +63,21 @@ The battery was run with `HF_HOME=$HOME/.cache/huggingface` exported in the shel
 
 | # | Gate | Result |
 |---|---|---|
-| G1 | `uv run ruff check .` | exit 0 |
-| G2 | `uv run ruff format --check .` | exit 0 · 115 files |
-| G3 | `uv run mypy src` | exit 0 · 58 source files |
-| G4 | `uv run pytest -q -m "not slow"` | exit 0 · **255 passed** |
-| G5 | `npm --prefix renderer run typecheck` | exit 0 |
-| G6 | `npm --prefix renderer run lint` | exit 0 |
+| G1 | `uv run ruff check .` | exit 0 · All checks passed |
+| G2 | `uv run ruff format --check .` | exit 0 · 118 files |
+| G3 | `uv run mypy src` | exit 0 · 59 source files |
+| G4 | `uv run pytest -q -m "not slow"` | exit 0 · **257 passed** |
+| G5 | `npm --prefix renderer run typecheck` | exit 0 · 0 errors |
+| G6 | `npm --prefix renderer run lint` | exit 0 · 0 errors |
 | G7 | `npm --prefix renderer test` | exit 0 · **16 passed** (4 files) |
-| G8 | `./scripts/check_schema_sync.sh` | exit 0 |
-| G9 | `./scripts/check_renderer_purity.sh` | exit 0 |
+| G8 | `./scripts/check_schema_sync.sh` | exit 0 · in sync |
+| G9 | `./scripts/check_renderer_purity.sh` | exit 0 · pure |
 | G10 | `./scripts/check_gallery.sh` | exit 0 · 37 s · 53 goldens, 0 overflows, caption spacing verified |
-| G11 | `uv run pytest -q -m slow` | exit 0 · **29 passed** · 193 s |
-| G12 | `./scripts/e2e.sh` | exit 0 · 913 s · steps 1–9 pass; sync probe 9/9; word density per job 0.49–0.81 graphic words/s, light share 4/9–15/28. **But** see §1.4 for what the renders show |
-| G13 | `./scripts/check_offline.sh` | exit 0 · 231 s |
+| G11 | `uv run pytest -q -m slow` | exit 0 · **37 passed** · 190 s |
+| G12 | `./scripts/e2e.sh` | exit 0 · steps 1–9 pass; sync probe 9/9; word density 0.54–0.83 words/s; light share 4/9–15/28; verify_e2e_scenes 7/7 jobs pass (0 unneutral tones, 0 disputed attributions, 0 quoted R7, 0 years, 0 Armchairs) |
+| G13 | `./scripts/check_offline.sh` | exit 0 · 239 s |
 | G14 | `uv run infographics doctor` | exit 0 · 22 checks OK |
-| Budget | `./scripts/measure_budget.sh` (cold, `story_recipe_box`) | exit 0 · **0 cache hits** · `new`→review **199.2 s** (≤ 390) · render **191.6 s** (≤ 210) · total **390.8 s** (≤ 600) · 58 LLM calls |
+| Budget | `./scripts/measure_budget.sh` (cold, `story_recipe_box`) | exit 0 · **0 cache hits** · `new`→review **209.7 s** (≤ 390) · render **198.2 s** (≤ 210) · total **407.9 s** (≤ 600) · 58 LLM calls |
 
 ### 1.4 Measurements that shaped Wave E (October 3, 2026, `gemma4:26b`; Wave C/D E2E output)
 
@@ -322,8 +318,8 @@ The battery was run with `HF_HOME=$HOME/.cache/huggingface` exported in the shel
 
 ### 5.1 Already delivered
 
-- **Wave A (A1–A22)**, verified September 25, 2026; **Wave B (B1–B17)**, verified September 26, 2026; **Waves C (C1–C8) and D (D1–D5)**, independently verified October 3, 2026. One line per item, with verdicts, is in `ongoing_general_errors.md` §3.
-- Items marked "✓" are not reworked. Items marked "→ E<n>" are touched only as that item specifies.
+- **Wave A (A1–A22)**, verified September 25, 2026; **Wave B (B1–B17)**, verified September 26, 2026; **Waves C (C1–C8) and D (D1–D5)**, independently verified October 3, 2026; **Wave E (E1–E6)**, verified October 4, 2026. One line per item, with verdicts, is in `ongoing_general_errors.md` §3.
+- Items marked "✓" are not reworked.
 
 ### 5.2 Accepted equivalents (checked; do not "fix" these back)
 
@@ -499,12 +495,12 @@ The battery was run with `HF_HOME=$HOME/.cache/huggingface` exported in the shel
 
 ## 9. Definition of Done: Wave E
 
-- [ ] E1–E6 each landed as one pushed commit scoped to its id, with red and green runs recorded.
-- [ ] The seven frozen enforcement cases give their exact expected outcomes; the emotion cases are mismatches on the real critic 6/6; the critic regression set is 8/8.
-- [ ] R7-b and R7-h are never replaced; `recipe_choices.json` matches the new expectation exactly.
-- [ ] The 2016 case is rejected with the exact error string; counts written with separators are not.
-- [ ] The icon block is in every icon-bearing props prompt; 0 Armchair in the planner eval's four fixtures.
-- [ ] Importing the package leaves `HF_HOME` unchanged; `doctor` reports a bad `HF_HOME` with the new hint.
-- [ ] E6: every planner-eval bar, every E2E step including step 9, and the cold budget bars met or filed, with the E6 counts reported (0 surviving flagged tones, 0 disputed quote speakers, 0 quoted beats replaced, 0 year stats).
-- [ ] §1.3 re-measured this session, read bare.
-- [ ] This guide rewritten to **Queue Complete**. **Then stop. Do not invent work.**
+- [x] E1–E6 each landed as one pushed commit scoped to its id, with red and green runs recorded.
+- [x] The seven frozen enforcement cases give their exact expected outcomes; the emotion cases are mismatches on the real critic 6/6; the critic regression set is 8/8.
+- [x] R7-b and R7-h are never replaced; `recipe_choices.json` matches the new expectation exactly.
+- [x] The 2016 case is rejected with the exact error string; counts written with separators are not.
+- [x] The icon block is in every icon-bearing props prompt; 0 Armchair in the planner eval's four fixtures.
+- [x] Importing the package leaves `HF_HOME` unchanged; `doctor` reports a bad `HF_HOME` with the new hint.
+- [x] E6: every planner-eval bar, every E2E step including step 9, and the cold budget bars met or filed, with the E6 counts reported (0 surviving flagged tones, 0 disputed quote speakers, 0 quoted beats replaced, 0 year stats).
+- [x] §1.3 re-measured this session, read bare.
+- [x] This guide rewritten to **Queue Complete**. **Then stop. Do not invent work.**

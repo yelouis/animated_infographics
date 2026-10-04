@@ -15,15 +15,11 @@
 - Each item's source was read against its spec: **all 13 do what their specs say** (verdicts in §3).
 - The Wave D bars hold on real renders: every job ≤ 1.0 graphic word/s (0.49–0.81) with ≥ 1/3 light scenes.
 
-**The verification also read the rendered stories as a viewer, and found problems no gate covers.** Four come from gaps in my own Wave C/D specs, one is long-standing, and one is implementation hygiene. They are specced as **Wave E (E1–E6)** in `agent_execution_guide.md`. Each fix stays within behaviour the user already approved (Issue 5 → A, Issue 7 → A):
-- **The critic's findings do not stick.**
-  - 35 of 87 flagged tones survived a retry that "succeeded" by keeping them. Rose's farewell note was drawn as **sarcastic** dialogue, and a retry introduced "Rose?" said **angry**.
-  - An emotion read as "unknown" never counted, so "Meredith was impressed" stayed **angry**.
-  - 7 of 8 disputed quote speakers were kept; for example, a narration line was credited to The Soldiers. (E1)
-- **The rhythm rule replaced the story's climax.** Rose's quoted note became a neutral face. (E2)
-- **A year rendered as a count:** "She had died in 2016" became **"2,016"**. (E3)
-- **Icons:** the props prompt never listed the allowed names, so the model's guesses were snapped to "Armchair" (18% of all icons): "Machine Guns", "Trampled crops" and "Farmers" all showed an armchair. Listing the names removed it, 8/54 → 0/56. (E4)
-- **Hygiene:** D1 slipped an import-time `HF_HOME` override into the package, which hides the misconfiguration `doctor` exists to report; there are also two stale comments. (E5)
+**Wave E (E1–E6) was delivered as 6 commits and independently verified on October 4, 2026.**
+- Every gate G1–G14 was re-run bare in a separate session: 257 fast tests, 37 slow tests, E2E steps 1–9 with verify_e2e_scenes, the G13 offline gate (239 s), and the cold performance budget (209.7 s / 198.2 s / 407.9 s, 0 cache hits). All green bare; numbers in `agent_execution_guide.md` §1.3.
+- Each item's source was read against its spec: **all 6 do what their specs say** (verdicts in §3).
+- All Wave E verification criteria verified across 7 rendered E2E jobs: 0 unneutral flagged tones, 0 disputed quote attributions kept, 0 R7 repairs on beats with quoted speech, 0 year-like stats, and 0 Armchairs.
+- The build queue is complete.
 
 **No question is open for the user.**
 
@@ -173,6 +169,7 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 - E3 — A year is not a stat — git log --grep "(e3)" — G1–G14 green bare, 256 passed (+1 test); stat_callout validator rejects integer values 1000..2100 appearing in beat text without comma/formatting as years; real room 12 2016 scene fails with exact error (red first); falsified by deleting rule (2016 passes -> red) and widening range 0..9999 (312 cards fails -> red).
 - E4 — The props prompt lists the allowed icon names — git log --grep "(e4)" — G1–G14 green bare, 257 passed (+1 test), live slow tests pass (2/2 emu_war scenes contain 0 Armchair); props user prompt appends icon allow-list block for stat_callout, icon_list, cause_effect, and comparison; unit tests in tests/test_props_prompt.py assert block presence/absence (red first); falsified by removing block (slow test on emu_war scenes reproduces Armchair in both icon_list and cause_effect -> red).
 - E5 — Hygiene: no import-time environment change; stale comments — git log --grep "(e5)" — G1–G14 green bare, 257 passed; deleted HF_HOME override from __init__.py; doctor check 7 Kokoro missing message gains explicit hint (if HF_HOME is set, it must contain hub/models--hexgrad--Kokoro-82M; unset it or export HF_HOME="$HOME/.cache/huggingface"); design_testing_and_validation.md §3 documents battery.sh export; location.tsx and set_piece.tsx comments updated for D1 caption removal; red first verified on mktemp HF_HOME printed vs temporary dir, and doctor exits 4 with hint.
+- E6 — Re-measure; close-out of Wave E — git log --grep "(e6)" — G1–G14 green bare, 257 passed, 37 slow passed; cold planner eval passes all §9 bars (8/8 critic regression, 0 word-cap violations, 0 Armchairs, light share 33.3%–57.1% ≥ 1/3); G12 E2E and verify_e2e_scenes pass with 0 unneutral tones, 0 disputed attributions, 0 quoted R7 repairs, 0 year stats, and 0 Armchairs across all 7 rendered jobs; cold budget 407.94 s (≤ 600 s) with 0 cache hits; recipe box and room 12 stills verified (kinetic quote for Rose's note, neutral avatar for online call, book/camera/envelope icons, "3 March" stat); full battery exits 0 bare; queue complete.
 
 
 ---
