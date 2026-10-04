@@ -435,6 +435,21 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
         # Meaning rule (Issue 5 / Option A): currency symbols in suffix
         if any(sym in props.suffix for sym in ("$", "£", "€")):
             errors.append("props.suffix: currency symbols belong in prefix")
+
+        # Meaning rule: A year is not a stat (added October 3, 2026)
+        if (
+            props.decimals == 0
+            and props.display_scale == "none"
+            and int(props.value) == props.value
+        ):
+            val_int = int(props.value)
+            if 1000 <= val_int <= 2100 and re.search(
+                rf"(?<![\d,.]){val_int}(?![\d]|,\d)", beat_text
+            ):
+                errors.append(
+                    f"props.value: {val_int} is a year in this beat; a year belongs in a "
+                    "timeline or an era label, not a stat"
+                )
         # Rendered value line
         rendered_val = props.prefix + _format_stat_value(props.value, props.decimals)
         if props.display_scale != "none":

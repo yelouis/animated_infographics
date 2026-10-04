@@ -597,6 +597,128 @@ def test_meaning_rules_currency_and_ago() -> None:
     assert not any('"ago" is not in the narration' in e for e in errs_with_ago)
 
 
+def test_meaning_rule_year_is_not_a_stat() -> None:
+    """Validate meaning rule: A year is not a stat (design_planner.md §6 item 6)."""
+    bible = Bible(
+        schema_version=1,
+        title="Room 12",
+        logline="Logline",
+        genre="personal_story",
+        cast=[],
+        places=[],
+        set_pieces=[],
+    )
+
+    def _ctx(text: str) -> PlanContext:
+        words = [
+            TranscriptWord(i=i, text=tok, start_ms=i * 200, end_ms=(i + 1) * 200, sentence_i=0)
+            for i, tok in enumerate(text.split())
+        ]
+        sentences = [
+            TranscriptSentence(
+                i=0,
+                text=text,
+                start_ms=0,
+                end_ms=len(words) * 200,
+                word_start=0,
+                word_end=len(words),
+                paragraph_i=0,
+                is_title=False,
+            )
+        ]
+        tr = Transcript(
+            schema_version=1,
+            source="tts",
+            audio_path="test.wav",
+            duration_ms=len(words) * 200 + 100,
+            words=words,
+            sentences=sentences,
+        )
+        beat = Beat(
+            i=1,
+            word_start=0,
+            word_end=len(words),
+            start_ms=0,
+            end_ms=len(words) * 200,
+            text=text,
+        )
+        return PlanContext(transcript=tr, bible=bible, beat=beat)
+
+    expected_2016_err = (
+        "props.value: 2016 is a year in this beat; a year belongs in a timeline or an era label, "
+        "not a stat"
+    )
+
+    # 1. 2016 with suffix "" -> error
+    ctx_2016 = _ctx("She had died in 2016, and March 3rd was her birthday.")
+    s_2016 = StatCalloutScene(
+        id="s001",
+        beat_i=1,
+        template="stat_callout",
+        props=StatCalloutProps(value=2016.0, decimals=0, display_scale="none", suffix=""),
+    )
+    errs_2016 = validate_scene(s_2016, ctx_2016)
+    assert expected_2016_err in errs_2016
+
+    # 2. 2016 with suffix "Year died" -> error
+    s_2016_suffix = StatCalloutScene(
+        id="s001",
+        beat_i=1,
+        template="stat_callout",
+        props=StatCalloutProps(value=2016.0, decimals=0, display_scale="none", suffix="Year died"),
+    )
+    errs_2016_suffix = validate_scene(s_2016_suffix, ctx_2016)
+    assert expected_2016_err in errs_2016_suffix
+
+    # 3. 1932 in "In 1932, ..." -> error
+    ctx_1932 = _ctx("In 1932, the farmers banded together.")
+    s_1932 = StatCalloutScene(
+        id="s001",
+        beat_i=1,
+        template="stat_callout",
+        props=StatCalloutProps(value=1932.0, decimals=0, display_scale="none", suffix=""),
+    )
+    errs_1932 = validate_scene(s_1932, ctx_1932)
+    expected_1932_err = (
+        "props.value: 1932 is a year in this beat; a year belongs in a timeline or an era label, "
+        "not a stat"
+    )
+    assert expected_1932_err in errs_1932
+
+    # 4. 20,000 -> no error
+    ctx_20k = _ctx("about 20,000 emus were running wild across the region.")
+    s_20k = StatCalloutScene(
+        id="s001",
+        beat_i=1,
+        template="stat_callout",
+        props=StatCalloutProps(value=20000.0, decimals=0, display_scale="none", suffix="emus"),
+    )
+    errs_20k = validate_scene(s_20k, ctx_20k)
+    assert not any("is a year in this beat" in e for e in errs_20k)
+
+    # 5. 312 -> no error
+    ctx_312 = _ctx("The box held 312 handwritten cards.")
+    s_312 = StatCalloutScene(
+        id="s001",
+        beat_i=1,
+        template="stat_callout",
+        props=StatCalloutProps(value=312.0, decimals=0, display_scale="none", suffix="cards"),
+    )
+    errs_312 = validate_scene(s_312, ctx_312)
+    assert not any("is a year in this beat" in e for e in errs_312)
+
+    # 6. 1,500 written with a comma -> no error
+    ctx_1500 = _ctx("They deployed 1,500 soldiers to the border.")
+    s_1500 = StatCalloutScene(
+        id="s001",
+        beat_i=1,
+        template="stat_callout",
+        props=StatCalloutProps(value=1500.0, decimals=0, display_scale="none", suffix="soldiers"),
+    )
+    errs_1500 = validate_scene(s_1500, ctx_1500)
+    assert not any("is a year in this beat" in e for e in errs_1500)
+
+
 def test_internal_id_errors() -> None:
     """Verify internal_id_errors rejects internal IDs and accepts normal words (C4)."""
     from animated_infographics.planner.validate import internal_id_errors
