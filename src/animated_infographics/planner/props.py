@@ -2,10 +2,11 @@
 
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Any
+from typing import Any, Final, get_args, get_origin
 
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
+from animated_infographics.contracts.icons import IconName
 from animated_infographics.contracts.models import (
     Beat,
     Bible,
@@ -77,6 +78,36 @@ SCENE_CLASS_MAP: dict[str, type[Scene]] = {
     "map_focus": MapFocusScene,
     "timeline": TimelineSceneModel,
 }
+
+
+def _model_has_icon_field(cls: type[Any]) -> bool:
+    if not (isinstance(cls, type) and issubclass(cls, BaseModel)):
+        return False
+    for name, field in cls.model_fields.items():
+        if name == "icon":
+            return True
+        ann = field.annotation
+        origin = get_origin(ann)
+        args = get_args(ann)
+        subtypes = [ann] if origin is None else list(args)
+        for sub in subtypes:
+            if isinstance(sub, type) and issubclass(sub, BaseModel):
+                if _model_has_icon_field(sub):
+                    return True
+    return False
+
+
+_ICON_NAMES_STR: Final[str] = ", ".join(get_args(IconName))
+ICONS_PROMPT_BLOCK: Final[str] = (
+    "\n\n# Icons\n"
+    "Every icon field must be one of these names. Pick the one that depicts the label; "
+    "if none does and the field is optional, leave it out.\n"
+    f"{_ICON_NAMES_STR}"
+)
+
+_TEMPLATES_WITH_ICONS: Final[frozenset[str]] = frozenset(
+    t for t, s in REGISTRY.items() if _model_has_icon_field(s.props_model) and t != "title_card"
+)
 
 
 def build_deterministic_kinetic_quote(scene_id: str, beat_i: int, beat: Beat) -> KineticQuoteScene:
@@ -321,6 +352,9 @@ def plan_single_template_props(
     )
     if extra_user_prompt:
         base_user_prompt += f"\n\n{extra_user_prompt}"
+
+    if template_name in _TEMPLATES_WITH_ICONS:
+        base_user_prompt += ICONS_PROMPT_BLOCK
 
     system = (
         "You are an expert storyboard planner for animated educational explainer videos. "
