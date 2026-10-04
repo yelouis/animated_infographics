@@ -205,7 +205,7 @@ export const Location: React.FC<LocationTemplateProps> = ({
         </div>
       )}
 
-      {/* Place name bottom-aligned at y 1080, left x 100; caption directly above name */}
+      {/* place name bottom-aligned at y 1080; no caption (removed in D1) */}
       <div
         style={{
           position: "absolute",

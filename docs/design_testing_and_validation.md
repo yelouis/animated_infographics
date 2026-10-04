@@ -95,7 +95,7 @@ The `voice`/`reason` expectations are the table in `design_planner.md` §10; the
 
 ## 3. The battery (`scripts/battery.sh`)
 
-Runs every gate **bare**, one after another, prints a table of gate / exit code / key number, and exits non-zero if any gate failed. `--fast` runs G1–G10 and G14 (no heavy models). The execution guide's §1 is the recorded baseline of this table.
+Runs every gate **bare**, one after another, prints a table of gate / exit code / key number, and exits non-zero if any gate failed. `--fast` runs G1–G10 and G14 (no heavy models). The execution guide's §1 is the recorded baseline of this table. The script explicitly exports `HF_HOME` for its own run if needed, setting its own environment, while the package itself never modifies `HF_HOME` on import.
 
 | # | Gate | Command | Green means | Falsify it by (must go red) |
 |---|---|---|---|---|

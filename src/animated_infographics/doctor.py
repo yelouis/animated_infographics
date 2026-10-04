@@ -200,7 +200,12 @@ def run_doctor() -> int:
     if check_hf_file(kokoro_repo, "config.json") or check_hf_repo(kokoro_repo):
         report_ok(f"Kokoro model {kokoro_repo} in HF cache")
     else:
-        report_missing(f"Kokoro model {kokoro_repo} in HF cache", "scripts/setup.sh")
+        report_missing(
+            f"Kokoro model {kokoro_repo} in HF cache",
+            "scripts/setup.sh (if HF_HOME is set, it must contain "
+            "hub/models--hexgrad--Kokoro-82M; unset it or export "
+            'HF_HOME="$HOME/.cache/huggingface")',
+        )
 
     if check_hf_file(kokoro_repo, "voices/af_heart.pt"):
         report_ok("Kokoro voice voices/af_heart.pt in HF cache")
