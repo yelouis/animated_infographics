@@ -843,6 +843,7 @@ def run_eval(
         or text_audit_result["completeness_failures_count"] > 0
         or text_audit_result.get("id_leaks_count", 0) > 0
         or text_audit_result.get("word_cap_violations_count", 0) > 0
+        or text_audit_result.get("placeholder_violations_count", 0) > 0
     ):
         all_passed = False
 
@@ -963,6 +964,7 @@ def run_eval(
         and text_audit_result["completeness_failures_count"] == 0
         and text_audit_result.get("id_leaks_count", 0) == 0
         and text_audit_result.get("word_cap_violations_count", 0) == 0
+        and text_audit_result.get("placeholder_violations_count", 0) == 0
     )
     at_max_with_punct = (
         text_audit_result["at_max_length_count"] - text_audit_result["at_max_length_no_punct_count"]
@@ -991,6 +993,10 @@ def run_eval(
                 "- **Word-Cap Violations**: "
                 f"{text_audit_result.get('word_cap_violations_count', 0)} (Bar: 0)"
             ),
+            (
+                "- **Placeholder/Instruction Violations**: "
+                f"{text_audit_result.get('placeholder_violations_count', 0)} (Bar: 0)"
+            ),
             f"- **Armchair Icons (Total)**: {sum(r['armchair_count'] for r in results)} (Bar: 0)",
             f"- **Text Audit Status**: {'**PASS**' if audit_passed else '**FAIL**'}",
             "",
@@ -1012,6 +1018,13 @@ def run_eval(
         md_lines.append("### Internal ID Leaks")
         for item in text_audit_result.get("id_leaks", []):
             md_lines.append(f"- `{item['template']}` {item['path']}: {repr(item['value'])}")
+        md_lines.append("")
+
+    if text_audit_result.get("placeholder_violations_count", 0) > 0:
+        md_lines.append("### Placeholder / Instruction Violations")
+        for item in text_audit_result.get("placeholder_violations", []):
+            for err in item.get("errors", []):
+                md_lines.append(f"- `{item['template']}`: {err}")
         md_lines.append("")
 
     if text_audit_result["at_max_length_no_punct_count"] > 0:

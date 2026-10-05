@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 import pytest
 from pydantic import ValidationError
@@ -38,6 +39,7 @@ from animated_infographics.contracts.templates import (
 )
 from animated_infographics.planner.validate import (
     PlanContext,
+    placeholder_errors,
     validate_plan,
     validate_scene,
     word_cap_errors,
@@ -1054,3 +1056,125 @@ def test_word_cap_exact_cap_passes() -> None:
         ],
     }
     assert word_cap_errors("icon_list", props) == []
+
+
+def test_placeholder_errors_frozen_cases() -> None:
+    """Validate placeholder and instruction text per design_planner.md §6 item 7 and F2."""
+    import json
+
+    cases_path = Path(__file__).resolve().parent / "data" / "wave_f_cases.json"
+    data = json.loads(cases_path.read_text(encoding="utf-8"))
+    placeholder_scenes = data["placeholder_scenes"]
+
+    # 1. Red first / frozen cases:
+    for case in placeholder_scenes:
+        errs = placeholder_errors(case["template"], case["props"])
+        assert errs == case["expected_errors"]
+
+    # 2. "UNKNOWN IDENTITY" and "No Record Found Yet" yield no error
+    ok_props = {
+        "heading": "UNKNOWN IDENTITY",
+        "items": [
+            {"icon": "MagnifyingGlass", "label": "No Record Found Yet"},
+        ],
+    }
+    assert placeholder_errors("icon_list", ok_props) == []
+
+    # 3. Over every scene of every frozen storyboard in tests/data/,
+    # assert 0 errors except the 2 frozen junk scenes
+    data_dir = Path(__file__).resolve().parent / "data"
+    all_scenes: list[tuple[str, str, Any, str]] = []  # (filename, scene_id, props, template)
+
+    def extract_scenes(obj: Any, filename: str) -> None:
+        if isinstance(obj, dict):
+            if "template" in obj and "props" in obj:
+                sc_id = obj.get("scene_id", obj.get("id", "unknown"))
+                all_scenes.append((filename, sc_id, obj["props"], obj["template"]))
+            for v in obj.values():
+                extract_scenes(v, filename)
+        elif isinstance(obj, list):
+            for v in obj:
+                extract_scenes(v, filename)
+
+    for p in sorted(data_dir.glob("*.json")):
+        d = json.loads(p.read_text(encoding="utf-8"))
+        extract_scenes(d, p.name)
+
+    unexpected_errors: list[str] = []
+    for fn, sc_id, props, tmpl in all_scenes:
+        errs = placeholder_errors(tmpl, props)
+        if errs:
+            if fn == "wave_f_cases.json" and sc_id in ("s017", "s008"):
+                continue
+            unexpected_errors.append(f"{fn} {sc_id} ({tmpl}): {errs}")
+
+    assert unexpected_errors == [], f"Unexpected placeholder errors found: {unexpected_errors}"
+
+
+def test_validate_scene_rejects_placeholder() -> None:
+    """Verify validate_scene rejects placeholder text in props."""
+    from animated_infographics.contracts.models import ComparisonScene
+    from animated_infographics.contracts.templates import ComparisonPanel, ComparisonProps
+
+    ctx = _make_dummy_ctx()
+    scene = ComparisonScene(
+        id="s008",
+        beat_i=1,
+        template="comparison",
+        props=ComparisonProps(
+            a=ComparisonPanel(heading="1990s Rate", points=["$38 cash"]),
+            b=ComparisonPanel(heading="Current Price", points=["Not specified"]),
+        ),
+    )
+    errs = validate_scene(scene, ctx)
+    assert any(
+        'props.b.points[0]: "Not specified" is a placeholder — show only what the beat says' in e
+        for e in errs
+    )
+
+
+def test_text_audit_counts_placeholder_violations(tmp_path: Path) -> None:
+    """Verify audit_storyboards counts placeholder violations (F2)."""
+    import json
+
+    from animated_infographics.evals.text_audit import audit_storyboards
+
+    sb_dir = tmp_path / "job1"
+    sb_dir.mkdir()
+    bible_json = {
+        "schema_version": 1,
+        "title": "Emu War",
+        "logline": "The Emu War.",
+        "genre": "history",
+        "cast": [],
+        "places": [],
+        "set_pieces": [],
+    }
+    (sb_dir / "bible.json").write_text(json.dumps(bible_json), encoding="utf-8")
+
+    storyboard_json = {
+        "schema_version": 1,
+        "scenes": [
+            {
+                "id": "s017",
+                "beat_i": 1,
+                "template": "comparison",
+                "props": {
+                    "a": {
+                        "heading": "Ammo Spent",
+                        "points": ["9,860 rounds", "Icon: Bullet"],
+                    },
+                    "b": {
+                        "heading": "Emus Killed",
+                        "points": ["986 birds", "Icon: Bird"],
+                    },
+                },
+            }
+        ],
+    }
+    sb_path = sb_dir / "storyboard.json"
+    sb_path.write_text(json.dumps(storyboard_json), encoding="utf-8")
+
+    res = audit_storyboards([sb_path])
+    assert res["placeholder_violations_count"] == 1
+    assert len(res["placeholder_violations"][0]["errors"]) == 2

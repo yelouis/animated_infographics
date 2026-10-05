@@ -184,6 +184,7 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 **Wave F:**
 
 - F1 — A date is not a stat — git log --grep "(f1)" — G1–G14 green bare, 258 passed (+1 test); stat_callout validator rejects integer values matching month-and-day or day-and-month date patterns in beat text; frozen March 3rd case fails with exact error (red first); 3 soldiers, 20,000 emus, and 312 cards do not error; falsified by removing ordinal group (March 3rd goes red bare).
+- F2 — No placeholder or instruction text on screen — git log --grep "(f2)" — G1–G14 green bare, 261 passed (+3 tests); placeholder_errors rejects instruction text matching \bicon\s*: and whole-string placeholder words across WORD_CAPS fields; text audit tracks placeholder_violations_count with bar 0; both frozen junk comparison cases fail with exact errors (red first); "UNKNOWN IDENTITY" and "No Record Found Yet" pass with 0 errors; all frozen storyboards in tests/data/ yield 0 errors except the two frozen junk scenes; falsified by removing "not specified" (frozen case goes red bare).
 
 
 ---

@@ -165,6 +165,59 @@ def word_cap_errors(template: str, props: Mapping[str, Any] | Any) -> list[str]:
     return errors
 
 
+PLACEHOLDER_WORDS: Final[frozenset[str]] = frozenset(
+    {
+        "not specified",
+        "unspecified",
+        "not mentioned",
+        "n/a",
+        "na",
+        "none",
+        "unknown",
+        "tbd",
+        "no data",
+        "not applicable",
+    }
+)
+
+
+def placeholder_errors(template: str, props: Mapping[str, Any] | Any) -> list[str]:
+    """Validate that props contain no instructions or placeholder text on screen.
+
+    Per design_planner.md §6 item 7 and agent_execution_guide.md §3.F2:
+    For every WORD_CAPS[template] path, in table order and then index order:
+    - if re.search(r"\\bicon\\s*:", v, re.IGNORECASE), emit:
+      f'props.{path}: "{v}" is an instruction, not on-screen text — put icons only in icon fields'
+    - otherwise, if re.sub(r"[^\\w/ ]", "", v).strip().casefold() in PLACEHOLDER_WORDS, emit:
+      f'props.{path}: "{v}" is a placeholder — show only what the beat says'
+    """
+    if hasattr(props, "model_dump"):
+        props_map = props.model_dump()
+    elif isinstance(props, Mapping):
+        props_map = props
+    else:
+        return []
+
+    caps = WORD_CAPS.get(template)
+    if not caps:
+        return []
+
+    errors: list[str] = []
+    for path in caps:
+        for concrete_path, val in field_values(props_map, path):
+            if re.search(r"\bicon\s*:", val, re.IGNORECASE):
+                errors.append(
+                    f'props.{concrete_path}: "{val}" is an instruction, '
+                    "not on-screen text — put icons only in icon fields"
+                )
+            elif re.sub(r"[^\w/ ]", "", val).strip().casefold() in PLACEHOLDER_WORDS:
+                errors.append(
+                    f'props.{concrete_path}: "{val}" is a placeholder — '
+                    "show only what the beat says"
+                )
+    return errors
+
+
 def normalize_props_text(template_name: str, props: dict[str, Any]) -> dict[str, Any]:
     """Normalize all free-text string fields in a props dictionary.
 
@@ -670,6 +723,9 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
 
     # 9. Word caps (item 9)
     errors.extend(word_cap_errors(template, scene.props))
+
+    # 10. Placeholder and instruction text (item 7, Wave F)
+    errors.extend(placeholder_errors(template, scene.props))
 
     return errors
 

@@ -14,7 +14,11 @@ from typing import Any
 
 from animated_infographics.contracts.models import Bible
 from animated_infographics.contracts.templates import REGISTRY
-from animated_infographics.planner.validate import internal_id_errors, word_cap_errors
+from animated_infographics.planner.validate import (
+    internal_id_errors,
+    placeholder_errors,
+    word_cap_errors,
+)
 
 # Terminal punctuation symbols that count as closing/completed text
 TERMINAL_PUNCTUATION: tuple[str, ...] = (".", "!", "?", ")", '"', "'", "”", "’")
@@ -179,6 +183,7 @@ def audit_storyboards(storyboard_paths: list[Path], dedup: bool = True) -> dict[
     completeness_failures: list[dict[str, Any]] = []
     id_leaks: list[dict[str, Any]] = []
     word_cap_violations: list[dict[str, Any]] = []
+    placeholder_violations: list[dict[str, Any]] = []
 
     for sc, bible in unique_scenes:
         tmpl = sc.get("template", "")
@@ -192,6 +197,16 @@ def audit_storyboards(storyboard_paths: list[Path], dedup: bool = True) -> dict[
                 {
                     "template": tmpl,
                     "errors": cap_errs,
+                    "props": props,
+                }
+            )
+
+        ph_errs = placeholder_errors(tmpl, props)
+        if ph_errs:
+            placeholder_violations.append(
+                {
+                    "template": tmpl,
+                    "errors": ph_errs,
                     "props": props,
                 }
             )
@@ -264,11 +279,13 @@ def audit_storyboards(storyboard_paths: list[Path], dedup: bool = True) -> dict[
         "completeness_failures_count": len(completeness_failures),
         "id_leaks_count": len(id_leaks),
         "word_cap_violations_count": len(word_cap_violations),
+        "placeholder_violations_count": len(placeholder_violations),
         "at_max_length_no_punct": at_max_length_no_punct,
         "contains_newline": contains_newline,
         "completeness_failures": completeness_failures,
         "id_leaks": id_leaks,
         "word_cap_violations": word_cap_violations,
+        "placeholder_violations": placeholder_violations,
     }
 
 
