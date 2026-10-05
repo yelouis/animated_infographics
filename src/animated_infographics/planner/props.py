@@ -1,5 +1,6 @@
 """Props planning with fallback ladder, schema narrowing, and deterministic repairs."""
 
+import re
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any, Final, get_args, get_origin
@@ -157,6 +158,22 @@ def build_deterministic_kinetic_quote(scene_id: str, beat_i: int, beat: Beat) ->
         mute_sfx=False,
         rationale="deterministic fallback",
     )
+
+
+def normalize_era_label(era: str | None, transcript_text: str) -> str | None:
+    """Normalize location.era_label deterministically per design_planner.md §5 and F3.
+
+    - None or empty -> None
+    - m = re.search(r"\b(1[0-9]{3}|20[0-9]{2})s?\b", era);
+      if m and re.search(rf"\b{m.group(1)}", transcript_text) -> m.group(0)
+    - else -> None
+    """
+    if not era or not era.strip():
+        return None
+    m = re.search(r"\b(1[0-9]{3}|20[0-9]{2})s?\b", era)
+    if m and re.search(rf"\b{m.group(1)}", transcript_text):
+        return m.group(0)
+    return None
 
 
 def build_deterministic_title_card(scene_id: str, beat_i: int, bible: Bible) -> TitleCardScene:
@@ -366,6 +383,10 @@ def plan_single_template_props(
     def validate_props(raw: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
         try:
             clean_raw = normalize_props_text(template_name, raw)
+            if template_name == "location":
+                transcript_text = " ".join(s.text for s in transcript.sentences)
+                era = clean_raw.get("era_label")
+                clean_raw["era_label"] = normalize_era_label(era, transcript_text)
             props_instance = spec.props_model.model_validate(clean_raw)
             if template_name == "text_thread" and isinstance(props_instance, TextThreadProps):
                 if props_instance.contact_cast_id is None:
@@ -403,6 +424,10 @@ def plan_single_template_props(
     )
 
     if result is not None:
+        if template_name == "location":
+            transcript_text = " ".join(s.text for s in transcript.sentences)
+            era = result.get("era_label")
+            result["era_label"] = normalize_era_label(era, transcript_text)
         props_instance = spec.props_model.model_validate(result)
         if template_name == "text_thread" and isinstance(props_instance, TextThreadProps):
             if props_instance.contact_cast_id is None:
