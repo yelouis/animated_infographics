@@ -719,6 +719,128 @@ def test_meaning_rule_year_is_not_a_stat() -> None:
     assert not any("is a year in this beat" in e for e in errs_1500)
 
 
+def test_meaning_rule_date_is_not_a_stat() -> None:
+    """Validate meaning rule: A date is not a stat (design_planner.md §6 item 6, Wave F)."""
+    import json
+    from pathlib import Path
+
+    cases_path = Path(__file__).parent / "data" / "wave_f_cases.json"
+    cases_data = json.loads(cases_path.read_text(encoding="utf-8"))
+    stat_dates = cases_data["stat_dates"]
+
+    bible = Bible(
+        schema_version=1,
+        title="Room 12",
+        logline="Logline",
+        genre="personal_story",
+        cast=[],
+        places=[],
+        set_pieces=[],
+    )
+
+    def _ctx(text: str) -> PlanContext:
+        words = [
+            TranscriptWord(i=i, text=tok, start_ms=i * 200, end_ms=(i + 1) * 200, sentence_i=0)
+            for i, tok in enumerate(text.split())
+        ]
+        sentences = [
+            TranscriptSentence(
+                i=0,
+                text=text,
+                start_ms=0,
+                end_ms=len(words) * 200,
+                word_start=0,
+                word_end=len(words),
+                paragraph_i=0,
+                is_title=False,
+            )
+        ]
+        tr = Transcript(
+            schema_version=1,
+            source="tts",
+            audio_path="test.wav",
+            duration_ms=len(words) * 200 + 100,
+            words=words,
+            sentences=sentences,
+        )
+        beat = Beat(
+            i=1,
+            word_start=0,
+            word_end=len(words),
+            start_ms=0,
+            end_ms=len(words) * 200,
+            text=text,
+        )
+        return PlanContext(transcript=tr, bible=bible, beat=beat)
+
+    # 1. Real frozen case: March 3rd in "She had died in 2016, and March 3rd was her birthday."
+    c0 = stat_dates[0]
+    ctx_room12 = _ctx(c0["beat"])
+    s_room12 = StatCalloutScene(
+        id=c0["scene_id"],
+        beat_i=1,
+        template="stat_callout",
+        props=StatCalloutProps(**c0["props"]),
+    )
+    errs_room12 = validate_scene(s_room12, ctx_room12)
+    assert c0["expected_error"] in errs_room12
+
+    # 2. "3rd of March"
+    ctx_3rd_of_march = _ctx("She was born on the 3rd of March before sunrise.")
+    s_3rd_of_march = StatCalloutScene(
+        id="s001",
+        beat_i=1,
+        template="stat_callout",
+        props=StatCalloutProps(value=3.0, decimals=0, display_scale="none", suffix=""),
+    )
+    errs_3rd = validate_scene(s_3rd_of_march, ctx_3rd_of_march)
+    assert any("is a day of a date in this beat" in e for e in errs_3rd)
+
+    # 3. "November 2"
+    ctx_nov2 = _ctx("The first attack came on November 2.")
+    s_nov2 = StatCalloutScene(
+        id="s001",
+        beat_i=1,
+        template="stat_callout",
+        props=StatCalloutProps(value=2.0, decimals=0, display_scale="none", suffix=""),
+    )
+    errs_nov2 = validate_scene(s_nov2, ctx_nov2)
+    assert any("is a day of a date in this beat" in e for e in errs_nov2)
+
+    # 4. Must NOT error: 3 in "3 soldiers"
+    ctx_3_soldiers = _ctx("Major Meredith arrived with 3 soldiers and ammunition.")
+    s_3_soldiers = StatCalloutScene(
+        id="s001",
+        beat_i=1,
+        template="stat_callout",
+        props=StatCalloutProps(value=3.0, decimals=0, display_scale="none", suffix="soldiers"),
+    )
+    errs_soldiers = validate_scene(s_3_soldiers, ctx_3_soldiers)
+    assert not any("is a day of a date in this beat" in e for e in errs_soldiers)
+
+    # 5. Must NOT error: 20,000 in "about 20,000 emus"
+    ctx_20k = _ctx("a drought pushed about 20,000 emus inland onto farms.")
+    s_20k = StatCalloutScene(
+        id="s001",
+        beat_i=1,
+        template="stat_callout",
+        props=StatCalloutProps(value=20000.0, decimals=0, display_scale="none", suffix="emus"),
+    )
+    errs_20k = validate_scene(s_20k, ctx_20k)
+    assert not any("is a day of a date in this beat" in e for e in errs_20k)
+
+    # 6. Must NOT error: 312 in "The box held 312 handwritten cards"
+    ctx_312 = _ctx("The box held 312 handwritten cards, forty years of cooking.")
+    s_312 = StatCalloutScene(
+        id="s001",
+        beat_i=1,
+        template="stat_callout",
+        props=StatCalloutProps(value=312.0, decimals=0, display_scale="none", suffix="cards"),
+    )
+    errs_312 = validate_scene(s_312, ctx_312)
+    assert not any("is a day of a date in this beat" in e for e in errs_312)
+
+
 def test_internal_id_errors() -> None:
     """Verify internal_id_errors rejects internal IDs and accepts normal words (C4)."""
     from animated_infographics.planner.validate import internal_id_errors

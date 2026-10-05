@@ -450,6 +450,20 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
                     f"props.value: {val_int} is a year in this beat; a year belongs in a "
                     "timeline or an era label, not a stat"
                 )
+
+            MONTHS = (
+                "january|february|march|april|may|june|"
+                "july|august|september|october|november|december"
+            )
+            if re.search(
+                rf"\b(?:{MONTHS})\.?\s+{val_int}(?:st|nd|rd|th)?\b|\b{val_int}(?:st|nd|rd|th)?\s+(?:of\s+)?(?:{MONTHS})\b",
+                beat_text,
+                re.IGNORECASE,
+            ):
+                errors.append(
+                    f"props.value: {val_int} is a day of a date in this beat; a date belongs in a "
+                    "timeline or an era label, not a stat"
+                )
         # Rendered value line
         rendered_val = props.prefix + _format_stat_value(props.value, props.decimals)
         if props.display_scale != "none":
