@@ -15,11 +15,15 @@
 - Each item's source was read against its spec: **all 13 do what their specs say** (verdicts in §3).
 - The Wave D bars hold on real renders: every job ≤ 1.0 graphic word/s (0.49–0.81) with ≥ 1/3 light scenes.
 
-**Wave E (E1–E6) was delivered as 6 commits and independently verified on October 4, 2026.**
-- Every gate G1–G14 was re-run bare in a separate session: 257 fast tests, 37 slow tests, E2E steps 1–9 with verify_e2e_scenes, the G13 offline gate (239 s), and the cold performance budget (209.7 s / 198.2 s / 407.9 s, 0 cache hits). All green bare; numbers in `agent_execution_guide.md` §1.3.
-- Each item's source was read against its spec: **all 6 do what their specs say** (verdicts in §3).
-- All Wave E verification criteria verified across 7 rendered E2E jobs: 0 unneutral flagged tones, 0 disputed quote attributions kept, 0 R7 repairs on beats with quoted speech, 0 year-like stats, and 0 Armchairs.
-- The build queue is complete.
+**Wave E (E1–E6) was delivered as 6 commits (`26e0f2c`…`66b377f`) and independently verified on October 4, 2026, in a separate session.**
+- **Gates:** every gate G1–G14 was re-run bare: 257 fast tests, 37 slow tests, the E2E (1,033 s, steps 1–9), the offline gate (226 s) and the cold budget (202.8 s / 200.2 s / 403.0 s, 0 cache hits).
+- **Source:** each item was read against its spec, and **all 6 do what their specs say** (verdicts in §3).
+- **Every Wave E target is fixed on screen.** Rose's note is back as her quote. "It's a joke.", "Rose?" and "Meredith was impressed" are neutral. The narration line no longer belongs to The Soldiers. Icons depict their labels. There are 0 armchairs in 12 rendered jobs (two E2E runs).
+
+**Reading the renders as a viewer found three remaining problems.** They are specced as **Wave F (F1–F4)** in `agent_execution_guide.md`, each measured first and each within approved behaviour:
+- **A date drawn as a counter.** E3's rule covered only four-digit years. With "2016" blocked, the model drew "March 3rd" as a big **3** over "rd March"; my fresh run has three such scenes in one story. The same pattern appears in Wave A and Wave B runs. (F1)
+- **Placeholder and instruction text on screen.** "Icon: Bullet" and "Icon: Bird" appeared in comparison points, a side effect of E4 showing icon names. A comparison side read "Not specified". Neither recurred in my run, but the rule scanned all 9,080 strings since Wave A without a false alarm. (F2)
+- **Invented era stamps.** Of 358 location stamps since Wave A, 228 contain no year at all: "Present Day" for "Last spring", "Modern Era" for a 1990s motel, "N/A". The fix is deterministic: keep a year from the narration, or nothing. (F3)
 
 **No question is open for the user.**
 
@@ -78,6 +82,11 @@ The critic-triggered retry tells the model "fix the props if that reading fits b
 #### 2.11 A choice list the model never sees becomes a default
 
 The props schema's `enum` held 157 icon names, but the prompt listed none. The model guessed, and constrained decoding snapped each unknown guess to an early allowed name: "Armchair" was 9–18% of all icons in every wave and was never noticed, because the icon was valid. **Show the model the names it must choose from, and measure the distribution of what it picks, not just its validity.** Contract: `design_planner.md` §5.
+
+
+#### 2.12 A fix written for one example misses its siblings, and a prompt change moves errors elsewhere
+
+E3 was specced from one case, "2016", so the model's next move, "March 3rd" as a stat, passed. E4 showed the icon names, so the model began writing "Icon: Bullet" into text fields. **Name the defect class in the spec (a date, not a year), test the class against every past run, and re-read every template a prompt change reaches.** Contracts: `design_planner.md` §6 item 6 and item 7.
 
 ---
 
@@ -161,6 +170,8 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 - D3 — Selection rules R6 and R7; deterministic pictures — git log --grep "(d3)" — G1–G14 green bare, 251 passed (+5 tests); timeline <= 1 and comparison <= 1 enforced in selection rule R6 and validate_plan; reaction-shot rhythm rule R7 (run >= 2 non-picture scenes in replaceable templates triggers deterministic rhythm target: narrator emotion_beat, named non-narrator cast member, named set_piece, or named location); kept templates and picture templates never replaced; quoted text excluded from first-person narrator match; Choice gains rhythm_id; props plan_storyboard builds deterministic neutral emotion_beat, set_piece, or location with 0 LLM calls; needs_critic bypasses deterministic rhythm picture scenes; recipe_choices.json exact repairs and choices verified; rhythm_cases.json 7/7 verified and falsified (dropping QUOTED stripping picks c1 -> red; dropping kept-class check replaces R7-e/R7-f -> red).
 - D4 — Word-density measurement: eval bar, evals/word_density.py, E2E step 9 — git log --grep "(d4)" — G1–G14 green bare, 254 passed (+3 tests); evals/planner.py computes graphic_words_total, graphic_words_per_narration_word, light_share (scenes after title card with graphic words <= 2 / m), and R6/R7 repairs; light_share >= 1/3 bar enforced in fixture_pass; planner report includes metrics and Wave B baselines; evals/word_density.py CLI loads timeline.json, calculates graphic words/s and light share, exits 1 if per_second > 1.0 or light < m/3; scripts/e2e.sh step 9 checks rendered jobs and logs word density lines to e2e report; unit tests on synthetic timeline pass; falsified by dividing duration_frames by 3 (exit 1 -> red) and light_share bar to 0.9 (eval fails -> red).
 - D5 — Re-measure; close-out of Wave D — git log --grep "(d5)" — G1–G14 green bare, 254 passed; cold planner eval passes all §9 bars (8/8 critic regression, 0 word-cap violations, 0 newlines, 0 completeness failures, 0 ID leaks, light share 33.3%–57.1% >= 1/3); G12 E2E step 9 passes with all rendered jobs <= 1.0 graphic word/s and >= 1/3 light share; cold budget 390.16 s (<= 600 s) with 0 cache hits; story_recipe_box stills verified (neutral reaction shot, name-only set piece, 3-event timeline, 3-message text thread, 8-word quote); README updated to Waves A–D delivered; agent execution guide rewritten to Queue Complete.
+
+**Wave E — delivered; independently verified October 4, 2026.** Verdicts: E1 ✓ (`enforce_reading` on the standing scene; the emotion rule; disputed quote speakers dropped) · E2 ✓ (frozen data merged exactly) · E3 ✓ to spec, but the spec covered only years → F1 · E4 ✓ (the block follows any disagreement message; accepted), but it induced instruction text → F2 · E5 ✓ · E6 ✓ (`evals/verify_e2e_scenes.py` reproduces 0/0/0/0/0 on both runs; it is run by hand, not wired into `e2e.sh`).
 
 **Wave E:**
 
@@ -280,4 +291,19 @@ Wave C (C1–C7) specced. Issue 6 filed for the user.
   - `design_testing_and_validation.md` §2.
 - **New frozen data:** `tests/data/critic_enforcement_cases.json` and `tests/data/wave_e_expectations.json`.
 - Wave E (E1–E6) specced. **No question for the user.**
+
+**October 4, 2026: verification of Wave E (designer).**
+- Every gate and the cold budget reproduce bare. All 6 items match their specs, and every Wave E target is fixed in the renders.
+- Real-output review found three remaining problems:
+  - dates drawn as counters ("3 / rd March"; E3 covered only years);
+  - placeholder and instruction text ("Icon: Bullet", "Not specified");
+  - invented era stamps (228 of 358 since Wave A have no year).
+- **Each was measured before specifying:**
+  - the date rule was scanned over every run since Wave A (Wave A, Wave B and Wave E cases), and re-planned live: the scene falls back to quoting its sentence;
+  - the junk-text rule was scanned over 9,080 strings (only real junk flagged), and re-planned live: "10 per bird", a real second panel;
+  - a retry-based era rule was tried on 11 real scenes and produced worse stamps ("Two days"), so the era rule is a deterministic normalisation.
+- **Contracts updated:** `design_planner.md` §5 (era normalisation) and §6 items 6 and 7; `design_templates.md` §2.13; `design_testing_and_validation.md` §2.
+- **Relabelled:** the live-mode constraints in `design_future_live_and_video.md` §1 changed from F1–F6 to **LC1–LC6**, so that Wave F's item ids are unambiguous.
+- **New frozen data:** `tests/data/wave_f_cases.json`.
+- Wave F (F1–F4) specced. **No question for the user.**
 

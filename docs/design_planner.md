@@ -203,6 +203,15 @@ If it fails `validate_scene`, the scene goes through the normal ladder with its 
 ```
 Each template's registry `writing_rules` state its word caps and list maxima (`design_templates.md` §5.3); the exact strings were in the Wave D guide's item D2 and now live in the registry.
 
+**Era stamps show a year from the narration, or nothing (added October 4, 2026).** In props planning, after text normalisation and before `validate_scene`, a `location`'s `era_label` is normalised deterministically, with no LLM call:
+- if it contains a four-digit year (`\b(1[0-9]{3}|20[0-9]{2})s?\b`) that also appears in the transcript, it becomes that year token: "1919 Boston" → "1919", "1932 era" → "1932", "1960s" stays;
+- otherwise it becomes `null`.
+
+This applies to planner output only; human edits in `preview` are untouched.
+- **Why:** the stamp is drawn rotated on the image, so its words must be right.
+- **Measured** over all 358 location scenes since Wave A: only **4** stamps were already a bare narration year; **115** contained one ("1932 Era"); **228** had none, and were invented ("Present Day" for "Last spring" and "I drove up that weekend", "Modern Era" for a 1990s motel, "40 Years", "N/A").
+- A retry-based rule was tried first, on 11 real scenes. It produced worse stamps ("Two days", "forty years") and failed the 1919 molasses location outright, so the rule is deterministic.
+
 **Allowed icon names in the props prompt (added October 3, 2026).** For templates with an `icon` field (`stat_callout`, `icon_list`, `cause_effect`, `comparison`), the user message ends with this block, verbatim, followed by every name of the icon allow-list in its `contracts/icons.py` order, separated by `", "`:
 ```
 
@@ -255,10 +264,26 @@ The **same functions** run on LLM output (inside the ladder) and on human edits 
      Error: `props.value: <value> is a year in this beat; a year belongs in a timeline or an era label, not a stat`.
      - **Measured:** Wave D's R6 demoted `story_room_12`'s second timeline to its alternate `stat_callout`, which rendered "She had died in 2016…" as **"2,016"** counting up from 0, under an armchair icon. Given a unit field, the model wrote "Year died" instead. That is the only year-like stat in every run since Wave A.
      - Counts from 1000 to 2100 written without a thousands separator are treated as years; the ladder then uses the alternate template.
+   - **A day of a date is not a stat either (added October 4, 2026; the year rule above was too narrow).** It is an error when:
+     - a `stat_callout` has `decimals` 0, `display_scale` `"none"` and an integer `value` v;
+     - and the beat contains v as the day of a date: `\b(?:<month>)\.?\s+<v>(?:st|nd|rd|th)?\b` or `\b<v>(?:st|nd|rd|th)?\s+(?:of\s+)?(?:<month>)\b`, case-insensitive, where `<month>` is any full English month name.
+
+     Error: `props.value: <v> is a day of a date in this beat; a date belongs in a timeline or an era label, not a stat`.
+     - **Measured:** after the year rule blocked "2016", the model drew "She had died in 2016, and March 3rd was her birthday." as a big **3** with the unit "March" (Wave E's final run). "March 3rd" had already been drawn as "3" + "rd" in Wave A and Wave B.
+     - With the rule, that scene failed all 3 attempts and fell to the deterministic quote of the sentence.
    - `timeline.events[].date_label`: see §8 (Issue 4).
 7. **Text completeness (added September 25, 2026)**, for every free-text string field (not ids, enums, `prefix`, or `date_label`/`era_label`):
    - **Repair (not an error):** runs of whitespace, including `\n`, collapse to one space; strip the ends.
    - **Errors:** the string contains no letter or digit (`"..."`, `"—"`); it ends with `-`, `(`, `[`, `,`, `:` or `/`; its `(`/`)`, `[`/`]` or `"` characters are unbalanced; its last word is a truncation fragment (a single **lowercase** letter other than `a`, e.g. "…crowds at p"; a capital like "Plan B" is legitimate). Error format: `props.caption: looks cut off ("…crowds at p")`.
+   - **No placeholders or instructions on screen (added October 4, 2026).** For every `WORD_CAPS` field:
+     - a value matching `\bicon\s*:` (case-insensitive) is an error: `props.<path>: "<value>" is an instruction, not on-screen text — put icons only in icon fields`;
+     - a value whose normalised form (`re.sub(r"[^\w/ ]", "", v).strip().casefold()`) is one of `not specified`, `unspecified`, `not mentioned`, `n/a`, `na`, `none`, `unknown`, `tbd`, `no data`, `not applicable` is an error: `props.<path>: "<value>" is a placeholder — show only what the beat says`.
+     - **Measured** over all 9,080 on-screen strings of every E2E run since Wave A, the rule flags only real junk:
+       - "N/A" ×15 (Wave A timeline labels);
+       - **"Icon: Bullet" and "Icon: Bird"**, written into comparison points after E4 showed the icon names;
+       - **"Not specified"**, a comparison side the beat does not have.
+
+       It flags no legitimate string ("UNKNOWN IDENTITY" is not a whole-string placeholder). On retry, the model wrote "10 per bird" and a real second panel.
 8. **No internal ids on screen (added September 26, 2026).** No free-text field (the list in item 7) may contain a whole token equal to one of **this bible's** entity ids (`c1`–`c8`, `p1`–`p4`, `v1`–`v3`), with or without surrounding parentheses or a trailing colon, casefolded. Error: `props.text: contains the internal id "v1" — use the name ("the recipe box")`. The props prompt says: "Refer to people, places and objects by their names; never write ids like c1, p2 or v1." Measured in Wave B's E2E storyboards: 4 leaks in 311 unique scenes, e.g. "One card missing from the recipe box (v1).", "c1 buys the Sundowner from c3", "Feathered adversaries (c4: The Emus)".
 9. **Word caps (added September 27, 2026, Issue 7 → Option A).**
    - For every `(template, field path)` in `WORD_CAPS` (`design_templates.md` §5.3), `count_words(value)` must be ≤ the cap. Error: `props.items[0].label: 5 words, limit 3 — rewrite it shorter as a complete phrase`.

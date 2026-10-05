@@ -10,12 +10,12 @@ None of this is approved for build. It exists for two reasons: (1) to record the
 
 | # | Constraint | Enforced by |
 |---|---|---|
-| F1 | Templates are pure functions of (props, scene clock). No Remotion frame APIs outside `src/clock/remotion/`. | `check_renderer_purity.sh` (G9) |
-| F2 | A template never reads another scene, the full timeline, or the future. It needs only its own props plus the entity dictionaries. So scenes can be appended one at a time. | `design_data_contracts.md` §7; code review |
-| F3 | Planner selection is **windowed** (6 beats plus 2 previous) and props are **per scene**. Both already work on partial transcripts. | `design_planner.md` §4–5 |
-| F4 | Every piece of timing logic (beats, captions, frames) is a pure function of a word list, so it can run on a growing word list. | `timing/` unit tests |
-| F5 | Transcript words carry absolute ms; nothing assumes the transcript is complete except `duration_frames` and the final beat's end. | `design_audio_and_timing.md` |
-| F6 | No `--auto-approve` for *offline* jobs. Live mode is a different product surface with no review gate by nature, and must be a separate command, not a flag on `render`. | `design_system_architecture.md` §5 |
+| LC1 | Templates are pure functions of (props, scene clock). No Remotion frame APIs outside `src/clock/remotion/`. | `check_renderer_purity.sh` (G9) |
+| LC2 | A template never reads another scene, the full timeline, or the future. It needs only its own props plus the entity dictionaries. So scenes can be appended one at a time. | `design_data_contracts.md` §7; code review |
+| LC3 | Planner selection is **windowed** (6 beats plus 2 previous) and props are **per scene**. Both already work on partial transcripts. | `design_planner.md` §4–5 |
+| LC4 | Every piece of timing logic (beats, captions, frames) is a pure function of a word list, so it can run on a growing word list. | `timing/` unit tests |
+| LC5 | Transcript words carry absolute ms; nothing assumes the transcript is complete except `duration_frames` and the final beat's end. | `design_audio_and_timing.md` |
+| LC6 | No `--auto-approve` for *offline* jobs. Live mode is a different product surface with no review gate by nature, and must be a separate command, not a flag on `render`. | `design_system_architecture.md` §5 |
 
 ---
 
@@ -46,7 +46,7 @@ mic ─► streaming ASR (local) ─► word stream ─► live beat closer ─�
 - **ASR candidates** (to be measured when DF4 starts): an MLX Whisper streaming wrapper (word timestamps on a ~200 ms cadence were reported in April 2026) and `parakeet-mlx`. The selection criterion is word-final latency and WER on the fixtures, measured, not assumed.
 - **Beat closer:** close a beat at sentence-final punctuation from the ASR, or at a pause ≥ 600 ms, or at 8 s. That is the same `BEAT_MAX_MS`.
 - **The latency reality:** a beat cannot be planned before it has been said. With a MoE model at the MVP's speed, visuals will lag speech by roughly **2–4 s**. Two mitigations to evaluate: (a) show an immediate `kinetic_quote` of the live words, then upgrade to the planned template when it arrives; (b) **prepared mode**: if the speaker has a script or outline, plan every scene in advance with the offline planner and, live, only *match* speech to the next planned scene. That gives near-zero lag and full quality.
-- **Rendering:** the templates run unchanged in a plain React app. The clock adapter swaps `useCurrentFrame` for a `requestAnimationFrame` counter (F1 is what makes that a small change). Remotion is not needed live.
+- **Rendering:** the templates run unchanged in a plain React app. The clock adapter swaps `useCurrentFrame` for a `requestAnimationFrame` counter (LC1 is what makes that a small change). Remotion is not needed live.
 
 **User direction for live presentations (September 27, 2026), verbatim:** *"For real-time presentations, it makes sense to show timelines and repeated graphics to drive home the point."* So live mode gets its **own** visual profile when DF4 is specced:
 - Timelines stay a first-class device.
