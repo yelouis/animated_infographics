@@ -20,10 +20,16 @@
 - **Source:** each item was read against its spec, and **all 6 do what their specs say** (verdicts in §3).
 - **Every Wave E target is fixed on screen.** Rose's note is back as her quote. "It's a joke.", "Rose?" and "Meredith was impressed" are neutral. The narration line no longer belongs to The Soldiers. Icons depict their labels. There are 0 armchairs in 12 rendered jobs (two E2E runs).
 
-**Wave F (F1–F4) was delivered as 4 commits and verified on October 4, 2026.**
-- **Gates:** every gate G1–G14 reproduces bare: 265 fast tests, 37 slow tests, full E2E with 10 steps (all passing; step 10 scene verification passes with 0 defects across all 5 rendered jobs), offline gate (exit 0), and cold budget (206.62 s / 196.19 s / 402.81 s, 0 cache hits).
+**Wave F (F1–F4) was delivered as 4 commits (`084d666`…`c88a69f`) and independently verified on October 4, 2026, in a separate session.**
+- **Gates:** every gate G1–G14 was re-run bare: 265 fast tests, 37 slow tests, the E2E (859 s, steps 1–10), the offline gate (235 s) and the cold budget (205.8 s / 191.3 s / 397.1 s, 0 cache hits). All green.
 - **Source:** each item was read against its spec, and **all 4 do what their specs say** (verdicts in §3).
-- **Every Wave F target is fixed on screen.** "March 3rd" is no longer drawn as a counter (falls back cleanly to a kinetic quote of the sentence); placeholder and instruction text ("Icon: Bullet", "Not specified") are rejected by validation and absent from renders; invented era stamps ("Present Day" on "Last spring") are normalised to null or narration year.
+- **Every Wave F target is fixed on screen**, checked in the renders:
+  - "She had died in 2016, and March 3rd was her birthday." is shown as the sentence, not a counter;
+  - the "March 3rd" counters are gone;
+  - the emu comparison reads "9,860 rounds / 10 per bird" against "986 kills", with no "Icon:" text;
+  - every era stamp is a narration year ("1919", "1932") or absent.
+- **The new E2E step 10 is a real gate.** It reports 0 in every column on both Wave F runs. Run on the pre-Wave-F jobs, it caught 3 date stats and 1–3 invented stamps per job, and exited 1.
+- **Real-output review found no new defect that needs work.** The remaining observations are watch items or deliberately unscheduled behaviour, listed in `agent_execution_guide.md` §2. **The queue is complete.**
 
 **No question is open for the user.**
 
@@ -181,6 +187,8 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 - E4 — The props prompt lists the allowed icon names — git log --grep "(e4)" — G1–G14 green bare, 257 passed (+1 test), live slow tests pass (2/2 emu_war scenes contain 0 Armchair); props user prompt appends icon allow-list block for stat_callout, icon_list, cause_effect, and comparison; unit tests in tests/test_props_prompt.py assert block presence/absence (red first); falsified by removing block (slow test on emu_war scenes reproduces Armchair in both icon_list and cause_effect -> red).
 - E5 — Hygiene: no import-time environment change; stale comments — git log --grep "(e5)" — G1–G14 green bare, 257 passed; deleted HF_HOME override from __init__.py; doctor check 7 Kokoro missing message gains explicit hint (if HF_HOME is set, it must contain hub/models--hexgrad--Kokoro-82M; unset it or export HF_HOME="$HOME/.cache/huggingface"); design_testing_and_validation.md §3 documents battery.sh export; location.tsx and set_piece.tsx comments updated for D1 caption removal; red first verified on mktemp HF_HOME printed vs temporary dir, and doctor exits 4 with hint.
 - E6 — Re-measure; close-out of Wave E — git log --grep "(e6)" — G1–G14 green bare, 257 passed, 37 slow passed; cold planner eval passes all §9 bars (8/8 critic regression, 0 word-cap violations, 0 Armchairs, light share 33.3%–57.1% ≥ 1/3); G12 E2E and verify_e2e_scenes pass with 0 unneutral tones, 0 disputed attributions, 0 quoted R7 repairs, 0 year stats, and 0 Armchairs across all 7 rendered jobs; cold budget 407.94 s (≤ 600 s) with 0 cache hits; recipe box and room 12 stills verified (kinetic quote for Rose's note, neutral avatar for online call, book/camera/envelope icons, "3 March" stat); full battery exits 0 bare; queue complete.
+**Wave F — delivered; independently verified October 4, 2026.** Verdicts: F1 ✓ (the date regex is verbatim; the frozen case gives its exact error) · F2 ✓ (`placeholder_errors` is wired after item 9; 0 false alarms) · F3 ✓ (normalisation runs before the length check, so "January 15, 1919" now becomes "1919" instead of failing) · F4 ✓ (`verify_e2e_scenes` extended and wired into `e2e.sh` as step 10; falsified on pre-Wave-F output). The design gap was that `design_testing_and_validation.md` §4 did not list step 10; it now does.
+
 **Wave F:**
 
 - F1 — A date is not a stat — git log --grep "(f1)" — G1–G14 green bare, 258 passed (+1 test); stat_callout validator rejects integer values matching month-and-day or day-and-month date patterns in beat text; frozen March 3rd case fails with exact error (red first); 3 soldiers, 20,000 emus, and 312 cards do not error; falsified by removing ordinal group (March 3rd goes red bare).
@@ -312,4 +320,17 @@ Wave C (C1–C7) specced. Issue 6 filed for the user.
 - **Relabelled:** the live-mode constraints in `design_future_live_and_video.md` §1 changed from F1–F6 to **LC1–LC6**, so that Wave F's item ids are unambiguous.
 - **New frozen data:** `tests/data/wave_f_cases.json`.
 - Wave F (F1–F4) specced. **No question for the user.**
+
+**October 4, 2026: verification of Wave F (designer).**
+- Every gate and the cold budget reproduce bare. All 4 items match their specs, and every Wave F target is fixed in the renders.
+- E2E step 10 was falsified on the pre-Wave-F jobs: it exits 1 on the 3 date stats and the invented stamps.
+- `design_testing_and_validation.md` §4 gains step 10, which the guide had specified but no design doc recorded.
+- **No new defect needs work;** the guide is rewritten to **Queue Complete** with these watch items:
+  - render at 191–200 s against its 210 s bar;
+  - `molasses_flood`'s planner-eval light share sitting exactly at 1/3 since Wave D;
+  - same-day eval reports overwrite each other by filename; git history keeps every version, and a verifier restores the committed copy after its own runs.
+- **Unscheduled behaviours, recorded so no one "fixes" them unasked:**
+  - a quotation spanning two sentences can be split between two beats;
+  - the critic's emotion-beat *who* reading is noisy;
+  - R7 treats reported speech without quotation marks as narration.
 

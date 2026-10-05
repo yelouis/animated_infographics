@@ -142,6 +142,17 @@ Uses a fresh `--jobs-dir` under `artifacts/e2e/<timestamp>/`. Steps and assertio
    - It exits **1** if any job has **> 1.0 graphic word/s** or **< 1/3** such scenes.
    - It prints one line per job, which goes into the E2E report.
    - **Falsify:** copy one rendered job's `timeline.json` to a temporary directory, divide `duration_frames` by 3 (tripling words/s), and run it there → **1**.
+10. **Scene criteria (added October 4, 2026, Waves E and F):** `uv run python -m animated_infographics.evals.verify_e2e_scenes <job>…` over the same rendered jobs → **0**. It reads each job's `plan_report.json`, `storyboard.json` and `beats.json`, and counts per job:
+    - dialogue lines whose tone the critic flagged `vs unknown` and that are still non-neutral;
+    - `kinetic_quote` scenes keeping a disputed attribution;
+    - R7 repairs on beats with quoted speech;
+    - year stats and date stats (`design_planner.md` §6 item 6);
+    - placeholder or instruction text (item 7);
+    - era stamps that are not exactly a narration year (§5);
+    - "Armchair" icons.
+
+    Every column must be 0; the table goes into the E2E report.
+    - **Falsified** October 4, 2026: run on the pre-Wave-F E2E jobs, it reported 3 date stats and 1–3 invented era stamps per job, and exited **1**.
 
 Writes `docs/evals/e2e_<YYYY-MM-DD>.md` (committed): every exit code, the `verify.json` contents, sync-probe counts, stage timings, and the contact sheets copied to `docs/evals/assets/<YYYY-MM-DD>/`. **MP4s are not committed** (size); the report names their paths and SHA-256.
 
