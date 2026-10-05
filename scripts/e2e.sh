@@ -421,6 +421,18 @@ echo "$WORD_DENSITY_OUT" > "$ARTIFACTS_DIR/step9_word_density.txt"
 log "Step 9 passed."
 
 # ============================================================================
+# Step 10: Scene criteria verification (dates, junk text, era stamps, Wave E zeros)
+# ============================================================================
+log "Step 10: Running verify_e2e_scenes across rendered jobs..."
+VERIFY_SCENES_OUT=$(uv run python -m animated_infographics.evals.verify_e2e_scenes \
+  "$JOB_DIR" "$AUDIO_JOB_DIR" "$RECIPE_DIR" "$ROOM12_DIR" "$EMU_DIR")
+CODE=$?
+echo "$VERIFY_SCENES_OUT"
+[ "$CODE" -eq 0 ] || fail "Step 10 scene verification failed with exit $CODE: $VERIFY_SCENES_OUT"
+echo "$VERIFY_SCENES_OUT" > "$ARTIFACTS_DIR/step10_verify_scenes.txt"
+log "Step 10 passed."
+
+# ============================================================================
 # Write Complete Evaluation Report
 # ============================================================================
 REPORT_PATH="$REPO_ROOT/docs/evals/e2e_$DATE_STR.md"
@@ -503,10 +515,11 @@ def format_text_check_summary(j: Path) -> str:
     return f'{len(entities)} entities ({counts[\"clean\"]} clean, {counts[\"regenerated\"]} regenerated, {counts[\"skipped\"]} skipped, {counts[\"failed\"]} failed, {counts[\"unavailable\"]} unavailable)'
 
 density_text = Path('$ARTIFACTS_DIR/step9_word_density.txt').read_text(encoding='utf-8').strip()
+verify_scenes_text = Path('$ARTIFACTS_DIR/step10_verify_scenes.txt').read_text(encoding='utf-8').strip()
 
 report = f'''# E2E Evaluation Report — $DATE_STR
 
-All steps 1–9 of design_testing_and_validation.md §4 verified.
+All steps 1–10 of design_testing_and_validation.md §4 verified.
 
 ## Results Summary
 
@@ -524,6 +537,7 @@ All steps 1–9 of design_testing_and_validation.md §4 verified.
 | 7b | voice override --voice am_michael (0 LLM calls) | 0 | PASS |
 | 8 | determinism byte-identity on warm cache | 0 | PASS |
 | 9 | word density (≤1.0 words/s, light share ≥1/3) | 0 | PASS |
+| 10 | scene criteria verification (dates, junk, era, wave E zeros) | 0 | PASS |
 
 ## Details by Fixture
 
@@ -610,6 +624,11 @@ All steps 1–9 of design_testing_and_validation.md §4 verified.
 ### Word Density (Issue 7)
 \`\`\`
 {density_text}
+\`\`\`
+
+### Scene Criteria Verification (Step 10, Wave F)
+\`\`\`
+{verify_scenes_text}
 \`\`\`
 '''
 Path('$REPORT_PATH').write_text(report, encoding='utf-8')

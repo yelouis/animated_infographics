@@ -1,4 +1,4 @@
-# Agent Execution Guide — Active Build: Wave F (verification fixes, 4 items) — October 4, 2026
+# Agent Execution Guide — Queue Complete — October 4, 2026
 
 **You are an engineering agent with no memory of this project.** Waves A–E are built, committed and pushed (head `66b377f`).
 
@@ -64,18 +64,18 @@ Unchanged; `doctor` 22 checks OK. M4 Max 64 GB; ffmpeg 8.1; Node v26.5.0; Python
 | G1 | `uv run ruff check .` | exit 0 |
 | G2 | `uv run ruff format --check .` | exit 0 |
 | G3 | `uv run mypy src` | exit 0 |
-| G4 | `uv run pytest -q -m "not slow"` | exit 0 · **257 passed** |
+| G4 | `uv run pytest -q -m "not slow"` | exit 0 · **265 passed** |
 | G5 | `npm --prefix renderer run typecheck` | exit 0 |
 | G6 | `npm --prefix renderer run lint` | exit 0 |
 | G7 | `npm --prefix renderer test` | exit 0 · 16 passed |
 | G8 | `./scripts/check_schema_sync.sh` | exit 0 |
 | G9 | `./scripts/check_renderer_purity.sh` | exit 0 |
-| G10 | `./scripts/check_gallery.sh` | exit 0 · 37 s · 0 overflows |
-| G11 | `uv run pytest -q -m slow` | exit 0 · **37 passed** · 188 s |
-| G12 | `./scripts/e2e.sh` | exit 0 · 1,033 s · steps 1–9 pass; sync probe 9/9; word density per job 0.54–0.83 graphic words/s, light share 4/9–16/32. `evals/verify_e2e_scenes.py` on its jobs: 0 surviving flagged tones, 0 disputed quote speakers, 0 quoted beats replaced, 0 year stats, 0 armchairs. **But** see §1.4 |
-| G13 | `./scripts/check_offline.sh` | exit 0 · 226 s |
+| G10 | `./scripts/check_gallery.sh` | exit 0 · 0 overflows |
+| G11 | `uv run pytest -q -m slow` | exit 0 · **37 passed** |
+| G12 | `./scripts/e2e.sh` | exit 0 · steps 1–10 pass; sync probe 9/9; word density per job 0.52–0.83 graphic words/s, light share 4/9–15/28 (all ≥ 1/3); step 10 `verify_e2e_scenes.py`: 0 tones, 0 attributions, 0 R7 quoted repairs, 0 year stats, 0 date stats, 0 junk text, 0 invented era stamps, 0 armchairs across all 5 rendered jobs |
+| G13 | `./scripts/check_offline.sh` | exit 0 |
 | G14 | `uv run infographics doctor` | exit 0 · 22 checks OK |
-| Budget | `./scripts/measure_budget.sh` (cold, `story_recipe_box`) | exit 0 · **0 cache hits** · `new`→review **202.8 s** (≤ 390) · render **200.2 s** (≤ 210) · total **403.0 s** (≤ 600) · 58 LLM calls. **Watch:** render has 10 s of headroom (the agent's run: 198.2 s). Wave F changes no rendering, so a render over 210 s in F4 is filed, not tuned |
+| Budget | `./scripts/measure_budget.sh` (cold, `story_recipe_box`) | exit 0 · **0 cache hits** · `new`→review **206.62 s** (≤ 390) · render **196.19 s** (≤ 210) · total **402.81 s** (≤ 600) · preview (warm) **13.70 s** (≤ 60) · 57 LLM calls |
 
 ### 1.4 Measurements that shaped Wave F (October 4, 2026, `gemma4:26b`)
 
@@ -242,8 +242,8 @@ Unchanged; `doctor` 22 checks OK. M4 Max 64 GB; ffmpeg 8.1; Node v26.5.0; Python
 
 ### 5.1 Already delivered
 
-- **Wave A (A1–A22)**, verified September 25, 2026; **Wave B (B1–B17)**, September 26; **Waves C (C1–C8) and D (D1–D5)**, October 3; **Wave E (E1–E6)**, independently verified October 4, 2026. One line per item, with verdicts, is in `ongoing_general_errors.md` §3.
-- Items marked "✓" are not reworked. Items marked "→ F<n>" are touched only as that item specifies.
+- **Wave A (A1–A22)**, verified September 25, 2026; **Wave B (B1–B17)**, September 26; **Waves C (C1–C8) and D (D1–D5)**, October 3; **Wave E (E1–E6)**, October 4; **Wave F (F1–F4)**, October 4, 2026. One line per item, with verdicts, is in `ongoing_general_errors.md` §3.
+- Items marked "✓" are not reworked.
 
 ### 5.2 Accepted equivalents (checked; do not "fix" these back)
 
@@ -427,11 +427,11 @@ Unchanged; `doctor` 22 checks OK. M4 Max 64 GB; ffmpeg 8.1; Node v26.5.0; Python
 
 ## 9. Definition of Done: Wave F
 
-- [ ] F1–F4 each landed as one pushed commit scoped to its id, with red and green runs recorded.
-- [ ] The frozen "March 3rd" stat yields its exact error; "3 soldiers", "about 20,000 emus" and "312 handwritten cards" do not.
-- [ ] Both frozen junk-text comparisons yield their exact errors, and no other frozen scene in `tests/data/` errors.
-- [ ] All eight frozen era stamps normalise to their expected values; the stub integration shows "Present Day" → null.
-- [ ] F4: every planner-eval bar (incl. 0 placeholder errors), every E2E step **including the new step 10** (0 date stats, 0 junk text, 0 invented era stamps, plus Wave E's five zeros), and the cold budget bars met or filed.
-- [ ] The F4 stills opened and described.
-- [ ] §1.3 re-measured this session, read bare.
-- [ ] This guide rewritten to **Queue Complete**. **Then stop. Do not invent work.**
+- [x] F1–F4 each landed as one pushed commit scoped to its id, with red and green runs recorded.
+- [x] The frozen "March 3rd" stat yields its exact error; "3 soldiers", "about 20,000 emus" and "312 handwritten cards" do not.
+- [x] Both frozen junk-text comparisons yield their exact errors, and no other frozen scene in `tests/data/` errors.
+- [x] All eight frozen era stamps normalise to their expected values; the stub integration shows "Present Day" → null.
+- [x] F4: every planner-eval bar (incl. 0 placeholder errors), every E2E step **including the new step 10** (0 date stats, 0 junk text, 0 invented era stamps, plus Wave E's five zeros), and the cold budget bars met or filed.
+- [x] The F4 stills opened and described.
+- [x] §1.3 re-measured this session, read bare.
+- [x] This guide rewritten to **Queue Complete**. **Then stop. Do not invent work.**

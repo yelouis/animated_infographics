@@ -20,10 +20,10 @@
 - **Source:** each item was read against its spec, and **all 6 do what their specs say** (verdicts in §3).
 - **Every Wave E target is fixed on screen.** Rose's note is back as her quote. "It's a joke.", "Rose?" and "Meredith was impressed" are neutral. The narration line no longer belongs to The Soldiers. Icons depict their labels. There are 0 armchairs in 12 rendered jobs (two E2E runs).
 
-**Reading the renders as a viewer found three remaining problems.** They are specced as **Wave F (F1–F4)** in `agent_execution_guide.md`, each measured first and each within approved behaviour:
-- **A date drawn as a counter.** E3's rule covered only four-digit years. With "2016" blocked, the model drew "March 3rd" as a big **3** over "rd March"; my fresh run has three such scenes in one story. The same pattern appears in Wave A and Wave B runs. (F1)
-- **Placeholder and instruction text on screen.** "Icon: Bullet" and "Icon: Bird" appeared in comparison points, a side effect of E4 showing icon names. A comparison side read "Not specified". Neither recurred in my run, but the rule scanned all 9,080 strings since Wave A without a false alarm. (F2)
-- **Invented era stamps.** Of 358 location stamps since Wave A, 228 contain no year at all: "Present Day" for "Last spring", "Modern Era" for a 1990s motel, "N/A". The fix is deterministic: keep a year from the narration, or nothing. (F3)
+**Wave F (F1–F4) was delivered as 4 commits and verified on October 4, 2026.**
+- **Gates:** every gate G1–G14 reproduces bare: 265 fast tests, 37 slow tests, full E2E with 10 steps (all passing; step 10 scene verification passes with 0 defects across all 5 rendered jobs), offline gate (exit 0), and cold budget (206.62 s / 196.19 s / 402.81 s, 0 cache hits).
+- **Source:** each item was read against its spec, and **all 4 do what their specs say** (verdicts in §3).
+- **Every Wave F target is fixed on screen.** "March 3rd" is no longer drawn as a counter (falls back cleanly to a kinetic quote of the sentence); placeholder and instruction text ("Icon: Bullet", "Not specified") are rejected by validation and absent from renders; invented era stamps ("Present Day" on "Last spring") are normalised to null or narration year.
 
 **No question is open for the user.**
 
@@ -186,6 +186,7 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 - F1 — A date is not a stat — git log --grep "(f1)" — G1–G14 green bare, 258 passed (+1 test); stat_callout validator rejects integer values matching month-and-day or day-and-month date patterns in beat text; frozen March 3rd case fails with exact error (red first); 3 soldiers, 20,000 emus, and 312 cards do not error; falsified by removing ordinal group (March 3rd goes red bare).
 - F2 — No placeholder or instruction text on screen — git log --grep "(f2)" — G1–G14 green bare, 261 passed (+3 tests); placeholder_errors rejects instruction text matching \bicon\s*: and whole-string placeholder words across WORD_CAPS fields; text audit tracks placeholder_violations_count with bar 0; both frozen junk comparison cases fail with exact errors (red first); "UNKNOWN IDENTITY" and "No Record Found Yet" pass with 0 errors; all frozen storyboards in tests/data/ yield 0 errors except the two frozen junk scenes; falsified by removing "not specified" (frozen case goes red bare).
 - F3 — Era stamps show a narration year or nothing — git log --grep "(f3)" — G1–G14 green bare, 264 passed (+3 tests); normalize_era_label normalizes location era_label to a four-digit year from the narration or null; applied to planner location props before validate_scene; all 8 frozen era label cases match expected values (red first); 1960s with 1960 in transcript yields 1960s, absent 1932 yields null; stub backend returning 'Present Day' produces null; falsified by keeping labels with digits (1932 era goes red bare).
+- F4 — Re-measure; close-out of Wave F — git log --grep "(f4)" — G1–G14 green bare, 265 passed, 37 slow passed; cold planner eval passes all §9 bars (8/8 critic regression, 0 word-cap violations, 0 placeholder errors, 0 armchairs, light share 33.3%–57.1% ≥ 1/3); G12 E2E step 10 verify_e2e_scenes passes with 0 unneutral tones, 0 disputed attributions, 0 quoted R7 repairs, 0 year stats, 0 date stats, 0 junk text, 0 invented era stamps, and 0 armchairs across all 5 rendered jobs; cold budget 402.81 s (≤ 600 s) with 0 cache hits; room 12, recipe box, and emu war stills verified; full battery exits 0 bare; queue complete.
 
 
 ---
