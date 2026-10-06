@@ -10,6 +10,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+from animated_infographics.contracts.deck import DeckPlan
 from animated_infographics.contracts.director import DirectorPlan
 from animated_infographics.contracts.icons import ICON_NAMES
 from animated_infographics.contracts.models import (
@@ -102,6 +103,7 @@ def export_all(out_dir: Path, project_root: Path) -> None:
         "timeline.schema.json": generate_schema(Timeline),
         "styles.schema.json": generate_schema(StyleSpec),
         "director.schema.json": generate_schema(DirectorPlan),
+        "deck.schema.json": generate_schema(DeckPlan),
     }
 
     for filename, schema in schemas.items():
@@ -135,6 +137,11 @@ def export_all(out_dir: Path, project_root: Path) -> None:
     director_path = renderer_gen_dir / "director.ts"
     director_ts = generate_contracts_ts(schemas["director.schema.json"], project_root)
     director_path.write_text(director_ts, encoding="utf-8")
+
+    # 8. Deck TS
+    deck_path = renderer_gen_dir / "deck.ts"
+    deck_ts = generate_contracts_ts(schemas["deck.schema.json"], project_root)
+    deck_path.write_text(deck_ts, encoding="utf-8")
 
 
 def main() -> None:

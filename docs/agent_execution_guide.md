@@ -66,8 +66,8 @@
 
 | # | Gate | Result |
 |---|---|---|
-| G1–G3 | ruff / format / mypy | exit 0 (131 files formatted; 65 source files) |
-| G4 | `uv run pytest -q -m "not slow"` | exit 0 · **302 passed** |
+| G1–G3 | ruff / format / mypy | exit 0 (136 files formatted; 68 source files) |
+| G4 | `uv run pytest -q -m "not slow"` | exit 0 · **314 passed** |
 | G5–G7 | renderer typecheck / lint / vitest | exit 0 · 19 vitest |
 | G8 | schema sync | exit 0 |
 | G9 | renderer purity | exit 0 |
@@ -477,6 +477,7 @@
 - E4's icon block follows any disagreement message.
 - R6 keeps the original alternate even when it equals the new primary.
 - F3's era normalisation runs before the length check.
+- `num_predict=2048` in deck stage (`design_presentation_simulation.md` §2 suggested 1536, but 8–10 slides with indentation and sentence lists require ~1520–1600 tokens).
 
 ### 5.3 User decisions
 

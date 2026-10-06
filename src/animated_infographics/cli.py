@@ -15,6 +15,7 @@ import typer
 # Runtime environment settings
 os.environ["HF_HUB_OFFLINE"] = "1"
 
+from animated_infographics.audio.narrate import build_sentence_list
 from animated_infographics.contracts.models import (
     Beats,
     Bible,
@@ -29,13 +30,16 @@ from animated_infographics.errors import (
     ValidationFailed,
 )
 from animated_infographics.jobs import (
+    ALL_PRESENTATION_STAGES,
     ALL_STAGES,
+    PRESENTATION_STAGES,
     STAGES,
     Job,
     RunContext,
     StageFn,
 )
 from animated_infographics.planner.validate import PlanContext, validate_plan
+from animated_infographics.presentation.deck import run_deck_stage, validate_deck
 from animated_infographics.stages.assets import run_assets_stage
 from animated_infographics.stages.bible import run_bible_stage
 from animated_infographics.stages.compile import run_compile_stage
@@ -64,7 +68,10 @@ def _unimplemented_stage(stage_name: str) -> StageFn:
     return _fn
 
 
-STAGE_REGISTRY: dict[str, StageFn] = {stage: _unimplemented_stage(stage) for stage in ALL_STAGES}
+ALL_KNOWN_STAGES = sorted(set(ALL_STAGES) | set(ALL_PRESENTATION_STAGES))
+STAGE_REGISTRY: dict[str, StageFn] = {
+    stage: _unimplemented_stage(stage) for stage in ALL_KNOWN_STAGES
+}
 STAGE_REGISTRY["ingest"] = run_ingest_stage
 STAGE_REGISTRY["voice"] = run_voice_stage
 STAGE_REGISTRY["narrate"] = run_narrate_stage
@@ -77,6 +84,7 @@ STAGE_REGISTRY["assets"] = run_assets_stage
 STAGE_REGISTRY["compile"] = run_compile_stage
 STAGE_REGISTRY["preview"] = run_preview_stage
 STAGE_REGISTRY["render"] = run_render_stage
+STAGE_REGISTRY["deck"] = run_deck_stage
 
 
 def set_stage_registry(custom: Mapping[str, StageFn]) -> None:
@@ -242,6 +250,97 @@ def new(
         print(f"storyboard.json: {job.dir / 'storyboard.json'}")
 
 
+@app.command("present-sim")
+def present_sim(
+    script_path: Annotated[Path, typer.Argument(help="Path to input text script (.txt)")],
+    style: Annotated[
+        str, typer.Option("--style", "-s", help="Style name (literal | creative)")
+    ] = "literal",
+    perturb: Annotated[
+        str, typer.Option("--perturb", "-p", help="Perturbation level (mild | strong)")
+    ] = "mild",
+    seed: Annotated[int, typer.Option(help="Simulation seed")] = 7,
+    tiebreak: Annotated[str, typer.Option(help="Tiebreak mode: none or llm")] = "none",
+    voice: Annotated[
+        str | None, typer.Option(help="Voice override: af_heart or am_michael")
+    ] = None,
+    music: Annotated[Path | None, typer.Option(help="Optional background music WAV")] = None,
+    sfx_dir: Annotated[Path | None, typer.Option(help="Optional SFX directory")] = None,
+    jobs_dir: Annotated[Path, typer.Option(help="Jobs directory")] = Path("./jobs"),
+    no_llm_cache: Annotated[bool, typer.Option(help="Bypass LLM response cache")] = False,
+) -> None:
+    """Create and run a new presentation simulation job through preview."""
+    with handle_errors():
+        if not script_path.is_file():
+            raise ValidationFailed(f"Input file not found: {script_path}")
+
+        if script_path.suffix.lower() != ".txt":
+            raise ValidationFailed(
+                f"Unsupported input type '{script_path.suffix.lower()}'. "
+                "presentation jobs require .txt"
+            )
+
+        if style not in {"literal", "creative"}:
+            raise ValidationFailed(f"style must be one of literal, creative; got '{style}'")
+
+        if perturb not in {"mild", "strong"}:
+            raise ValidationFailed(f"perturb must be one of mild, strong; got '{perturb}'")
+
+        if tiebreak not in {"none", "llm"}:
+            raise ValidationFailed(f"tiebreak must be one of none, llm; got '{tiebreak}'")
+
+        if voice is not None and voice not in {"af_heart", "am_michael"}:
+            raise ValidationFailed(f"voice must be one of af_heart, am_michael; got '{voice}'")
+
+        if music is not None and not music.is_file():
+            raise ValidationFailed(f"Music file not found: {music}")
+
+        if sfx_dir is not None and not sfx_dir.is_dir():
+            raise ValidationFailed(f"SFX directory not found: {sfx_dir}")
+
+        now = datetime.now(UTC)
+        job = Job.create(script_path, jobs_dir, now, kind="presentation")
+
+        # Copy inputs into job/input/
+        dest_input = job.dir / "input" / script_path.name
+        shutil.copy2(script_path, dest_input)
+
+        if music is not None:
+            shutil.copy2(music, job.dir / "input" / music.name)
+
+        if sfx_dir is not None:
+            dest_sfx = job.dir / "input" / "sfx"
+            if dest_sfx.exists():
+                shutil.rmtree(dest_sfx)
+            shutil.copytree(sfx_dir, dest_sfx)
+
+        ctx = RunContext(
+            voice=voice,
+            music_path=music,
+            sfx_dir=sfx_dir,
+            no_llm_cache=no_llm_cache,
+            style=style,
+            perturb=perturb,
+            seed=seed,
+            tiebreak=tiebreak,
+            now=now,
+        )
+
+        stages = ["ingest", "voice", "deck", "preview"]
+        job.run(stages, STAGE_REGISTRY, ctx)
+
+        plan_sha = job.plan_sha256()
+        job.state["plan_sha256"] = plan_sha
+        job.state["preview_plan_sha256"] = plan_sha
+        job.state["timeline_plan_sha256"] = plan_sha
+        job.state["state"] = "awaiting_review"
+        job.save_state()
+
+        print(f"preview/contact_sheet.png: {job.dir / 'preview' / 'contact_sheet.png'}")
+        print(f"preview/storyboard.md: {job.dir / 'preview' / 'storyboard.md'}")
+        print(f"deck.json: {job.dir / 'deck.json'}")
+
+
 @app.command("preview")
 def preview(
     job_ref: Annotated[str, typer.Argument(help="Job ID or job directory path")],
@@ -254,6 +353,46 @@ def preview(
 
         if job.state.get("state") not in {"awaiting_review", "approved", "rendered"}:
             raise GateRefused(f"job state '{job.state.get('state')}' cannot run preview")
+
+        if job.kind == "presentation":
+            deck_path = job.dir / "deck.json"
+            if not deck_path.is_file():
+                raise ValidationFailed(f"deck.json missing in job {job.job_id}")
+
+            try:
+                deck_data = json.loads(deck_path.read_text(encoding="utf-8"))
+            except Exception as e:
+                raise ValidationFailed(f"deck.json validation failed: {e}") from e
+
+            ingest_path = job.dir / "ingest.json"
+            if not ingest_path.is_file():
+                raise ValidationFailed(f"ingest.json missing in job {job.job_id}")
+
+            ingest = IngestRecord.model_validate_json(ingest_path.read_text(encoding="utf-8"))
+            sentences = build_sentence_list(ingest)
+            word_count = ingest.word_count or sum(len(p.split()) for p in (ingest.paragraphs or []))
+
+            _, val_errors = validate_deck(deck_data, sentences, word_count)
+            if val_errors:
+                err_msg = "deck.json validation failed:\n" + "\n".join(f"- {e}" for e in val_errors)
+                raise ValidationFailed(err_msg)
+
+            # Invalidate approval
+            job.state["approval"] = None
+
+            ctx = RunContext(preview_video=preview_video)
+            job.run(["preview"], STAGE_REGISTRY, ctx)
+
+            plan_sha = job.plan_sha256()
+            job.state["plan_sha256"] = plan_sha
+            job.state["preview_plan_sha256"] = plan_sha
+            job.state["timeline_plan_sha256"] = plan_sha
+            job.state["state"] = "awaiting_review"
+            job.save_state()
+
+            print(f"preview/contact_sheet.png: {job.dir / 'preview' / 'contact_sheet.png'}")
+            print(f"preview/storyboard.md: {job.dir / 'preview' / 'storyboard.md'}")
+            return
 
         # Validate human-edited plan files
         bible_path = job.dir / "bible.json"
@@ -461,12 +600,6 @@ def rerun(
 ) -> None:
     """Rerun job pipeline from a specified stage through preview."""
     with handle_errors():
-        allowed_stages = ("bible", "segment", "director", "storyboard", "assets", "compile")
-        if from_stage not in allowed_stages:
-            raise ValidationFailed(
-                f"Invalid rerun stage '{from_stage}'. Allowed: {', '.join(allowed_stages)}"
-            )
-
         job = Job.open(job_ref, jobs_dir)
 
         eff_style = "literal"
@@ -489,6 +622,37 @@ def rerun(
                     eff_style = ingest_data.get("style", "literal")
                 except Exception:
                     pass
+
+        if job.kind == "presentation":
+            pres_allowed_stages = ("deck", "tree", "perform", "follow", "compose")
+            if from_stage not in pres_allowed_stages:
+                raise ValidationFailed(
+                    f"Invalid rerun stage '{from_stage}'. Allowed: {', '.join(pres_allowed_stages)}"
+                )
+            idx = PRESENTATION_STAGES.index(from_stage)
+            prev_stage = PRESENTATION_STAGES[idx - 1]
+            job.invalidate_after(prev_stage)
+            stages_to_run = [
+                s
+                for s in PRESENTATION_STAGES[idx:]
+                if s in STAGE_REGISTRY and s in {"deck", "preview"}
+            ]
+            ctx = RunContext(style=eff_style)
+            job.run(stages_to_run, STAGE_REGISTRY, ctx)
+            plan_sha = job.plan_sha256()
+            job.state["plan_sha256"] = plan_sha
+            job.state["preview_plan_sha256"] = plan_sha
+            job.state["timeline_plan_sha256"] = plan_sha
+            job.state["state"] = "awaiting_review"
+            job.save_state()
+            print(f"Rerun completed for job {job.job_id} through preview.")
+            return
+
+        allowed_stages = ("bible", "segment", "director", "storyboard", "assets", "compile")
+        if from_stage not in allowed_stages:
+            raise ValidationFailed(
+                f"Invalid rerun stage '{from_stage}'. Allowed: {', '.join(allowed_stages)}"
+            )
 
         # Invalidate from previous stage
         idx = STAGES.index(from_stage)  # type: ignore[arg-type]

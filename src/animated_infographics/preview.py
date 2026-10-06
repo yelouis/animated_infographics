@@ -10,6 +10,7 @@ from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
 
+from animated_infographics.contracts.deck import DeckPlan
 from animated_infographics.contracts.models import (
     Beat,
     PlanReport,
@@ -278,6 +279,196 @@ def generate_contact_sheet(
         draw.text((x + 10, strip_top + 12), label_text, fill=ink_color, font=font)
 
     sheet.save(out_path, format="PNG")
+    return out_path
+
+
+def generate_deck_contact_sheet(
+    job_dir: Path,
+    deck: DeckPlan,
+    timeline: Timeline | None = None,
+    flagged_scenes: set[str] | None = None,
+) -> Path:
+    """Generate presentation contact sheet displaying slides and points per H1/review gate."""
+    preview_dir = job_dir / "preview"
+    preview_dir.mkdir(parents=True, exist_ok=True)
+    out_path = preview_dir / "contact_sheet.png"
+
+    canvas_w = 1350
+    bg_color = (20, 33, 61)  # #14213D
+    raised_color = (31, 47, 82)  # #1F2F52
+    border_color = (42, 63, 109)
+    accent_color = (252, 163, 17)  # #FCA311
+    ink_color = (248, 244, 233)  # #F8F4E9
+    muted_color = (148, 163, 184)  # #94A3B8
+    bullet_color = (96, 165, 250)  # #60A5FA
+
+    repo_root = Path(__file__).resolve().parents[2]
+    font_path = repo_root / "renderer" / "public" / "fonts" / "Inter-SemiBold.ttf"
+    header_font: Any
+    title_font: Any
+    body_font: Any
+    small_font: Any
+    try:
+        header_font = ImageFont.truetype(str(font_path), size=26)
+        title_font = ImageFont.truetype(str(font_path), size=20)
+        body_font = ImageFont.truetype(str(font_path), size=16)
+        small_font = ImageFont.truetype(str(font_path), size=14)
+    except Exception:
+        header_font = ImageFont.load_default()
+        title_font = ImageFont.load_default()
+        body_font = ImageFont.load_default()
+        small_font = ImageFont.load_default()
+
+    # Pre-calculate card heights
+    card_w = 1270
+    card_margin_x = (canvas_w - card_w) // 2
+    card_padding = 18
+    gap_y = 20
+
+    cards_info: list[dict[str, Any]] = []
+    current_y = 100  # Start after header banner
+
+    for slide in deck.slides:
+        # Title height + point lines
+        lines_count = len(slide.points)
+        # title line (30px) + each point (26px) + padding (36px)
+        card_h = card_padding * 2 + 30 + lines_count * 28 + 8
+        cards_info.append({"slide": slide, "y": current_y, "h": card_h})
+        current_y += card_h + gap_y
+
+    canvas_h = max(600, current_y + 20)
+
+    sheet = Image.new("RGB", (canvas_w, canvas_h), color=bg_color)
+    draw = ImageDraw.Draw(sheet)
+
+    # 1. Header Banner
+    draw.rectangle([0, 0, canvas_w, 80], fill=raised_color)
+    draw.text((40, 16), "PRESENTATION SIMULATION DECK", fill=accent_color, font=header_font)
+    total_pts = sum(len(s.points) for s in deck.slides)
+    sub_text = f"{len(deck.slides)} Slides · {total_pts} Talking Points"
+    draw.text((40, 48), sub_text, fill=muted_color, font=small_font)
+
+    # 2. Slide Cards
+    for item in cards_info:
+        slide = item["slide"]
+        cy = item["y"]
+        ch = item["h"]
+
+        # Card rectangle
+        draw.rectangle(
+            [card_margin_x, cy, card_margin_x + card_w, cy + ch],
+            fill=raised_color,
+            outline=border_color,
+            width=2,
+        )
+
+        # Slide ID badge & Title
+        draw.rectangle(
+            [
+                card_margin_x + card_padding,
+                cy + card_padding,
+                card_margin_x + card_padding + 46,
+                cy + card_padding + 24,
+            ],
+            fill=border_color,
+        )
+        draw.text(
+            (card_margin_x + card_padding + 8, cy + card_padding + 3),
+            slide.id.upper(),
+            fill=accent_color,
+            font=small_font,
+        )
+
+        draw.text(
+            (card_margin_x + card_padding + 58, cy + card_padding + 1),
+            slide.title,
+            fill=ink_color,
+            font=title_font,
+        )
+
+        # Sentence scope on right
+        sids_text = (
+            f"Sentences {slide.sentence_ids[0]}–{slide.sentence_ids[-1]}"
+            if slide.sentence_ids
+            else ""
+        )
+        draw.text(
+            (card_margin_x + card_w - card_padding - 160, cy + card_padding + 4),
+            sids_text,
+            fill=muted_color,
+            font=small_font,
+        )
+
+        # Points
+        pt_y = cy + card_padding + 34
+        for pt in slide.points:
+            # Bullet circle
+            draw.ellipse(
+                [
+                    card_margin_x + card_padding + 12,
+                    pt_y + 6,
+                    card_margin_x + card_padding + 18,
+                    pt_y + 12,
+                ],
+                fill=bullet_color,
+            )
+            draw.text(
+                (card_margin_x + card_padding + 28, pt_y),
+                pt.text,
+                fill=ink_color,
+                font=body_font,
+            )
+            pt_sids = f"({', '.join(str(i) for i in pt.sentence_ids)})"
+            draw.text(
+                (card_margin_x + card_w - card_padding - 140, pt_y + 2),
+                pt_sids,
+                fill=muted_color,
+                font=small_font,
+            )
+            pt_y += 28
+
+    sheet.save(out_path, format="PNG")
+    return out_path
+
+
+def generate_deck_storyboard_markdown(
+    job_dir: Path,
+    deck: DeckPlan,
+    title: str | None = None,
+    voice: VoiceDecision | None = None,
+) -> Path:
+    """Generate preview/storyboard.md for presentation deck jobs."""
+    preview_dir = job_dir / "preview"
+    preview_dir.mkdir(parents=True, exist_ok=True)
+    out_path = preview_dir / "storyboard.md"
+
+    total_pts = sum(len(s.points) for s in deck.slides)
+    lines = [
+        f"# Presentation Deck: {title or 'Presentation'}",
+        "",
+        format_voice_line(voice),
+        "",
+        f"**Slides:** {len(deck.slides)} | **Talking Points:** {total_pts}",
+        "",
+        "| slide | title | points | sentences |",
+        "|---|---|---|---|",
+    ]
+
+    for s in deck.slides:
+        pts_str = "<br>".join(f"• {p.text} ({p.sentence_ids})" for p in s.points)
+        sids_str = ", ".join(str(i) for i in s.sentence_ids)
+        lines.append(f"| `{s.id}` | **{s.title}** | {pts_str} | `{sids_str}` |")
+
+    lines.append("")
+    lines.append("## Detailed Slide Plan")
+    lines.append("")
+    for s in deck.slides:
+        lines.append(f"### Slide {s.id}: {s.title} (sentences: {s.sentence_ids})")
+        for p_idx, p in enumerate(s.points):
+            lines.append(f"- **Point {p_idx + 1}:** {p.text} *(sentences {p.sentence_ids})*")
+        lines.append("")
+
+    out_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return out_path
 
 

@@ -39,6 +39,9 @@ def run_ingest_stage(job: Job, ctx: RunContext) -> None:
         music=music_rel,
         sfx_dir=sfx_rel,
         style=ctx.style,  # type: ignore[arg-type]
+        perturb=ctx.perturb,  # type: ignore[arg-type]
+        seed=ctx.seed,
+        tiebreak=ctx.tiebreak,  # type: ignore[arg-type]
     )
 
     out_file = job.dir / "ingest.json"

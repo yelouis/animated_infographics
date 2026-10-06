@@ -14,7 +14,7 @@ from typing import Any
 
 from animated_infographics.errors import ValidationFailed
 
-STAGES = (
+VIDEO_STAGES = (
     "ingest",
     "voice",
     "narrate",
@@ -28,7 +28,25 @@ STAGES = (
     "preview",
 )
 
+STAGES = VIDEO_STAGES
 ALL_STAGES = (*STAGES, "render")
+
+PRESENTATION_STAGES = (
+    "ingest",
+    "voice",
+    "deck",
+    "deck_bible",
+    "tree",
+    "assets",
+    "perform",
+    "speak",
+    "hear",
+    "follow",
+    "compose",
+    "preview",
+)
+
+ALL_PRESENTATION_STAGES = (*PRESENTATION_STAGES, "render", "score")
 
 STAGE_OUTPUT_MAP: dict[str, list[str]] = {
     "ingest": ["ingest.json", "input"],
@@ -43,6 +61,16 @@ STAGE_OUTPUT_MAP: dict[str, list[str]] = {
     "compile": ["timeline.json", "audio/music.wav", "audio/sfx"],
     "preview": ["preview"],
     "render": ["out"],
+    # Presentation stages
+    "deck": ["deck.json"],
+    "deck_bible": ["deck_bible.json"],
+    "tree": ["tree.json"],
+    "perform": ["performance.json"],
+    "speak": ["audio/narration.wav", "speak_timing.json"],
+    "hear": ["heard.json"],
+    "follow": ["playback.json"],
+    "compose": ["timeline.json", "audio/music.wav", "audio/sfx"],
+    "score": ["presentation_score.json"],
 }
 
 STAGE_INPUT_DEPENDENCIES: dict[str, list[str]] = {
@@ -58,6 +86,16 @@ STAGE_INPUT_DEPENDENCIES: dict[str, list[str]] = {
     "compile": ["storyboard.json", "bible.json", "beats.json", "ingest.json"],
     "preview": ["timeline.json"],
     "render": ["timeline.json"],
+    # Presentation stages
+    "deck": ["ingest.json"],
+    "deck_bible": ["deck.json"],
+    "tree": ["deck.json", "deck_bible.json"],
+    "perform": ["ingest.json", "deck.json"],
+    "speak": ["performance.json", "voice.json"],
+    "hear": ["audio/narration.wav"],
+    "follow": ["tree.json", "heard.json"],
+    "compose": ["tree.json", "playback.json", "heard.json", "audio/narration.wav"],
+    "score": ["playback.json", "performance.json", "speak_timing.json"],
 }
 
 
@@ -73,6 +111,9 @@ class RunContext:
     preview_video: bool = False
     sync_probe: bool = False
     style: str = "literal"
+    perturb: str | None = None
+    seed: int | None = None
+    tiebreak: str | None = None
     now: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
@@ -92,6 +133,8 @@ class Job:
             raise ValidationFailed(f"state.json not found in {self.dir}")
         with open(self.state_file, encoding="utf-8") as f:
             data = json.load(f)
+            if "kind" not in data:
+                data["kind"] = "video"
             return dict(data)
 
     def save_state(self) -> None:
@@ -104,8 +147,18 @@ class Job:
     def job_id(self) -> str:
         return str(self.state["job_id"])
 
+    @property
+    def kind(self) -> str:
+        return str(self.state.get("kind", "video"))
+
     @classmethod
-    def create(cls, input_path: Path, jobs_dir: Path, now: datetime) -> "Job":
+    def create(
+        cls,
+        input_path: Path,
+        jobs_dir: Path,
+        now: datetime,
+        kind: str = "video",
+    ) -> "Job":
         """Create a new job directory and initialize state.json."""
         stem = input_path.stem.lower()
         slug = re.sub(r"[^a-z0-9]+", "-", stem).strip("-")[:40]
@@ -127,6 +180,7 @@ class Job:
         initial_state: dict[str, Any] = {
             "schema_version": 1,
             "job_id": job_id,
+            "kind": kind,
             "state": "planning",
             "completed_stages": [],
             "stage_input_sha256": {},
@@ -159,7 +213,15 @@ class Job:
         return cls(job_dir)
 
     def plan_sha256(self) -> str:
-        """Compute sha256 of bible.json, storyboard.json, and director.json if present."""
+        """Compute sha256 of human-reviewable plan files."""
+        if self.kind == "presentation":
+            deck_path = self.dir / "deck.json"
+            if not deck_path.is_file():
+                return ""
+            hasher = hashlib.sha256()
+            hasher.update(deck_path.read_bytes())
+            return hasher.hexdigest()
+
         bible_path = self.dir / "bible.json"
         sb_path = self.dir / "storyboard.json"
         if not bible_path.is_file() or not sb_path.is_file():
@@ -196,12 +258,13 @@ class Job:
 
     def invalidate_after(self, stage: str) -> None:
         """Delete outputs of every later stage and remove from completed_stages."""
+        stages_order = ALL_PRESENTATION_STAGES if self.kind == "presentation" else ALL_STAGES
         try:
-            stage_idx = ALL_STAGES.index(stage)  # type: ignore[arg-type]
+            stage_idx = stages_order.index(stage)  # type: ignore[arg-type]
         except ValueError:
             return
 
-        later_stages = ALL_STAGES[stage_idx + 1 :]
+        later_stages = stages_order[stage_idx + 1 :]
         completed = list(self.state.get("completed_stages", []))
         input_shas = dict(self.state.get("stage_input_sha256", {}))
 
@@ -212,7 +275,7 @@ class Job:
             if later in input_shas:
                 del input_shas[later]
 
-            if later in {"bible", "storyboard"}:
+            if later in {"bible", "storyboard", "deck"}:
                 invalidated_any_plan = True
 
             # Delete outputs

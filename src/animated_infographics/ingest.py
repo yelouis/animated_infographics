@@ -2,6 +2,7 @@
 
 import re
 from pathlib import Path
+from typing import Literal
 
 from animated_infographics.contracts.models import IngestRecord
 from animated_infographics.contracts.styles import StyleName
@@ -39,6 +40,9 @@ def ingest(
     music: str | None = None,
     sfx_dir: str | None = None,
     style: StyleName = "literal",
+    perturb: Literal["mild", "strong"] | None = None,
+    seed: int | None = None,
+    tiebreak: Literal["none", "llm"] | None = None,
 ) -> IngestRecord:
     """Ingest and validate an input text or audio file."""
     ext = input_path.suffix.lower()
@@ -54,6 +58,9 @@ def ingest(
             music=music,
             sfx_dir=sfx_dir,
             style=style,
+            perturb=perturb,
+            seed=seed,
+            tiebreak=tiebreak,
         )
 
     if ext != ".txt":
@@ -98,4 +105,7 @@ def ingest(
         music=music,
         sfx_dir=sfx_dir,
         style=style,
+        perturb=perturb,
+        seed=seed,
+        tiebreak=tiebreak,
     )

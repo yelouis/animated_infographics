@@ -5,16 +5,23 @@ from __future__ import annotations
 import json
 import time
 
+from animated_infographics.audio.narrate import build_sentence_list
+from animated_infographics.contracts.deck import DeckPlan
 from animated_infographics.contracts.models import (
     Beats,
+    IngestRecord,
     PlanReport,
     Timeline,
     VoiceDecision,
 )
+from animated_infographics.errors import ValidationFailed
 from animated_infographics.jobs import Job, RunContext
+from animated_infographics.presentation.deck import validate_deck
 from animated_infographics.preview import (
     compute_hero_frames,
     generate_contact_sheet,
+    generate_deck_contact_sheet,
+    generate_deck_storyboard_markdown,
     generate_preview_report,
     generate_storyboard_markdown,
     render_preview_video,
@@ -25,6 +32,66 @@ from animated_infographics.preview import (
 def run_preview_stage(job: Job, ctx: RunContext) -> None:
     """Render preview stills, assemble contact sheet, write storyboard.md and report.json."""
     t0 = time.perf_counter()
+
+    if job.kind == "presentation":
+        deck_path = job.dir / "deck.json"
+        if not deck_path.is_file():
+            raise ValidationFailed(f"deck.json missing in presentation job {job.job_id}")
+
+        ingest_path = job.dir / "ingest.json"
+        if not ingest_path.is_file():
+            raise ValidationFailed(f"ingest.json missing in job {job.job_id}")
+
+        ingest = IngestRecord.model_validate_json(ingest_path.read_text(encoding="utf-8"))
+        sentences = build_sentence_list(ingest)
+        word_count = ingest.word_count or sum(len(p.split()) for p in (ingest.paragraphs or []))
+
+        deck_data = json.loads(deck_path.read_text(encoding="utf-8"))
+        _, errors = validate_deck(deck_data, sentences, word_count)
+        if errors:
+            err_msg = "deck.json validation failed:\n" + "\n".join(f"- {e}" for e in errors)
+            raise ValidationFailed(err_msg)
+
+        deck = DeckPlan.model_validate(deck_data)
+
+        pres_voice: VoiceDecision | None = None
+        voice_path = job.dir / "voice.json"
+        if voice_path.is_file():
+            pres_voice = VoiceDecision.model_validate_json(voice_path.read_text(encoding="utf-8"))
+
+        timeline_path = job.dir / "timeline.json"
+        timeline: Timeline | None = None
+        if timeline_path.is_file():
+            timeline = Timeline.model_validate_json(timeline_path.read_text(encoding="utf-8"))
+
+        preview_dir = job.dir / "preview"
+        preview_dir.mkdir(parents=True, exist_ok=True)
+        plan_sha = job.plan_sha256()
+
+        if timeline is None:
+            generate_deck_contact_sheet(job.dir, deck)
+            generate_deck_storyboard_markdown(job.dir, deck, title=ingest.title, voice=pres_voice)
+            generate_preview_report(job.dir, None, [], plan_sha)
+        else:
+            frames = compute_hero_frames(timeline)
+            overflow_entries = render_stills(job.dir, frames, scale=0.5)
+            flagged_scenes = {
+                entry["scene_id"] for entry in overflow_entries if "scene_id" in entry
+            }
+            generate_deck_contact_sheet(
+                job.dir, deck, timeline=timeline, flagged_scenes=flagged_scenes
+            )
+            generate_deck_storyboard_markdown(job.dir, deck, title=ingest.title, voice=pres_voice)
+            generate_preview_report(job.dir, None, overflow_entries, plan_sha)
+
+        if ctx.preview_video and (job.dir / "timeline.json").is_file():
+            render_preview_video(job.dir)
+
+        elapsed_ms = int((time.perf_counter() - t0) * 1000)
+        log_file = job.dir / "logs" / "preview.log"
+        log_file.parent.mkdir(parents=True, exist_ok=True)
+        log_file.write_text(f"llm_calls=0 cache_hits=0 elapsed_ms={elapsed_ms}\n", encoding="utf-8")
+        return
 
     timeline_path = job.dir / "timeline.json"
     beats_path = job.dir / "beats.json"

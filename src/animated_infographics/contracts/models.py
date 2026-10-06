@@ -138,6 +138,9 @@ class IngestRecord(BaseModel):
     music: str | None = None
     sfx_dir: str | None = None
     style: StyleName = "literal"
+    perturb: Literal["mild", "strong"] | None = None
+    seed: int | None = None
+    tiebreak: Literal["none", "llm"] | None = None
 
 
 class SentenceOffset(BaseModel):

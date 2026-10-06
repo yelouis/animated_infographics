@@ -16,7 +16,22 @@ runner = CliRunner()
 @pytest.fixture
 def fake_stages() -> dict[str, Any]:
     def fake_ingest(j: Job, ctx: RunContext) -> None:
-        (j.dir / "ingest.json").write_text('{"text":"hello"}', encoding="utf-8")
+        data = {
+            "schema_version": 1,
+            "kind": "text",
+            "source": "test.txt",
+            "title": "Story Title",
+            "paragraphs": [
+                "Sentence one is here. Sentence two is here. Sentence three is here. "
+                "Sentence four is here. Sentence five is here. Sentence six is here. "
+                "Sentence seven is here. Sentence eight is here."
+            ],
+            "word_count": 400,
+            "perturb": ctx.perturb,
+            "seed": ctx.seed,
+            "tiebreak": ctx.tiebreak,
+        }
+        (j.dir / "ingest.json").write_text(json.dumps(data), encoding="utf-8")
 
     def fake_voice(j: Job, ctx: RunContext) -> None:
         (j.dir / "voice.json").write_text('{"voice":"am_michael"}', encoding="utf-8")
@@ -118,6 +133,25 @@ def fake_stages() -> dict[str, Any]:
     def fake_director(j: Job, ctx: RunContext) -> None:
         pass
 
+    def fake_deck(j: Job, ctx: RunContext) -> None:
+        titles = ["Slide One", "Slide Two", "Slide Three", "Slide Four"]
+        data = {
+            "schema_version": 1,
+            "slides": [
+                {
+                    "id": f"d{i}",
+                    "title": titles[i - 1],
+                    "sentence_ids": [2 * i - 1, 2 * i],
+                    "points": [
+                        {"text": "Point A", "sentence_ids": [2 * i - 1]},
+                        {"text": "Point B", "sentence_ids": [2 * i]},
+                    ],
+                }
+                for i in range(1, 5)
+            ],
+        }
+        (j.dir / "deck.json").write_text(json.dumps(data), encoding="utf-8")
+
     registry = {
         "ingest": fake_ingest,
         "voice": fake_voice,
@@ -129,6 +163,7 @@ def fake_stages() -> dict[str, Any]:
         "storyboard": fake_storyboard,
         "assets": fake_assets,
         "compile": fake_compile,
+        "deck": fake_deck,
         "preview": fake_preview,
         "render": fake_render,
     }
@@ -367,3 +402,60 @@ def test_cli_rerun_and_status(tmp_path: Path, fake_stages: Any) -> None:
     assert res.exit_code == 0
     job = Job(jobs_dir / job_id)
     assert job.state["state"] == "awaiting_review"
+
+
+def test_present_sim_cli_flow(tmp_path: Path, fake_stages: Any) -> None:
+    """Verify present-sim creates presentation job, preview re-validates,
+    and invalid edit exits 2.
+    """
+    jobs_dir = tmp_path / "jobs"
+    txt_file = tmp_path / "story.txt"
+    txt_file.write_text(
+        "Story Title\n\n"
+        "Sentence one is here. Sentence two is here. Sentence three is here. "
+        "Sentence four is here. Sentence five is here. Sentence six is here. "
+        "Sentence seven is here. Sentence eight is here.",
+        encoding="utf-8",
+    )
+
+    res = runner.invoke(
+        app,
+        [
+            "present-sim",
+            str(txt_file),
+            "--perturb",
+            "mild",
+            "--seed",
+            "7",
+            "--tiebreak",
+            "none",
+            "--jobs-dir",
+            str(jobs_dir),
+        ],
+    )
+    assert res.exit_code == 0
+    job_dir = list(jobs_dir.iterdir())[0]
+    job = Job(job_dir)
+    assert job.kind == "presentation"
+    assert job.state["state"] == "awaiting_review"
+
+    # Check ingest.json recorded parameters
+    ingest_data = json.loads((job_dir / "ingest.json").read_text(encoding="utf-8"))
+    assert ingest_data["perturb"] == "mild"
+    assert ingest_data["seed"] == 7
+    assert ingest_data["tiebreak"] == "none"
+
+    # preview command re-validates and passes
+    res = runner.invoke(app, ["preview", job.job_id, "--jobs-dir", str(jobs_dir)])
+    assert res.exit_code == 0
+
+    # Human edit with invalid deck (skip sentence 3) -> preview must exit 2
+    deck_path = job_dir / "deck.json"
+    deck_data = json.loads(deck_path.read_text(encoding="utf-8"))
+    deck_data["slides"][0]["sentence_ids"] = [1, 2]
+    deck_data["slides"][1]["sentence_ids"] = [4, 5]  # skips sentence 3
+    deck_path.write_text(json.dumps(deck_data), encoding="utf-8")
+
+    res = runner.invoke(app, ["preview", job.job_id, "--jobs-dir", str(jobs_dir)])
+    assert res.exit_code == 2
+    assert "validation failed" in res.stderr.lower()
