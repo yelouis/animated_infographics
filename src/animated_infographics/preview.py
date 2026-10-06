@@ -274,7 +274,50 @@ def generate_storyboard_markdown(
     preview_dir.mkdir(parents=True, exist_ok=True)
     out_path = preview_dir / "storyboard.md"
 
+    director_path = job_dir / "director.json"
+    director_lines: list[str] = []
+    if director_path.is_file():
+        try:
+            from animated_infographics.contracts.director import DirectorPlan
+
+            d_plan = DirectorPlan.model_validate_json(director_path.read_text(encoding="utf-8"))
+            director_lines.append("## Creative Director Plan")
+            director_lines.append("")
+            if d_plan.motifs:
+                director_lines.append("### Motifs")
+                for motif in d_plan.motifs:
+                    extra = f", icon: {motif.icon}" if motif.icon else ""
+                    if motif.set_piece_id:
+                        extra += f", set_piece: {motif.set_piece_id}"
+                    director_lines.append(f"- **{motif.name}** (`{motif.id}`{extra}):")
+                    for app in motif.appearances:
+                        director_lines.append(f"  - beat {app.beat_i}: {app.role}")
+                director_lines.append("")
+            if d_plan.metaphors:
+                director_lines.append("### Metaphors")
+                for met in d_plan.metaphors:
+                    lbl = f' (label: "{met.label}")' if met.label else ""
+                    c_str = f" [cast: {', '.join(met.cast_ids)}]" if met.cast_ids else ""
+                    director_lines.append(f'- beat {met.beat_i}: "{met.image}"{lbl}{c_str}')
+                director_lines.append("")
+            if d_plan.asides:
+                director_lines.append("### Asides")
+                for a in d_plan.asides:
+                    details: list[str] = []
+                    if a.cast_id:
+                        details.append(f"cast: {a.cast_id}")
+                    if a.icon:
+                        details.append(f"icon: {a.icon}")
+                    if a.text:
+                        details.append(f'text: "{a.text}"')
+                    det_str = f" ({', '.join(details)})" if details else ""
+                    director_lines.append(f"- beat {a.beat_i}: {a.kind}{det_str}")
+                director_lines.append("")
+        except Exception:
+            pass
+
     lines = [
+        *director_lines,
         format_voice_line(voice),
         "",
         "| scene | time | template | beat text | key props | flags |",
@@ -321,6 +364,11 @@ def generate_preview_report(
 
     failed_images: list[str] = []
     warnings: list[str] = []
+    if plan_report and plan_report.style_degraded:
+        warnings.append("director stage failed after 3 attempts; degraded to literal")
+    elif (job_dir / ".director_degraded").is_file():
+        warnings.append("director stage failed after 3 attempts; degraded to literal")
+
     manifest_path = job_dir / "assets" / "manifest.json"
     if manifest_path.is_file():
         try:

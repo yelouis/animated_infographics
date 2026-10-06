@@ -43,7 +43,7 @@ def test_generate_json_only_in_llm_py() -> None:
 
 
 def test_run_with_retries_call_count() -> None:
-    """Verify run_with_retries call sites count is 7 after B10 (6 in planner/, 1 in assets/)."""
+    """Verify run_with_retries call sites count is 10 after G3 (9 in planner/, 1 in assets/)."""
     src_dir = Path(__file__).resolve().parent.parent / "src" / "animated_infographics"
     call_sites: list[str] = []
 
@@ -56,9 +56,9 @@ def test_run_with_retries_call_count() -> None:
                 if "run_with_retries(" in line:
                     call_sites.append(f"{py_path.name}:{idx}")
 
-    assert len(call_sites) == 7, (
-        "Expected 7 run_with_retries call sites "
-        "(voice, bible, segment, select, props, critic, text_check), "
+    assert len(call_sites) == 10, (
+        "Expected 10 run_with_retries call sites "
+        "(voice, bible, segment, select, props [2], text_check, director, license [2]), "
         f"got {len(call_sites)}: {call_sites}"
     )
 

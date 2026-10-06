@@ -67,7 +67,7 @@
 | # | Gate | Result |
 |---|---|---|
 | G1–G3 | ruff / format / mypy | exit 0 (119 files formatted; 59 source files) |
-| G4 | `uv run pytest -q -m "not slow"` | exit 0 · **272 passed** |
+| G4 | `uv run pytest -q -m "not slow"` | exit 0 · **290 passed** |
 | G5–G7 | renderer typecheck / lint / vitest | exit 0 · 16 vitest |
 | G8 | schema sync | exit 0 |
 | G9 | renderer purity | exit 0 |

@@ -13,8 +13,10 @@ FILES_TO_CHECK=(
   "schema/storyboard.schema.json"
   "schema/timeline.schema.json"
   "schema/styles.schema.json"
+  "schema/director.schema.json"
   "renderer/src/generated/contracts.ts"
   "renderer/src/generated/styles.ts"
+  "renderer/src/generated/director.ts"
   "renderer/src/generated/templateRegistry.json"
   "renderer/src/generated/iconNames.json"
   "renderer/src/generated/iconMap.ts"
@@ -68,5 +70,5 @@ for file in "${FILES_TO_CHECK[@]}"; do
   fi
 done
 
-echo "G8: Schema and contracts sync check passed (13 files verified)."
+echo "G8: Schema and contracts sync check passed (${#FILES_TO_CHECK[@]} files verified)."
 exit 0

@@ -295,6 +295,35 @@ def preview(
             except Exception as e:
                 raise ValidationFailed(f"transcript or beats validation failed: {e}") from e
 
+        director_path = job.dir / "director.json"
+        if director_path.is_file():
+            try:
+                from animated_infographics.contracts.director import DirectorPlan
+                from animated_infographics.planner.director import (
+                    DirectorContext,
+                    validate_director_plan,
+                )
+
+                director = DirectorPlan.model_validate_json(
+                    director_path.read_text(encoding="utf-8")
+                )
+            except Exception as e:
+                raise ValidationFailed(f"director.json validation failed: {e}") from e
+
+            if beats_path.is_file():
+                try:
+                    d_ctx = DirectorContext(beats=beats, bible=bible)
+                    _, d_errors = validate_director_plan(director.model_dump(), d_ctx)
+                    if d_errors:
+                        err_msg = "director.json validation failed:\n" + "\n".join(
+                            f"- {e}" for e in d_errors
+                        )
+                        raise ValidationFailed(err_msg)
+                except ValidationFailed:
+                    raise
+                except Exception as e:
+                    raise ValidationFailed(f"director validation failed: {e}") from e
+
         # Invalidate approval
         job.state["approval"] = None
 

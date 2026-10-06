@@ -159,12 +159,20 @@ class Job:
         return cls(job_dir)
 
     def plan_sha256(self) -> str:
-        """Compute sha256(bytes(bible.json) + b'\\n' + bytes(storyboard.json))."""
+        """Compute sha256 of bible.json, storyboard.json, and director.json if present."""
         bible_path = self.dir / "bible.json"
         sb_path = self.dir / "storyboard.json"
         if not bible_path.is_file() or not sb_path.is_file():
             return ""
-        return hashlib.sha256(bible_path.read_bytes() + b"\n" + sb_path.read_bytes()).hexdigest()
+        hasher = hashlib.sha256()
+        hasher.update(bible_path.read_bytes())
+        hasher.update(b"\n")
+        hasher.update(sb_path.read_bytes())
+        director_path = self.dir / "director.json"
+        if director_path.is_file():
+            hasher.update(b"\n")
+            hasher.update(director_path.read_bytes())
+        return hasher.hexdigest()
 
     def _compute_stage_input_sha(self, stage: str) -> str:
         """Compute hash of input dependencies for stage skip logic."""

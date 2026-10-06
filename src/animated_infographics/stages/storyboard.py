@@ -41,8 +41,17 @@ def run_storyboard_stage(job: Job, ctx: RunContext) -> None:
         except Exception:
             pass
 
+    style_degraded = False
+    if style == "creative":
+        degraded_marker = job.dir / ".director_degraded"
+        director_json = job.dir / "director.json"
+        if degraded_marker.is_file() or not director_json.is_file():
+            style_degraded = True
+
     backend = OllamaBackend(no_cache=ctx.no_llm_cache)
-    storyboard, plan_report = plan_storyboard(transcript, beats.beats, bible, backend, style=style)
+    storyboard, plan_report = plan_storyboard(
+        transcript, beats.beats, bible, backend, style=style, style_degraded=style_degraded
+    )
 
     storyboard_path = job.dir / "storyboard.json"
     with open(storyboard_path, "w", encoding="utf-8") as f:
