@@ -31,6 +31,7 @@ from animated_infographics.contracts.models import (
     RevealScene,
     RuleRepair,
     Scene,
+    SectionTitleScene,
     SetPieceScene,
     StatCalloutScene,
     Storyboard,
@@ -83,6 +84,9 @@ SCENE_CLASS_MAP: dict[str, type[Scene]] = {
     "set_piece": SetPieceScene,
     "map_focus": MapFocusScene,
     "timeline": TimelineSceneModel,
+    "metaphor": MetaphorScene,
+    "callback": CallbackScene,
+    "section_title": SectionTitleScene,
 }
 
 

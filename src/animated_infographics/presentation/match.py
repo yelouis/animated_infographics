@@ -5,6 +5,7 @@ Per design_presentation_simulation.md §3 and §6.2.
 
 from __future__ import annotations
 
+import logging
 import math
 import re
 import time
@@ -22,6 +23,8 @@ from animated_infographics.contracts.templates import WORD_CAPS
 from animated_infographics.contracts.tree import TreePlan
 from animated_infographics.planner.llm import LLMBackend
 from animated_infographics.planner.words import field_values
+
+logger = logging.getLogger(__name__)
 
 ENGLISH_STOPWORDS: frozenset[str] = frozenset(
     {
@@ -403,19 +406,23 @@ class LiveMatcher:
                     f'Candidate 2: {runner_up_id} - "{ru_node_obj.text if ru_node_obj else ""}"\n\n'
                     "Which talking point is the speaker on now? Answer one id."
                 )
-                resp = self.backend.generate_json(
-                    stage="follow",
-                    messages=[{"role": "user", "content": prompt}],
-                    schema={
-                        "type": "object",
-                        "properties": {"node_id": {"type": "string"}},
-                        "required": ["node_id"],
-                    },
-                    attempt=0,
-                    temperature=0.0,
-                    num_predict=16,
-                )
-                picked_id = resp.get("node_id", "").strip() if resp else ""
+                try:
+                    resp = self.backend.generate_json(
+                        stage="follow",
+                        messages=[{"role": "user", "content": prompt}],
+                        schema={
+                            "type": "object",
+                            "properties": {"node_id": {"type": "string"}},
+                            "required": ["node_id"],
+                        },
+                        attempt=0,
+                        temperature=0.0,
+                        num_predict=48,
+                    )
+                    picked_id = resp.get("node_id", "").strip() if resp else ""
+                except Exception as exc:
+                    logger.warning("LLM tiebreak failed: %s", exc)
+                    picked_id = ""
                 if picked_id == runner_up_id:
                     top_id, runner_up_id = runner_up_id, top_id
                     tiebreak_used = True

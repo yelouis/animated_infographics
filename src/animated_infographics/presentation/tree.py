@@ -22,6 +22,9 @@ from animated_infographics.contracts.deck import DeckPlan
 from animated_infographics.contracts.models import (
     Beat,
     Bible,
+    CallbackScene,
+    MetaphorScene,
+    Scene,
     SectionTitleProps,
     SectionTitleScene,
     Timeline,
@@ -38,7 +41,11 @@ from animated_infographics.contracts.models import (
     TranscriptSentence,
     TranscriptWord,
 )
-from animated_infographics.contracts.templates import REGISTRY
+from animated_infographics.contracts.templates import (
+    REGISTRY,
+    CallbackProps,
+    MetaphorProps,
+)
 from animated_infographics.contracts.tree import TreeEdge, TreeNode, TreePlan
 from animated_infographics.jobs import Job, RunContext
 from animated_infographics.planner.critic import needs_critic
@@ -118,6 +125,7 @@ def plan_tree(
     bible: Bible,
     backend: LLMBackend,
     style: str = "literal",
+    job_dir: Path | None = None,
 ) -> TreePlan:
     """Plan complete presentation animation tree with nodes and edges."""
     all_points: list[tuple[str, str, int, str]] = []  # (slide_id, pt_text, p_idx, slide_title)
@@ -145,6 +153,10 @@ def plan_tree(
     director_plan = None
     if style == "creative":
         director_plan, _ = plan_director(beats, bible, backend)
+        if director_plan is not None and job_dir is not None:
+            (job_dir / "director.json").write_text(
+                director_plan.model_dump_json(indent=2) + "\n", encoding="utf-8"
+            )
 
     # 3. Select templates with presentation profile (R2, R6, R7 off)
     choices, _, _, _ = plan_template_selection(
@@ -224,27 +236,52 @@ def plan_tree(
             scene_id_str = f"s{scene_counter:03d}"
             scene_counter += 1
 
-            # Attempt primary
-            planned_scene, _, _ = plan_single_template_props(
-                primary,
-                scene_id_str,
-                global_k,
-                beat,
-                prev_beat,
-                next_beat,
-                points_transcript,
-                bible,
-                backend,
-                props_prompt,
-                compact_bible,
-                extra_user_prompt=slide_context,
-                max_attempts=3,
-            )
+            planned_scene: Scene | None = None
+            if primary == "metaphor" and director_plan is not None:
+                met_directive = next(
+                    (m for m in director_plan.metaphors if m.beat_i == global_k), None
+                )
+                if met_directive is not None:
+                    planned_scene = MetaphorScene(
+                        id=scene_id_str,
+                        beat_i=global_k,
+                        template="metaphor",
+                        props=MetaphorProps(
+                            image_entity=f"metaphor_{global_k}",
+                            label=met_directive.label,
+                            cast_ids=met_directive.cast_ids,
+                        ),
+                        rationale="director",
+                    )
+            elif primary == "callback" and director_plan is not None:
+                payoff_motif = next(
+                    (
+                        m
+                        for m in director_plan.motifs
+                        if any(a.beat_i == global_k and a.role == "payoff" for a in m.appearances)
+                    ),
+                    None,
+                )
+                if payoff_motif is not None:
+                    name_words = payoff_motif.name.split()
+                    cb_label = " ".join(name_words[:3]) if name_words else None
+                    planned_scene = CallbackScene(
+                        id=scene_id_str,
+                        beat_i=global_k,
+                        template="callback",
+                        props=CallbackProps(
+                            motif_id=payoff_motif.id,
+                            label=cb_label,
+                            set_piece_id=payoff_motif.set_piece_id,
+                            icon=payoff_motif.icon,  # type: ignore[arg-type]
+                        ),
+                        rationale="director",
+                    )
 
-            # Fallback to alternate if primary failed
-            if planned_scene is None and alternate != primary:
+            # Attempt primary if not planned
+            if planned_scene is None:
                 planned_scene, _, _ = plan_single_template_props(
-                    alternate,
+                    primary,
                     scene_id_str,
                     global_k,
                     beat,
@@ -258,6 +295,67 @@ def plan_tree(
                     extra_user_prompt=slide_context,
                     max_attempts=3,
                 )
+
+            # Fallback to alternate if primary failed
+            if planned_scene is None and alternate != primary:
+                if alternate == "metaphor" and director_plan is not None:
+                    met_directive = next(
+                        (m for m in director_plan.metaphors if m.beat_i == global_k), None
+                    )
+                    if met_directive is not None:
+                        planned_scene = MetaphorScene(
+                            id=scene_id_str,
+                            beat_i=global_k,
+                            template="metaphor",
+                            props=MetaphorProps(
+                                image_entity=f"metaphor_{global_k}",
+                                label=met_directive.label,
+                                cast_ids=met_directive.cast_ids,
+                            ),
+                            rationale="director",
+                        )
+                elif alternate == "callback" and director_plan is not None:
+                    payoff_motif = next(
+                        (
+                            m
+                            for m in director_plan.motifs
+                            if any(
+                                a.beat_i == global_k and a.role == "payoff" for a in m.appearances
+                            )
+                        ),
+                        None,
+                    )
+                    if payoff_motif is not None:
+                        name_words = payoff_motif.name.split()
+                        cb_label = " ".join(name_words[:3]) if name_words else None
+                        planned_scene = CallbackScene(
+                            id=scene_id_str,
+                            beat_i=global_k,
+                            template="callback",
+                            props=CallbackProps(
+                                motif_id=payoff_motif.id,
+                                label=cb_label,
+                                set_piece_id=payoff_motif.set_piece_id,
+                                icon=payoff_motif.icon,  # type: ignore[arg-type]
+                            ),
+                            rationale="director",
+                        )
+                else:
+                    planned_scene, _, _ = plan_single_template_props(
+                        alternate,
+                        scene_id_str,
+                        global_k,
+                        beat,
+                        prev_beat,
+                        next_beat,
+                        points_transcript,
+                        bible,
+                        backend,
+                        props_prompt,
+                        compact_bible,
+                        extra_user_prompt=slide_context,
+                        max_attempts=3,
+                    )
 
             # Deterministic fallback
             if planned_scene is None:
@@ -462,7 +560,7 @@ def run_tree_stage(job: Job, ctx: RunContext) -> None:
     style = ctx.style or "literal"
     backend = OllamaBackend(no_cache=ctx.no_llm_cache)
 
-    tree = plan_tree(deck, bible, backend, style=style)
+    tree = plan_tree(deck, bible, backend, style=style, job_dir=job.dir)
 
     # Save tree.json
     tree_path = job.dir / "tree.json"
@@ -471,7 +569,9 @@ def run_tree_stage(job: Job, ctx: RunContext) -> None:
     # Compile and save timeline.json for preview stills rendering
     timeline = compile_tree_timeline(tree, bible, plan_sha=job.plan_sha256())
     timeline_path = job.dir / "timeline.json"
-    timeline_path.write_text(timeline.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    timeline_path.write_text(
+        timeline.model_dump_json(indent=2, by_alias=True) + "\n", encoding="utf-8"
+    )
 
     # Run assets illustration once at tree time per §3
     run_assets(bible, job, backend=backend)

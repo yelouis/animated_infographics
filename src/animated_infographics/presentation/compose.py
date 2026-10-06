@@ -149,27 +149,25 @@ def compose_presentation_timeline(
             continue
         sc = node.scene
 
-        start_ms = commit.at_ms
+        start_f = raw_scenes[-1]["end_frame"] if raw_scenes else 0
         if idx + 1 < len(playback.commits):
             end_ms = playback.commits[idx + 1].at_ms
+            end_f = max(start_f, round_half_up(end_ms * FPS / 1000.0))
         else:
-            end_ms = total_dur_ms
-
-        start_f = round_half_up(start_ms * FPS / 1000.0)
-        end_f = round_half_up(end_ms * FPS / 1000.0)
-
-        if end_f <= start_f:
-            end_f = start_f + min_frames
+            end_f = total_frames
 
         # Short scene merging per §7
         if (end_f - start_f < min_frames) and raw_scenes:
             # Merge into previous scene
             prev_sc = raw_scenes[-1]
-            prev_sc["end_frame"] = end_f
+            prev_sc["end_frame"] = max(prev_sc["end_frame"], end_f)
             merged_scene_notes.append(
                 f"Merged short scene {sc.id} ({end_f - start_f} frames) into {prev_sc['id']}"
             )
             continue
+
+        if not raw_scenes and end_f < min_frames:
+            end_f = min_frames
 
         raw_scenes.append(
             {
@@ -272,7 +270,7 @@ def compose_presentation_timeline(
     )
     sfx_list: list[TimelineSfx] = []
 
-    narration_audio = TimelineNarration(src="audio/narration.wav")
+    narration_audio = TimelineNarration(src="job/audio/narration.wav")
     audio = TimelineAudio(narration=narration_audio, music=music, sfx=sfx_list)
     debug = TimelineDebug()
 
@@ -365,7 +363,9 @@ def run_compose_stage(job: Job, ctx: RunContext) -> None:
     )
 
     timeline_path = job.dir / "timeline.json"
-    timeline_path.write_text(timeline.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    timeline_path.write_text(
+        timeline.model_dump_json(indent=2, by_alias=True) + "\n", encoding="utf-8"
+    )
 
     elapsed_ms = int((time.perf_counter() - t0) * 1000)
     log_file = job.dir / "logs" / "compose.log"

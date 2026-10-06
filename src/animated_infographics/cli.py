@@ -712,5 +712,32 @@ def rerun(
         print(f"Rerun completed for job {job.job_id} through preview.")
 
 
+@app.command("score")
+def score(
+    job_ref: Annotated[str, typer.Argument(help="Job ID or job directory path")],
+    oracle: Annotated[
+        bool, typer.Option("--oracle", help="Compose and render oracle baseline")
+    ] = False,
+    jobs_dir: Annotated[Path, typer.Option(help="Jobs directory")] = Path("./jobs"),
+) -> None:
+    """Score a presentation simulation job against ground truth and design bars."""
+    with handle_errors():
+        job = Job.open(job_ref, jobs_dir)
+        from animated_infographics.presentation.score import compute_presentation_score
+
+        res = compute_presentation_score(job.dir, oracle=oracle)
+        print(f"Presentation score for {job.job_id} ({res.level}):")
+        print(f"  Slide accuracy: {res.slide_accuracy:.4f}")
+        print(f"  Point accuracy: {res.point_accuracy:.4f}")
+        print(f"  Onset lag median: {res.onset_lag_median_s}s, p90: {res.onset_lag_p90_s}s")
+        print(f"  False switches: {res.false_switches_per_min}/min")
+        print(f"  Ad-lib stability: {res.adlib_stability:.4f}")
+        if res.skip_recovery_s is not None:
+            print(f"  Skip recovery: {res.skip_recovery_s}s")
+        print(f"  All passed: {res.all_passed}")
+        print(f"  Strip chart: {job.dir / 'strip_chart.png'}")
+        print(f"  presentation_score.json: {job.dir / 'presentation_score.json'}")
+
+
 if __name__ == "__main__":
     app()

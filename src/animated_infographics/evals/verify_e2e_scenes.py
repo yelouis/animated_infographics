@@ -30,10 +30,83 @@ MONTHS: str = (
 def verify_job_scenes(job_dir: Path) -> dict[str, Any]:
     plan_report_path = job_dir / "plan_report.json"
     storyboard_path = job_dir / "storyboard.json"
+    timeline_path = job_dir / "timeline.json"
     beats_path = job_dir / "beats.json"
     transcript_path = job_dir / "transcript.json"
+    heard_path = job_dir / "heard.json"
 
     if not plan_report_path.exists() or not storyboard_path.exists():
+        if timeline_path.exists():
+            timeline = json.loads(timeline_path.read_text(encoding="utf-8"))
+            scenes = timeline.get("scenes", [])
+            transcript_text = ""
+            if heard_path.exists():
+                try:
+                    h_data = json.loads(heard_path.read_text(encoding="utf-8"))
+                    transcript_text = " ".join(w.get("text", "") for w in h_data.get("words", []))
+                except Exception:
+                    pass
+
+            year_stats = 0
+            date_stats = 0
+            junk_text = 0
+            invented_era_stamps = 0
+            armchair_count = 0
+
+            for sc in scenes:
+                tmpl = sc.get("template", "")
+                props = sc.get("props", {})
+                props_str = json.dumps(props)
+                armchair_count += props_str.count('"Armchair"')
+
+                ph_errs = placeholder_errors(tmpl, props)
+                junk_text += len(ph_errs)
+
+                if tmpl == "location":
+                    era = props.get("era_label")
+                    if era is not None:
+                        m = re.fullmatch(r"(1[0-9]{3}|20[0-9]{2})s?", str(era).strip())
+                        if not m or not re.search(rf"\b{m.group(1)}", transcript_text):
+                            invented_era_stamps += 1
+
+                if tmpl == "stat_callout":
+                    val = props.get("value")
+                    decimals = props.get("decimals")
+                    display_scale = props.get("display_scale")
+                    if (
+                        isinstance(val, (int, float))
+                        and int(val) == val
+                        and decimals == 0
+                        and display_scale == "none"
+                    ):
+                        val_int = int(val)
+                        if 1000 <= val_int <= 2100:
+                            year_stats += 1
+                        date_pattern = (
+                            rf"\b(?:{MONTHS})\.?\s+{val_int}(?:st|nd|rd|th)?\b|"
+                            rf"\b{val_int}(?:st|nd|rd|th)?\s+(?:of\s+)?(?:{MONTHS})\b"
+                        )
+                        if re.search(date_pattern, transcript_text, re.IGNORECASE):
+                            date_stats += 1
+
+            return {
+                "job_dir": str(job_dir),
+                "unneutral_flagged_tones": 0,
+                "disputed_attributions_kept": 0,
+                "r7_quoted_repairs": 0,
+                "year_stats": year_stats,
+                "date_stats": date_stats,
+                "junk_text": junk_text,
+                "invented_era_stamps": invented_era_stamps,
+                "armchair_count": armchair_count,
+                "passed": (
+                    year_stats == 0
+                    and date_stats == 0
+                    and junk_text == 0
+                    and invented_era_stamps == 0
+                    and armchair_count == 0
+                ),
+            }
         raise FileNotFoundError(f"Missing plan_report.json or storyboard.json in {job_dir}")
 
     plan_report = json.loads(plan_report_path.read_text(encoding="utf-8"))
@@ -190,7 +263,10 @@ def main() -> None:
     print("-" * 140)
 
     for job_path in args.jobs:
-        if not job_path.is_dir() or not (job_path / "plan_report.json").exists():
+        if not job_path.is_dir() or (
+            not (job_path / "plan_report.json").exists()
+            and not (job_path / "timeline.json").exists()
+        ):
             continue
         try:
             res = verify_job_scenes(job_path)
