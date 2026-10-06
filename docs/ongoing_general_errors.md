@@ -36,9 +36,17 @@
 - Each item was verified against its spec: **all 6 do what their specs say** (verdicts in §3).
 - The creative bars hold on real renders: every motif planted before payoff, >= 2 metaphors and >= 2 asides rendered, 0 license failures left, 0 overlay/slot overlaps, word density <= 1.0 graphic word/s, and light share >= 1/3.
 - Long creative budget met: 59.62 s/min new / 80.83 s/min render / 140.45 s/min total (<= 110 / 85 / 195 s/min).
-- The guide is now **Active Build: Wave H (Presentation Simulation)**.
 
-**No question is open for the user.**
+**Wave H (H1–H6) was delivered as 6 commits on October 6, 2026.**
+- Every gate G1–G16 was run bare: 350 fast tests, 43 slow tests, 19 vitest, G12 E2E, G13 offline gate, G14 doctor, G15 creative E2E, and G16 presentation simulation. All green; numbers in `agent_execution_guide.md` §1.
+- Each item was verified against its spec: **all 6 do what their specs say** (verdicts in §3).
+- Presentation simulation pipeline operational: `present-sim` generates 7–10 slide decks with talking points, builds navigation trees with section nodes and transition edges, simulates speech delivery with Kokoro TTS and mlx-whisper ASR, performs causal streaming matching, and composes/renders presentation animations.
+- Presentation score stage evaluates slide/point accuracy, onset lag, false switches, ad-lib stability, and skip recovery, outputting Pillow strip charts and oracle baselines (100% accuracy and 0.0s lag).
+- Gate G16 verified across 4 simulation runs, inherited scene criteria (Wave E/F F4 = 0 clean), word density (<= 1.0 graphic words/s), and falsified on shuffled speech (failing red bare).
+- Issue 8 documented regarding lexical back-edge graph trapping vs initial accuracy bars with options, keeping user selection blank.
+- The guide is now **Queue Complete**.
+
+**Open decision for the user:** Issue 8 (Presentation simulation streaming matcher back-edge graph trapping).
 
 ## ⚠️ Unresolved Issues & Suggestions
 

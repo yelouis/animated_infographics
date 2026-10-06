@@ -12,7 +12,7 @@ Evaluation of the presentation simulation pipeline (Wave H) per `design_presenta
 
 | Job | Style | Level | Final MP4 (SHA-256) | Oracle MP4 (SHA-256) |
 |---|---|---|---|---|
-| history-great-stink-20261006-124512 | literal | mild | `d10edd6a64285878...` | `eb31acca6c585108...` |
+| history-great-stink-20261006-124512 | literal | mild | `d10edd6a64285878...` | `3af0babb631b4ef4...` |
 | history-great-stink-20261006-132526 | creative | strong | `a6c39a42bc460579...` | `d087ff8ac6993b85...` |
 | story-overdue-book-20261006-134157 | literal | strong | `5caf68ef6875275f...` | `89171d48c23c716a...` |
 | story-overdue-book-20261006-124735 | creative | mild | `a456d8f9ccf8964c...` | `e5c10da80950bf15...` |

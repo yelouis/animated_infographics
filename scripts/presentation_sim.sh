@@ -25,7 +25,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT" || fail "Cannot cd to repo root"
 
 ARTIFACTS_DIR="$REPO_ROOT/artifacts/presentation_sim/$TIMESTAMP"
-JOBS_DIR="${PRESENTATION_JOBS_DIR:-$ARTIFACTS_DIR/jobs}"
+JOBS_DIR="${PRESENTATION_JOBS_DIR:-$REPO_ROOT/jobs}"
 ASSETS_DIR="$REPO_ROOT/docs/evals/assets/$DATE_STR"
 REPORT_PATH="$REPO_ROOT/docs/evals/presentation_$DATE_STR.md"
 

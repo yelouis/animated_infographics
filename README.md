@@ -4,7 +4,7 @@ Turn narration into an **animated explainer video**: flat editorial vector scene
 
 The long-term goal is **live**: speak in real time while the visuals build behind you, like live captioning but as infographics.
 
-> **Status: Waves A–E delivered (Queue Complete).** All items implemented and verified against all 14 battery gates.
+> **Status: Waves A–H delivered (Queue Complete).** All items implemented and verified across 16 battery gates (G1–G16).
 
 ## How it works
 
@@ -48,6 +48,7 @@ uv run infographics new path/to/story.txt --music path/to/bed.wav --sfx-dir path
 ```
 
 Options:
+- `--style literal|creative`: Visual style. `literal` (default) provides strict byte-identical factual scene-by-scene representation. `creative` plans motifs, callbacks, visual metaphors, foreshadowing, and asides with strict license verification.
 - `--voice af_heart|am_michael`: Override automatic narrator voice selection.
 - `--music <path>`: Background music track (normalised to −16 LUFS, played at −18 dB / volume 0.126 with 1 s fade-in and 2 s fade-out).
 - `--sfx-dir <dir>`: Directory containing SFX audio files.
@@ -78,6 +79,50 @@ Render the final 1080×1920 MP4 at 30 fps:
 uv run infographics render <job_id>
 ```
 Output video is saved to `jobs/<job_id>/out/final.mp4`. A verification summary with audio loudness, AV duration alignment, and frame checks is written to `jobs/<job_id>/out/verify.json`.
+
+### 6. Presentation Simulation (`present-sim`)
+Simulate real-time speech-driven presentation animations completely offline:
+```bash
+uv run infographics present-sim path/to/script.txt --style literal|creative --perturb mild|strong --seed 7
+```
+
+Options:
+- `--style literal|creative`: Deck style.
+- `--perturb mild|strong`: Perturbation level simulating live human delivery (paraphrasing, fillers, ad-lib tangents, back-references, point skipping).
+- `--seed <int>`: Deterministic random seed.
+- `--tiebreak none|llm`: Optional LLM tie-break when lexical matcher candidates are tied (defaults to `none` per §6.4).
+- `--jobs-dir <dir>`: Destination directory for jobs.
+
+**What the simulation is:**
+- Plans an 8–10 slide deck with 2–4 talking points per slide and contiguous sentence coverage.
+- Builds an offline navigation tree with section nodes (`section_title`), point nodes, transition edges (next/skip/back), and BM25 token indices.
+- Applies realistic speech delivery variations, synthesizes narration via Kokoro, and transcribes via mlx-whisper.
+- Simulates causal streaming matching at speech pauses and emits a live playback plan.
+- Composes and renders the final presentation video following the mandatory review gate.
+
+**What the simulation is NOT:**
+- **No slide import**: Does not import existing PowerPoint (.pptx), PDF, or Google Slides files.
+- **No real-time player**: Does not run a 60 fps browser client with requestAnimationFrame or Web Audio API.
+- **No live input**: Does not stream live microphone audio or webcam video.
+
+### 7. Presentation Scoring and Oracle Baseline (`score`)
+Score tracking accuracy and render an oracle baseline:
+```bash
+uv run infographics score <job_id> [--oracle]
+```
+
+Evaluates 6 presentation metrics:
+1. **Slide accuracy**: Fraction of speaking time spent on the correct slide.
+2. **Point accuracy**: Fraction of speaking time spent on the correct talking point.
+3. **Onset lag**: Median and P90 lag from speaker transitioning to node commitment on screen.
+4. **False switches**: Number of spurious scene transitions per minute.
+5. **Ad-lib stability**: Fraction of ad-lib and tangent speaking time where the display stays stable.
+6. **Skip recovery**: Time taken to recover after the speaker skips a talking point.
+
+Outputs:
+- `jobs/<job_id>/presentation_score.json`: Recorded score report.
+- `jobs/<job_id>/strip_chart.png`: Visual strip chart (Pillow) showing ground truth vs shown slide progression.
+- `jobs/<job_id>/out/oracle.mp4` (with `--oracle`): Ground-truth baseline video achieving 100% accuracy and 0.0s lag, proving tree and template correctness.
 
 ---
 
@@ -125,10 +170,12 @@ When given a text input, the pipeline automatically chooses an installed narrato
 | [`docs/design_data_contracts.md`](docs/design_data_contracts.md) | Pydantic and TypeScript contract models; schema sync verification. |
 | [`docs/design_audio_and_timing.md`](docs/design_audio_and_timing.md) | TTS synthesis, ASR transcription, loudness targets, beats, frame math, and captions paging. |
 | [`docs/design_planner.md`](docs/design_planner.md) | Local LLM planning (Gemma 4 26B), structured outputs, validators, and voice selection rules. |
-| [`docs/design_templates.md`](docs/design_templates.md) | The 16 scene templates (Statement, People, Place & Time sets). |
+| [`docs/design_styles.md`](docs/design_styles.md) | Visual styles (`literal`, `creative`), motifs, callbacks, visual metaphors, asides, and license verification. |
+| [`docs/design_templates.md`](docs/design_templates.md) | The 19 scene templates (Statement, People, Place & Time sets, Creative, and Presentation). |
+| [`docs/design_presentation_simulation.md`](docs/design_presentation_simulation.md) | Offline presentation simulation, deck planning, tree navigation, live speech perturbation, BM25 matching, and scoring. |
 | [`docs/design_visual_direction.md`](docs/design_visual_direction.md) | Color palette, typography, layout zones, avatars, kinetic motion, and illustration styles. |
 | [`docs/design_rendering.md`](docs/design_rendering.md) | Remotion rendering engine, clock abstractions, sync probe, and media verification. |
-| [`docs/design_testing_and_validation.md`](docs/design_testing_and_validation.md) | Fixtures, the 14 gates (G1–G14), E2E test specification, and offline sandbox. |
+| [`docs/design_testing_and_validation.md`](docs/design_testing_and_validation.md) | Fixtures, the 16 gates (G1–G16), E2E test specification, and offline sandbox. |
 | [`docs/design_future_live_and_video.md`](docs/design_future_live_and_video.md) | Live mode, webcam PiP, and video input design constraints. |
 | [`docs/ongoing_general_errors.md`](docs/ongoing_general_errors.md) | Working log, decision records, and resolved item index. |
 
