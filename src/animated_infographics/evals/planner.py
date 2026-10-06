@@ -714,7 +714,12 @@ def run_eval(
         # Check bars
         expected_voice = expected.get("voice")
         expected_reason = expected.get("voice_reason")
+        expected_evidence = expected.get("evidence_contains")
         voice_match = voice.voice == expected_voice and voice.reason == expected_reason
+        if expected_evidence:
+            voice_match = voice_match and (
+                voice.evidence is not None and expected_evidence in voice.evidence
+            )
 
         min_distinct = 5 if fix_name == "molasses_flood" else 7
         distinct_bar_pass = distinct_templates >= min_distinct
@@ -1070,7 +1075,15 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Planner evaluation on fixtures")
     parser.add_argument(
         "--fixture",
-        choices=["molasses_flood", "emu_war", "story_recipe_box", "story_room_12", "all"],
+        choices=[
+            "molasses_flood",
+            "emu_war",
+            "story_recipe_box",
+            "story_room_12",
+            "story_overdue_book",
+            "history_great_stink",
+            "all",
+        ],
         default="all",
         help="Fixture to evaluate (default: all)",
     )
@@ -1090,7 +1103,14 @@ def main() -> None:
     no_cache = not args.allow_cache
 
     if args.fixture == "all":
-        fixtures = ["molasses_flood", "emu_war", "story_recipe_box", "story_room_12"]
+        fixtures = [
+            "molasses_flood",
+            "emu_war",
+            "story_recipe_box",
+            "story_room_12",
+            "story_overdue_book",
+            "history_great_stink",
+        ]
     else:
         fixtures = [args.fixture]
 

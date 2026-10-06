@@ -77,6 +77,7 @@
 | G13 | offline | exit 0 · 235 s |
 | G14 | doctor | exit 0 · 22 OK |
 | Budget | `story_recipe_box`, cold | 205.8 s / 191.3 s / 397.1 s (≤ 390 / 210 / 600), 0 cache hits |
+| Budget (long) | `story_overdue_book`, literal cold | 56.87 s/min / 79.80 s/min / 136.67 s/min (≤ 90 / 80 / 170 s/min), 0 cache hits |
 
 ### 1.4 Measurements that shaped Waves G and H (October 5, 2026)
 

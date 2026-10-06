@@ -1,0 +1,19 @@
+{
+  "numbers": [1858, 2000000, 1854, 616, 16, 82, 1100, 318000000, 1866, 12, 1875, 1891, 25],
+  "cast_names": ["Snow", "Bazalgette"],
+  "narrator": false,
+  "places": [
+    {
+      "name": "London",
+      "country_iso3": "GBR",
+      "lat": 51.51,
+      "lon": -0.13,
+      "tol_deg": 0.1,
+      "geo_source": "gazetteer"
+    }
+  ],
+  "voice": "am_michael",
+  "voice_reason": "third_person",
+  "evidence_contains": null,
+  "narrator_facial_hair": null
+}

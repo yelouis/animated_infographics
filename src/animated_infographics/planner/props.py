@@ -137,6 +137,10 @@ def build_deterministic_kinetic_quote(scene_id: str, beat_i: int, beat: Beat) ->
     text = " ".join(selected_tokens)
     if has_more_words:
         text += "…"
+    else:
+        text = text.rstrip(",;:-–— ")
+        if not text.endswith((".", "!", "?", '"', "'", "…")):
+            text += "."
 
     if len(text) > 90:
         clipped = text[:89]
@@ -686,26 +690,41 @@ def plan_storyboard(
             accumulated_errors.extend(p_errs)
             # Attempt alternate template
             if alt_template != prim_template:
-                a_scene, a_errs, a_attempts = plan_single_template_props(
-                    alt_template,
-                    scene_id,
-                    idx,
-                    beat,
-                    prev_beat,
-                    next_beat,
-                    transcript,
-                    bible,
-                    backend,
-                    prompt_template,
-                    compact_bible,
-                )
-                total_scene_attempts += a_attempts
-                total_llm_calls += a_attempts
-                if a_scene is not None:
-                    scene_result = a_scene
-                    fallback_level = 1
-                else:
-                    accumulated_errors.extend(a_errs)
+                # Global template limits: timeline (max 1), comparison (max 1), reveal (max 2)
+                if alt_template in ("timeline", "comparison"):
+                    already_used = any(s.template == alt_template for s in scenes)
+                    planned_later = any(c.primary == alt_template for c in choices[idx + 1 :])
+                    if already_used or planned_later:
+                        alt_template = "kinetic_quote"
+                elif alt_template == "reveal":
+                    already_used_count = sum(1 for s in scenes if s.template == "reveal")
+                    planned_later_count = sum(
+                        1 for c in choices[idx + 1 :] if c.primary == "reveal"
+                    )
+                    if already_used_count + planned_later_count >= 2:
+                        alt_template = "kinetic_quote"
+
+                if alt_template != prim_template and alt_template != "kinetic_quote":
+                    a_scene, a_errs, a_attempts = plan_single_template_props(
+                        alt_template,
+                        scene_id,
+                        idx,
+                        beat,
+                        prev_beat,
+                        next_beat,
+                        transcript,
+                        bible,
+                        backend,
+                        prompt_template,
+                        compact_bible,
+                    )
+                    total_scene_attempts += a_attempts
+                    total_llm_calls += a_attempts
+                    if a_scene is not None:
+                        scene_result = a_scene
+                        fallback_level = 1
+                    else:
+                        accumulated_errors.extend(a_errs)
 
         if scene_result is not None:
             # Fallback level 0 or 1: check critic per §11
@@ -750,7 +769,10 @@ def plan_storyboard(
             if cast_id in seen_intro_cast:
                 # Need repair to alternate or fallback
                 alt_template = choices[idx].alternate
-                if alt_template == "character_intro":
+                if alt_template in ("character_intro", "timeline", "comparison") or (
+                    alt_template == "reveal"
+                    and sum(1 for s in scenes if s.template == "reveal") >= 2
+                ):
                     alt_template = "kinetic_quote"
 
                 new_scene: Scene | None = None
@@ -817,6 +839,61 @@ def plan_storyboard(
                 )
             else:
                 seen_intro_cast.add(cast_id)
+
+    # 4. Apply Rule R6 post-props (timeline and comparison at most once per video)
+    for limit_tmpl in ("timeline", "comparison"):
+        matching_indices = [idx for idx, sc in enumerate(scenes) if sc.template == limit_tmpl]
+        if len(matching_indices) > 1:
+            for idx in matching_indices[1:]:
+                sc = scenes[idx]
+                new_scene = build_deterministic_kinetic_quote(sc.id, idx, beats[idx])
+                all_repairs.append(
+                    RuleRepair(
+                        rule="R6",
+                        scene=sc.id,
+                        to="kinetic_quote",
+                        **{"from": limit_tmpl},
+                    )
+                )
+                scenes[idx] = new_scene
+                old_rep = plan_report_scenes[idx]
+                plan_report_scenes[idx] = PlanReportScene(
+                    id=old_rep.id,
+                    primary=old_rep.primary,
+                    alternate=old_rep.alternate,
+                    final_template=new_scene.template,
+                    fallback_level=2,
+                    attempts=old_rep.attempts,
+                    errors=old_rep.errors,
+                    critic=CriticReport(status="not_applicable", mismatches=[], changed=False),
+                )
+
+    # 5. Apply Rule R4 post-props (reveal at most 2 times per video)
+    reveal_indices = [idx for idx, sc in enumerate(scenes) if sc.template == "reveal"]
+    if len(reveal_indices) > 2:
+        for idx in reveal_indices[2:]:
+            sc = scenes[idx]
+            new_scene = build_deterministic_kinetic_quote(sc.id, idx, beats[idx])
+            all_repairs.append(
+                RuleRepair(
+                    rule="R4",
+                    scene=sc.id,
+                    to="kinetic_quote",
+                    **{"from": "reveal"},
+                )
+            )
+            scenes[idx] = new_scene
+            old_rep = plan_report_scenes[idx]
+            plan_report_scenes[idx] = PlanReportScene(
+                id=old_rep.id,
+                primary=old_rep.primary,
+                alternate=old_rep.alternate,
+                final_template=new_scene.template,
+                fallback_level=2,
+                attempts=old_rep.attempts,
+                errors=old_rep.errors,
+                critic=CriticReport(status="not_applicable", mismatches=[], changed=False),
+            )
 
     storyboard = Storyboard(schema_version=1, aspect="9:16", scenes=scenes)
     plan_report = PlanReport(

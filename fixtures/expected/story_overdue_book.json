@@ -1,0 +1,19 @@
+{
+  "numbers": [3, 2300, 1983, 9, 23, 1554.6, 10, 40, 1998, 26, 1982, 2, 4, 2015, 19, 42],
+  "cast_names": ["June", "Robert", "Marisol"],
+  "narrator": true,
+  "places": [
+    {
+      "name": "Portland",
+      "country_iso3": "USA",
+      "lat": 45.52,
+      "lon": -122.68,
+      "tol_deg": 0.1,
+      "geo_source": "gazetteer"
+    }
+  ],
+  "voice": "af_heart",
+  "voice_reason": "llm",
+  "evidence_contains": "grandmother",
+  "narrator_facial_hair": null
+}

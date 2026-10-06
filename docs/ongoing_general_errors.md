@@ -202,6 +202,11 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 - F3 — Era stamps show a narration year or nothing — git log --grep "(f3)" — G1–G14 green bare, 264 passed (+3 tests); normalize_era_label normalizes location era_label to a four-digit year from the narration or null; applied to planner location props before validate_scene; all 8 frozen era label cases match expected values (red first); 1960s with 1960 in transcript yields 1960s, absent 1932 yields null; stub backend returning 'Present Day' produces null; falsified by keeping labels with digits (1932 era goes red bare).
 - F4 — Re-measure; close-out of Wave F — git log --grep "(f4)" — G1–G14 green bare, 265 passed, 37 slow passed; cold planner eval passes all §9 bars (8/8 critic regression, 0 word-cap violations, 0 placeholder errors, 0 armchairs, light share 33.3%–57.1% ≥ 1/3); G12 E2E step 10 verify_e2e_scenes passes with 0 unneutral tones, 0 disputed attributions, 0 quoted R7 repairs, 0 year stats, 0 date stats, 0 junk text, 0 invented era stamps, and 0 armchairs across all 5 rendered jobs; cold budget 402.81 s (≤ 600 s) with 0 cache hits; room 12, recipe box, and emu war stills verified; full battery exits 0 bare; queue complete.
 
+**Wave G:**
+
+- G1 — New fixtures wired in; literal measured on long stories — git log --grep "(g1)" — G1–G14 green bare; shasum CHECKSUMS passes all 28 entries; planner eval passes 6/6 fixtures cold (story_overdue_book af_heart / llm "grandmother", 15 distinct, light 52.5%; history_great_stink am_michael / third_person, 14 distinct, light 39.4%); literal cold budget on story_overdue_book 56.87 s/min new / 79.80 s/min render / 136.67 s/min total (≤ 90 / 80 / 170 s/min), 0 cache hits; literal restatement observed on beats s003/s027, s032, s054.
+
+
 
 ---
 
