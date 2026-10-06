@@ -83,7 +83,7 @@
 | What | Result |
 |---|---|
 | `story_overdue_book` (first version), `new` cold, literal | **349 s** to `awaiting_review`; narration **329.7 s** (5.5 min), 755 words, **64 beats**. Stage timings: voice 31.9 s, narrate 26.2 s, bible 10.3 s, segment 3.6 s, storyboard 140.6 s, assets 114.1 s, preview 19.2 s. That is 63 s per narration minute, against `story_recipe_box`'s 79 s/min. |
-| `history_great_stink`, `new` cold, literal (through storyboard) | narration **303.6 s** (5.1 min), **60 beats**; voice `am_michael` / `third_person`; cast John Snow, Joseph Bazalgette, Members of Parliament, Londoners; places London (gazetteer), River Thames (llm), Soho (gazetteer). Its expected facts hold so far |
+| `history_great_stink`, `new` cold, literal | **331 s** to `awaiting_review` (65 s per narration minute); narration **303.6 s** (5.1 min), **60 beats**; voice `am_michael` / `third_person`; cast John Snow, Joseph Bazalgette, Members of Parliament, Londoners; places London (gazetteer), River Thames (llm), Soho (gazetteer). Its expected facts hold so far |
 | Voice stage on that first version | `am_michael` / `no_evidence`: "As the only librarian in Alder Creek, Oregon, and a grandmother of three, I" fails Form B, an accepted false negative (`design_planner.md` §10). The opening was rewritten to "As a grandmother of three, I…". **G1 confirms `af_heart` / `llm`.** |
 | Bible of that run | cast: Me (narrator), June Lind, Robert Okafor, Marisol. Places: Alder Creek (llm geo), Portland (gazetteer). Set pieces: The Long Way Home, The Late Fee Stack, The Reading Nook. |
 | Everything else in these waves | **Not measured by the designer** (no code was written, per the user). Each item states the measurement you run first, and the bar it must meet. |

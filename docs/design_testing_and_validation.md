@@ -221,7 +221,7 @@ Writes `docs/evals/e2e_<YYYY-MM-DD>.md` (committed): every exit code, the `verif
 | `literal` | ≤ **90 s per narration minute** | ≤ **80 s/min** | ≤ **170 s/min** |
 | `creative` | ≤ **110 s/min** | ≤ **85 s/min** | ≤ **195 s/min** |
 
-- **Anchors:** a cold literal run on October 5, 2026 took **349 s** to `awaiting_review` for 5.5 min of narration (63 s/min). The `story_recipe_box` render takes 73 s per minute of video. Creative adds the director call, the license calls and up to 5 metaphor illustrations (~20 s each).
+- **Anchors:** cold literal runs on October 5, 2026 took **349 s** to `awaiting_review` for 5.5 min of narration (`story_overdue_book`, 63 s/min) and **331 s** for 5.1 min (`history_great_stink`, 65 s/min). The `story_recipe_box` render takes 73 s per minute of video. Creative adds the director call, the license calls and up to 5 metaphor illustrations (~20 s each).
 - The `story_recipe_box` bars above remain the primary budget.
 
 Total ≤ 10 minutes: the user's stated tolerance for a 1–3 minute video, measured at the top of that range. (Re-anchored September 24, 2026 from the 2-minute `emu_war` when the story fixtures became complete ~3-minute stories. The 6/4 split became 6.5/3.5, because planning scales with scene count while rendering is fast.) **Exceeding a bar is filed with the per-stage timings**, never fixed silently by lowering quality (fewer images, a smaller model, lower CRF). Those are the user's trade-offs to make.
