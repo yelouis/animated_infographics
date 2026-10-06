@@ -21,6 +21,7 @@ from animated_infographics.contracts.models import (
     TranscriptWord,
     VoiceDecision,
 )
+from animated_infographics.contracts.styles import StyleSpec
 from animated_infographics.contracts.templates import REGISTRY
 
 
@@ -41,6 +42,16 @@ def test_unknown_key_rejected() -> None:
             start_ms=0,
             end_ms=100,
             sentence_i=0,
+            extra="forbidden",  # type: ignore[call-arg]
+        )
+
+    with pytest.raises(ValidationError):
+        StyleSpec(
+            name="literal",
+            director=False,
+            templates=[],
+            overlays=False,
+            license="none",
             extra="forbidden",  # type: ignore[call-arg]
         )
 

@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 
 from animated_infographics.contracts.models import IngestRecord
+from animated_infographics.contracts.styles import StyleName
 from animated_infographics.errors import ValidationFailed
 
 SUPPORTED_AUDIO_EXTENSIONS = frozenset({".mp3", ".wav", ".m4a"})
@@ -37,6 +38,7 @@ def ingest(
     title_override: str | None,
     music: str | None = None,
     sfx_dir: str | None = None,
+    style: StyleName = "literal",
 ) -> IngestRecord:
     """Ingest and validate an input text or audio file."""
     ext = input_path.suffix.lower()
@@ -51,6 +53,7 @@ def ingest(
             word_count=None,
             music=music,
             sfx_dir=sfx_dir,
+            style=style,
         )
 
     if ext != ".txt":
@@ -94,4 +97,5 @@ def ingest(
         word_count=word_count,
         music=music,
         sfx_dir=sfx_dir,
+        style=style,
     )

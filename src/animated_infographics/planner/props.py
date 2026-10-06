@@ -570,6 +570,8 @@ def plan_storyboard(
     beats: Sequence[Beat],
     bible: Bible,
     backend: LLMBackend,
+    style: str = "literal",
+    style_degraded: bool = False,
 ) -> tuple[Storyboard, PlanReport]:
     """Execute complete storyboard planning: select -> props with fallback ladder -> rule repairs.
 
@@ -587,6 +589,8 @@ def plan_storyboard(
                 llm_cache_hits=0,
                 scenes=[],
                 rule_repairs=[],
+                style=style if (style != "literal" or style_degraded) else None,
+                style_degraded=style_degraded if (style != "literal" or style_degraded) else None,
             ),
         )
 
@@ -903,6 +907,8 @@ def plan_storyboard(
         llm_cache_hits=total_cache_hits,
         scenes=plan_report_scenes,
         rule_repairs=all_repairs,
+        style=style if (style != "literal" or style_degraded) else None,
+        style_degraded=style_degraded if (style != "literal" or style_degraded) else None,
     )
 
     return (storyboard, plan_report)

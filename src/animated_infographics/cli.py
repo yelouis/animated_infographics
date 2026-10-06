@@ -15,7 +15,13 @@ import typer
 # Runtime environment settings
 os.environ["HF_HUB_OFFLINE"] = "1"
 
-from animated_infographics.contracts.models import Beats, Bible, Storyboard, Transcript
+from animated_infographics.contracts.models import (
+    Beats,
+    Bible,
+    IngestRecord,
+    Storyboard,
+    Transcript,
+)
 from animated_infographics.doctor import run_doctor
 from animated_infographics.errors import (
     DependencyMissing,
@@ -33,6 +39,7 @@ from animated_infographics.planner.validate import PlanContext, validate_plan
 from animated_infographics.stages.assets import run_assets_stage
 from animated_infographics.stages.bible import run_bible_stage
 from animated_infographics.stages.compile import run_compile_stage
+from animated_infographics.stages.director import run_director_stage
 from animated_infographics.stages.ingest import run_ingest_stage
 from animated_infographics.stages.narrate import run_narrate_stage
 from animated_infographics.stages.preview import run_preview_stage
@@ -64,6 +71,7 @@ STAGE_REGISTRY["narrate"] = run_narrate_stage
 STAGE_REGISTRY["transcribe"] = run_transcribe_stage
 STAGE_REGISTRY["bible"] = run_bible_stage
 STAGE_REGISTRY["segment"] = run_segment_stage
+STAGE_REGISTRY["director"] = run_director_stage
 STAGE_REGISTRY["storyboard"] = run_storyboard_stage
 STAGE_REGISTRY["assets"] = run_assets_stage
 STAGE_REGISTRY["compile"] = run_compile_stage
@@ -129,6 +137,9 @@ def new(
     music: Annotated[Path | None, typer.Option(help="Optional background music WAV")] = None,
     sfx_dir: Annotated[Path | None, typer.Option(help="Optional SFX directory")] = None,
     jobs_dir: Annotated[Path, typer.Option(help="Jobs directory")] = Path("./jobs"),
+    style: Annotated[
+        str, typer.Option("--style", "-s", help="Style name (literal | creative)")
+    ] = "literal",
     no_llm_cache: Annotated[bool, typer.Option(help="Bypass LLM response cache")] = False,
     preview_video: Annotated[bool, typer.Option(help="Render preview MP4")] = False,
 ) -> None:
@@ -137,6 +148,9 @@ def new(
         # Pre-validation BEFORE creating job directory
         if not input_path.is_file():
             raise ValidationFailed(f"Input file not found: {input_path}")
+
+        if style not in {"literal", "creative"}:
+            raise ValidationFailed(f"style must be one of literal, creative; got '{style}'")
 
         suffix = input_path.suffix.lower()
         is_text = suffix == ".txt"
@@ -182,6 +196,7 @@ def new(
             sfx_dir=sfx_dir,
             no_llm_cache=no_llm_cache,
             preview_video=preview_video,
+            style=style,
             now=now,
         )
 
@@ -192,6 +207,7 @@ def new(
                 "narrate",
                 "bible",
                 "segment",
+                "director",
                 "storyboard",
                 "assets",
                 "compile",
@@ -203,6 +219,7 @@ def new(
                 "transcribe",
                 "bible",
                 "segment",
+                "director",
                 "storyboard",
                 "assets",
                 "compile",
@@ -408,11 +425,14 @@ def status(
 def rerun(
     job_ref: Annotated[str, typer.Argument(help="Job ID or job directory path")],
     from_stage: Annotated[str, typer.Option("--from", "-f", help="Stage to rerun from")] = "bible",
+    style: Annotated[
+        str | None, typer.Option("--style", "-s", help="Style name (literal | creative)")
+    ] = None,
     jobs_dir: Annotated[Path, typer.Option(help="Jobs directory")] = Path("./jobs"),
 ) -> None:
     """Rerun job pipeline from a specified stage through preview."""
     with handle_errors():
-        allowed_stages = ("bible", "segment", "storyboard", "assets", "compile")
+        allowed_stages = ("bible", "segment", "director", "storyboard", "assets", "compile")
         if from_stage not in allowed_stages:
             raise ValidationFailed(
                 f"Invalid rerun stage '{from_stage}'. Allowed: {', '.join(allowed_stages)}"
@@ -420,13 +440,34 @@ def rerun(
 
         job = Job.open(job_ref, jobs_dir)
 
+        eff_style = "literal"
+        ingest_path = job.dir / "ingest.json"
+        if style is not None:
+            if style not in {"literal", "creative"}:
+                raise ValidationFailed(f"style must be one of literal, creative; got '{style}'")
+            eff_style = style
+            if ingest_path.is_file():
+                ingest_data = json.loads(ingest_path.read_text(encoding="utf-8"))
+                ingest_data["style"] = style
+                ingest_rec = IngestRecord.model_validate(ingest_data)
+                ingest_path.write_text(
+                    ingest_rec.model_dump_json(indent=2) + "\n", encoding="utf-8"
+                )
+        else:
+            if ingest_path.is_file():
+                try:
+                    ingest_data = json.loads(ingest_path.read_text(encoding="utf-8"))
+                    eff_style = ingest_data.get("style", "literal")
+                except Exception:
+                    pass
+
         # Invalidate from previous stage
         idx = STAGES.index(from_stage)  # type: ignore[arg-type]
         prev_stage = STAGES[idx - 1]
         job.invalidate_after(prev_stage)
 
         stages_to_run = list(STAGES[idx:])
-        ctx = RunContext()
+        ctx = RunContext(style=eff_style)
         job.run(stages_to_run, STAGE_REGISTRY, ctx)
 
         plan_sha = job.plan_sha256()

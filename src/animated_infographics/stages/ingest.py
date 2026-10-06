@@ -38,6 +38,7 @@ def run_ingest_stage(job: Job, ctx: RunContext) -> None:
         title_override=ctx.title,
         music=music_rel,
         sfx_dir=sfx_rel,
+        style=ctx.style,  # type: ignore[arg-type]
     )
 
     out_file = job.dir / "ingest.json"

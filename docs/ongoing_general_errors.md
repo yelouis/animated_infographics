@@ -205,6 +205,7 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 **Wave G:**
 
 - G1 — New fixtures wired in; literal measured on long stories — git log --grep "(g1)" — G1–G14 green bare; shasum CHECKSUMS passes all 28 entries; planner eval passes 6/6 fixtures cold (story_overdue_book af_heart / llm "grandmother", 15 distinct, light 52.5%; history_great_stink am_michael / third_person, 14 distinct, light 39.4%); literal cold budget on story_overdue_book 56.87 s/min new / 79.80 s/min render / 136.67 s/min total (≤ 90 / 80 / 170 s/min), 0 cache hits; literal restatement observed on beats s003/s027, s032, s054.
+- G2 — Style contract; --style; literal byte-identity — git log --grep "(g2)" — G1–G14 green bare, 272 passed (+7 tests); StyleSpec and STYLES {literal, creative} in contracts/styles.py exported to schema/styles.schema.json and renderer/src/generated/styles.ts (G8 passed); --style added to new and rerun; ingest.json records style (missing key loads as literal); director inserted into stage list (skipped in literal, writes nothing); rerun --from director supported; literal byte-identity on molasses_flood verified against tests/data/literal_baseline/molasses_flood.sha256 across all 5 files (bible, beats, storyboard, plan_report, timeline); falsified by verifying modified plan_report changes checksum.
 
 
 

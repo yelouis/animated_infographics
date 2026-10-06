@@ -4,11 +4,12 @@ Every model is frozen and extra="forbid". Every top-level model carries
 schema_version: Literal[1].
 """
 
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator
 
 from animated_infographics.contracts.icons import IconName
+from animated_infographics.contracts.styles import StyleName
 from animated_infographics.contracts.templates import (
     CauseEffectProps,
     CharacterIntroProps,
@@ -134,6 +135,7 @@ class IngestRecord(BaseModel):
     word_count: int | None = None
     music: str | None = None
     sfx_dir: str | None = None
+    style: StyleName = "literal"
 
 
 class SentenceOffset(BaseModel):
@@ -638,6 +640,24 @@ class PlanReport(BaseModel):
     llm_cache_hits: int = Field(ge=0)
     scenes: list[PlanReportScene] = Field(default_factory=list)
     rule_repairs: list[RuleRepair] = Field(default_factory=list)
+    style: str | None = Field(default=None)
+    style_degraded: bool | None = Field(default=None)
+
+    @model_serializer(mode="wrap")
+    def _serialize(self, handler: Any) -> dict[str, Any]:
+        data = handler(self)
+        if self.style is None or (self.style == "literal" and not self.style_degraded):
+            data.pop("style", None)
+            data.pop("style_degraded", None)
+        return data
+
+    @property
+    def effective_style(self) -> str:
+        return self.style if self.style is not None else "literal"
+
+    @property
+    def is_style_degraded(self) -> bool:
+        return bool(self.style_degraded)
 
 
 # ---------------------------------------------------------------------------

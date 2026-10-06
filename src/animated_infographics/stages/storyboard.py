@@ -30,8 +30,19 @@ def run_storyboard_stage(job: Job, ctx: RunContext) -> None:
     beats = Beats.model_validate_json(beats_path.read_text(encoding="utf-8"))
     bible = Bible.model_validate_json(bible_path.read_text(encoding="utf-8"))
 
+    style = ctx.style
+    ingest_path = job.dir / "ingest.json"
+    if ingest_path.is_file():
+        import json
+
+        try:
+            ingest_data = json.loads(ingest_path.read_text(encoding="utf-8"))
+            style = ingest_data.get("style", style)
+        except Exception:
+            pass
+
     backend = OllamaBackend(no_cache=ctx.no_llm_cache)
-    storyboard, plan_report = plan_storyboard(transcript, beats.beats, bible, backend)
+    storyboard, plan_report = plan_storyboard(transcript, beats.beats, bible, backend, style=style)
 
     storyboard_path = job.dir / "storyboard.json"
     with open(storyboard_path, "w", encoding="utf-8") as f:

@@ -115,6 +115,9 @@ def fake_stages() -> dict[str, Any]:
     def fake_render(j: Job, ctx: RunContext) -> None:
         (j.dir / "out" / "final.mp4").write_bytes(b"mp4")
 
+    def fake_director(j: Job, ctx: RunContext) -> None:
+        pass
+
     registry = {
         "ingest": fake_ingest,
         "voice": fake_voice,
@@ -122,6 +125,7 @@ def fake_stages() -> dict[str, Any]:
         "transcribe": fake_transcribe,
         "bible": fake_bible,
         "segment": fake_segment,
+        "director": fake_director,
         "storyboard": fake_storyboard,
         "assets": fake_assets,
         "compile": fake_compile,

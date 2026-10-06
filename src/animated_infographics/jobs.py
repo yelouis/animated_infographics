@@ -21,6 +21,7 @@ STAGES = (
     "transcribe",
     "bible",
     "segment",
+    "director",
     "storyboard",
     "assets",
     "compile",
@@ -36,6 +37,7 @@ STAGE_OUTPUT_MAP: dict[str, list[str]] = {
     "transcribe": ["transcript.json"],
     "bible": ["bible.json"],
     "segment": ["beats.json"],
+    "director": ["director.json"],
     "storyboard": ["storyboard.json", "plan_report.json"],
     "assets": ["assets/images", "assets/manifest.json"],
     "compile": ["timeline.json", "audio/music.wav", "audio/sfx"],
@@ -50,7 +52,8 @@ STAGE_INPUT_DEPENDENCIES: dict[str, list[str]] = {
     "transcribe": ["input"],
     "bible": ["transcript.json", "voice.json"],
     "segment": ["transcript.json", "bible.json"],
-    "storyboard": ["beats.json", "bible.json"],
+    "director": ["beats.json", "bible.json", "ingest.json"],
+    "storyboard": ["beats.json", "bible.json", "ingest.json"],
     "assets": ["storyboard.json", "bible.json"],
     "compile": ["storyboard.json", "bible.json", "beats.json", "ingest.json"],
     "preview": ["timeline.json"],
@@ -69,6 +72,7 @@ class RunContext:
     no_llm_cache: bool = False
     preview_video: bool = False
     sync_probe: bool = False
+    style: str = "literal"
     now: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
