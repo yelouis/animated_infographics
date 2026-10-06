@@ -134,9 +134,10 @@ spoken exchange → `dialogue`; texts/messages → `text_thread`; a person's fir
 | **R4** | `reveal` more than **2** times | Later ones → alternate |
 | **R5** | `kinetic_quote` more than `ceil(0.30 × n_scenes)` times (counting only LLM primaries) | Excess (latest first) → alternate if it is not `kinetic_quote` |
 | **R6** (added September 27, 2026) | More than one `timeline`, or more than one `comparison`, in the video | Later ones → alternate if it is neither the same template nor `title_card`, else `kinetic_quote` |
+| **R8** (added October 5, 2026; creative style only) | A beat carries a director metaphor or motif payoff (`design_styles.md` §3.3) | → `metaphor` / `callback`, built deterministically; `alternate` = the LLM's primary |
 | **R7** (added September 27, 2026) | Two worded scenes in a row, then a **replaceable** scene whose beat names a picture target | That scene → a deterministic **picture** (below) |
 
-**Rule order (revised September 27, 2026):** R1, **R6**, R2, R4, R5, **R7**, then R3 after props. R6 runs before R2 so that R2 removes any consecutive duplicate R6 creates. R7 runs last and never creates one.
+**Rule order (revised September 27, 2026; R8 added October 5, 2026):** R1, **R8** (creative only), **R6**, R2, R4, R5, **R7**, then R3 after props. R2 never rewrites an R8 scene: a consecutive duplicate of `metaphor` or `callback` is resolved by rewriting the *other* scene. **The presentation profile** (`design_presentation_simulation.md` §3) skips R2, R6 and R7. R6 runs before R2 so that R2 removes any consecutive duplicate R6 creates. R7 runs last and never creates one.
 
 **R7, the reaction-shot rhythm (Issue 7 → Option A).** The template classes (picture, replaceable, kept) are in `design_templates.md` §5.4.
 ```
@@ -321,6 +322,14 @@ The renderer independently detects overflow in the DOM (`design_rendering.md` §
 | `kinetic_quote.emphasis[]` | each `norm(word)` is a whole word of `norm(text)` |
 
 **Why grounding is a hard gate:** a local model will cheerfully turn "about 150 were injured" into "1,500 injured". The error is invisible to a quick human skim and permanent once published. Code can decide groundedness exactly, so code does, and a wrong number never reaches review.
+
+---
+
+## 8b. Style-dependent stages (pointers; added October 5, 2026)
+
+- **`director`** and **`license`** (creative only): `design_styles.md` §3.3–3.4. Both go through `run_with_retries` and are counted in `plan_report.llm_calls`.
+- **`deck`**, **`tree`** and **`perform`** (presentation simulation only): `design_presentation_simulation.md` §2–4.
+- All of them follow §1: LLM-facing schemas carry no length constraints; limits are enforced by validators with retry messages.
 
 ---
 

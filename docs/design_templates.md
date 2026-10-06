@@ -1,6 +1,6 @@
 # Template Catalogue
 
-This document owns the **16 templates**: what each is for, its props and limits, its layout on the 9:16 canvas, its motion, its SFX cues and its template-specific validators. Everything here is encoded once in `contracts/templates.py` (`design_data_contracts.md` §8) and drawn by `renderer/src/templates/<name>.tsx`.
+This document owns the **16 templates** (19 from Waves G and H: `metaphor` and `callback` belong to the creative style, `design_styles.md`; `section_title` belongs to the presentation profile, `design_presentation_simulation.md`): what each is for, its props and limits, its layout on the 9:16 canvas, its motion, its SFX cues and its template-specific validators. Everything here is encoded once in `contracts/templates.py` (`design_data_contracts.md` §8) and drawn by `renderer/src/templates/<name>.tsx`.
 
 **Read `design_visual_direction.md` first.** Colours, fonts, layout zones and motion tokens are named here and defined there. All coordinates are canvas pixels on 1080×1920. The **stage** is x 60–1020, y 140–1180 (960×1040).
 
@@ -163,6 +163,43 @@ Notation: `str≤N` = 1..N characters; `?` = nullable; `[a..b]` = list length bo
 - **Validators:** `0 ≤ highlight_index < len(events)`; **the date-label rule of `design_planner.md` §8 (Issue 4)**: each label is a grounded date/number or one of 17 relative-time phrases; labels are distinct; years are non-decreasing. Examples from Wave A that are now rejected: `2013 / 2013 / 2013` (not distinct); `50+ Years / No Record / Memory Only` ("No Record" is neither); `Last Spring / Present / Now` ("Present" alone is not on the list; "Present day" is).
 - **SFX:** `pop` at each `item`.
 
+### 2.17 `metaphor` (creative style only; picture class; added October 5, 2026)
+- **Use when:** never selected by the LLM. It is placed by rule R8 from a director metaphor (`design_styles.md` §3.3, §3.5).
+- **Props:** `image_entity: str` (the metaphor's generated-image id), `label: str≤24?` (**≤ 3 words**), `cast_ids: [0..2] CastId`. Built deterministically from `director.json`.
+- **Layout:**
+  - **Image:** 960×960 at (60, 160), radius 32, with the `location` scrim (`IMAGE_SCRIM`) and Ken Burns.
+  - **Label:** in the `location` name slot, bottom-aligned at y 1080, left x 100.
+  - **Avatars:** up to two, 200 px, centred at (240, 1000) and (840, 1000), overlapping the image's bottom edge, each with a 10 px ring in its cast colour.
+  - **No image:** the label centred in a 560 px `bgRaised` circle at (540, 560), as in `location`'s fallback.
+- **Slots:** label display 800 72→48 · 2 · 880
+- **Motion:** image fades in over 12 frames; avatars spring in at frames 6 and 10. Hold: Ken Burns 1.00→1.08.
+- **Validators:** the label passes word caps, placeholder, id and completeness rules; no digits; no quotation marks.
+- **SFX:** `whoosh` at `start`.
+
+### 2.18 `callback` (creative style only; picture class; added October 5, 2026)
+- **Use when:** never selected by the LLM. It is placed by R8 at a motif's payoff.
+- **Props:** `motif_id: str`, `label: str≤24?` (**≤ 3 words**). Built deterministically.
+- **Layout:**
+  - **Motif with a set piece:** that set piece's illustration fills the image box (as `set_piece`), with a 12 px `highlight` ring that pulses (period 45 frames).
+  - **Otherwise:** the motif's icon, 360 px, in a 560 px `highlight` circle centred at (540, 560), drawn navy.
+  - **Label:** in the name slot.
+  - **"Seen before" row:** 24 px dots, one per earlier rendered appearance of the motif, centred at y 1140 with 16 px gaps. They fill in to `highlight` at `item_frames` (`spread 0.4`).
+- **Slots:** label display 800 72→48 · 2 · 880
+- **Motion:** zoom 1.00→1.12 over the scene. The dots fill at their item frames.
+- **SFX:** `ding` at the last `item`.
+
+### 2.19 `section_title` (presentation profile only; added October 5, 2026)
+- **Use when:** never selected by the LLM. It is the `section` node of a presentation tree (`design_presentation_simulation.md` §3), built deterministically.
+- **Props:** `title: str≤48` (**≤ 6 words**, the slide title), `index: int ≥ 0`, `count: int 1..10`.
+- **Layout:**
+  - **Title:** a display-font block centred at y 620.
+  - **Progress row:** `count` dots of 28 px with 24 px gaps, centred at y 820. The dot at `index` is `highlight` and 36 px; earlier dots are `ink`; later dots are `inkMuted`.
+  - The same layout for every slide makes it the presentation's **repeated graphic**.
+- **Slots:** title display 800 96→64 · 3 · 900
+- **Motion:** the title words stagger 3 frames each. The current dot springs from 28 to 36 px at frame 8. Hold: the current dot pulses 1.00→1.10, period 45 frames.
+- **Validators:** `0 ≤ index < count`; the title passes word caps, placeholder, id and completeness rules.
+- **SFX:** `whoosh` at `start`.
+
 ---
 
 ## 3. Gallery fixtures (required per template)
@@ -220,6 +257,10 @@ These fields restated the narration. They are **deleted from the props models** 
 | `set_piece` | — | none (no text fields) |
 | `map_focus` | — | `markers[].label` 3 |
 | `timeline` | `events` 3..**4** (3..6) | `events[].date_label` 3 · `events[].label` 3 |
+| `metaphor` (Wave G) | `cast_ids` 0..2 | `label` 3 |
+| `callback` (Wave G) | — | `label` 3 |
+| `section_title` (Wave H) | — | `title` 6 |
+| overlays (Wave G) | — | an aside's `text` 3; a motif's `name` 4. Overlay text counts as graphic words for its scene (`design_styles.md` §3.6) |
 
 Character limits are unchanged. Per-video limits (at most one `timeline` and one `comparison`) are planner rule R6; the reaction-shot rhythm is rule R7 (`design_planner.md` §4).
 
@@ -227,9 +268,9 @@ Character limits are unchanged. Per-video limits (at most one `timeline` and one
 
 | Class | Templates | Meaning |
 |---|---|---|
-| **picture** | `emotion_beat`, `set_piece`, `location`, `stat_callout`, `map_focus` | ≤ 2 graphic words by contract (map markers are labels on a picture). They end a run of worded scenes. |
+| **picture** | `emotion_beat`, `set_piece`, `location`, `stat_callout`, `map_focus`, and from Wave G **`metaphor`** and **`callback`** | ≤ 2 graphic words by contract (map markers are labels on a picture). They end a run of worded scenes. |
 | **replaceable** | `kinetic_quote`, `cause_effect`, `icon_list`, `comparison`, `timeline`, `relationship_map` | Their words restate the narration. R7 may replace one with a picture. |
-| **kept** | `title_card`, `character_intro`, `dialogue`, `text_thread`, `reveal` — and, from October 3, 2026, **any scene whose beat contains quoted speech or writing** | Words the story itself contains (speech, texts, a punchline) or a first appearance. They count as worded but are **never replaced**. Measured: without this class, R7 turned Major Meredith's introduction into a reaction shot, and Deb's reply "Keep the room. He's never missed one." into a picture of Room 12. |
+| **kept** | `title_card`, `character_intro`, `dialogue`, `text_thread`, `reveal`, `section_title` (Wave H) — and, from October 3, 2026, **any scene whose beat contains quoted speech or writing** | Words the story itself contains (speech, texts, a punchline) or a first appearance. They count as worded but are **never replaced**. Measured: without this class, R7 turned Major Meredith's introduction into a reaction shot, and Deb's reply "Keep the room. He's never missed one." into a picture of Room 12. |
 
 ### 5.5 Measured (September 27, 2026, `gemma4:26b`, the Wave B E2E storyboards)
 

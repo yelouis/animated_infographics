@@ -203,6 +203,8 @@ The **only** file the renderer reads. It is fully resolved: frame numbers, asset
 - `timing.item_frames` (frames relative to scene start, one per list item/marker/line/message/event) and `timing.count_frames` (`stat_callout` only; otherwise null) are computed **in Python** by `compile.py`. The renderer uses them for entrances and `compile.py` uses them for SFX cues, so sound and picture share one number (`design_templates.md` §1 rule 5).
 - `props` are the storyboard props unchanged (ids, not inlined objects). Templates resolve ids through the `cast` / `places` / `set_pieces` dictionaries via a context hook.
 
+- **`overlays`** (added October 5, 2026, creative style only; `design_styles.md` §3.5–3.6) is an optional per-scene list, `[]` when absent: `[{"kind": "motif_token" | "thought" | "label" | "prop", "icon": IconName | null, "text": str | null, "anchor": "top_right" | "bottom_left", "motif_id": str | null}]`. There are at most 2 per scene (one `motif_token`, one aside), only on the templates `design_styles.md` §3.5 allows. A `literal` timeline has no `overlays` key: schema default `[]`, serialised only when non-empty, so literal output stays byte-identical.
+
 **Renderer-side validation:** the `Story` composition's `calculateMetadata` validates `inputProps` against `schema/timeline.schema.json` (Ajv) and **throws** on failure. A render never starts on an invalid timeline.
 
 ---
@@ -237,3 +239,26 @@ Written by the `voice` stage before narration; read by `narrate`, `bible` (narra
 **Invariants (checked on load):** `source == "flag"` ⇔ `reason == "flag"` ⇔ `perspective`, `first_person_rate`, `narrator_gender` and `evidence` are all null. `voice ∈ INSTALLED_VOICES`. If `reason ∈ {tag, llm}`, then `evidence` is non-null and `narrator_gender ∈ {female, male}`. If `reason == "third_person"`, then `perspective == "third_person"`. `voice == "af_heart"` with `source == "auto"` ⇔ `perspective == "first_person"` and `narrator_gender == "female"`.
 
 Not human-editable. Changing the voice means a new job with `--voice` (`design_planner.md` §10).
+
+---
+
+## 10. Style and presentation artefacts (added October 5, 2026; Waves G and H)
+
+All are Pydantic contracts in `contracts/`, exported to `schema/*.schema.json` and the generated TypeScript (G8 covers them). None of them is human-editable except `director.json` and `deck.json`, which `preview` re-validates like `storyboard.json`.
+
+| File | Written by | Read by | Shape |
+|---|---|---|---|
+| `ingest.json` → `style` | `ingest` | every stage that branches on style | `"literal"` \| `"creative"`, default `"literal"`. A pre-Wave-G `ingest.json` without the key loads as `"literal"` |
+| `director.json` | `director` (creative only) | `storyboard`, `assets`, `compile`, `preview`, eval | `design_styles.md` §3.3, plus `license_dropped: [{"item", "verdict"}]` and `overlay_dropped: [...]` |
+| `plan_report.json` → `style`, `style_degraded` | `storyboard` | eval, `status` | `style` as above; `style_degraded: bool`; `rule_repairs[].rule` adds `"R8"` |
+| `state.json` → `kind` | `new` / `present-sim` | `jobs.py`, CLI | `"video"` (default; a pre-Wave-H state without the key loads as `"video"`) \| `"presentation"` |
+| `deck.json` | `deck` | `tree`, `perform`, `score`, `preview` | `design_presentation_simulation.md` §2 |
+| `tree.json` | `tree` | `follow`, `compose` | §3 of the same document |
+| `performance.json` | `perform` | `speak`, `score` **only** | §4: `{"seed", "level", "sentences": [{"text", "label", "op", "source_sentence_id"}], "op_counts"}` |
+| `speak_timing.json` | `speak` | `score` only | `[{"sentence_i", "start_ms", "end_ms"}]` |
+| `heard.json` | `hear` | `follow`, `compose` | the transcript contract of §2 (`source: "asr"`) |
+| `playback.json` | `follow` | `compose`, `score` | §6.5 |
+| `presentation_score.json` | `score` | eval report | §8 metrics, the bars applied, and the oracle row |
+
+**Isolation invariant (tested):** `follow` reads only `tree.json` and `heard.json`; `tree` reads only `deck.json`, `deck_bible.json` (the bible stage run on the deck text; same contract as `bible.json`) and the style; neither reads `performance.json`, `speak_timing.json` or the script. A unit test patches file access during each stage and fails on any other read.
+

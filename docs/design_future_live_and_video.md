@@ -53,4 +53,9 @@ mic ─► streaming ASR (local) ─► word stream ─► live beat closer ─�
 - Graphics may **recur** to reinforce a point, e.g. the same timeline returning with the next event highlighted. The offline no-repeat rule R2 (`design_planner.md` §4) and any per-video template limits do not carry over.
 - Any word-density limits chosen for offline **story** videos (Issue 7 in `ongoing_general_errors.md`) do not apply to live mode.
 
+**The path to DF4: prepared mode, decided by the user on October 5, 2026.** The user described the target: a presentation driven by a deck of talking points, where *"you will not know the transcript and what will be said in the moment but you will know the rough powerpoint which contains all the talking points"*. The system builds *"a tree of animations that will link each slide to each other as the real time voice is being said."* That is mitigation (b) above.
+- **The first step is an offline simulation:** `design_presentation_simulation.md` (Wave H). It derives the deck from a script, builds the tree from the deck alone, perturbs the script into a "performed" talk, narrates and re-transcribes it as simulated live ASR, follows it with a causal matcher, renders the result and scores it against ground truth.
+- **Still deferred:** slide import (.pptx, PDF, Google Slides), at the user's request: *"We do not need to build this out now."* The real-time player, the microphone and the webcam also stay deferred.
+- **Already answered:** the first of the three questions below. The talks are prepared (scripted or outlined), not improvised.
+
 **Questions for the user when DF4 is selected:** improvised or scripted talks (decides between mitigations (a) and (b))? Where does the output go (fullscreen, OBS, Zoom virtual camera)? What lag is acceptable?

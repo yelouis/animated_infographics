@@ -148,7 +148,9 @@ jobs/<job_id>/
   logs/<stage>.log
 ```
 
-**Stages, in order:** `ingest` → (`voice` → `narrate`) *or* `transcribe` → `bible` → `segment` → `storyboard` → `assets` → `compile` → `preview` → *(gate)* → `render`.
+**Stages, in order:** `ingest` → (`voice` → `narrate`) *or* `transcribe` → `bible` → `segment` → **`director`** (creative style only, added October 5, 2026; recorded as skipped for `literal`, `design_styles.md` §3.3) → `storyboard` → `assets` → `compile` → `preview` → *(gate)* → `render`.
+
+**Presentation jobs** (`state.json.kind == "presentation"`, added October 5, 2026) run `ingest` → `voice` → `deck` → `deck_bible` → `tree` → `assets` → `perform` → `speak` → `hear` → `follow` → `compose` → `preview` → *(gate)* → `render` → `score`. The stages are defined in `design_presentation_simulation.md`; the gate and job-local rules are unchanged.
 
 **`state.json`:**
 
@@ -202,12 +204,14 @@ Entry point: `infographics` (`[project.scripts] infographics = "animated_infogra
 | Command | Options |
 |---|---|
 | `doctor` | — Checks every dependency in §8 and prints one `OK`/`MISSING` line each. |
-| `new <input>` | `--title TEXT` · `--voice af_heart|am_michael` (text input only; overrides the automatic choice, `design_planner.md` §10) · `--music PATH` · `--sfx-dir PATH` · `--jobs-dir PATH` (default `./jobs`) · `--no-llm-cache` · `--preview-video` |
+| `new <input>` | `--style literal|creative` (default `literal`; recorded in `ingest.json`, `design_styles.md` §1) · `--title TEXT` · `--voice af_heart|am_michael` (text input only; overrides the automatic choice, `design_planner.md` §10) · `--music PATH` · `--sfx-dir PATH` · `--jobs-dir PATH` (default `./jobs`) · `--no-llm-cache` · `--preview-video` |
 | `preview <job>` | `--preview-video` |
 | `approve <job>` | — |
 | `render <job>` | — |
 | `status <job>` | — Prints state, completed stages, timings, fallback counts. |
-| `rerun <job> --from <stage>` | `<stage>` ∈ `bible`, `segment`, `storyboard`, `assets`, `compile`. Runs from there through `preview`, then stops at the gate. |
+| `rerun <job> --from <stage>` | `<stage>` ∈ `bible`, `segment`, `director`, `storyboard`, `assets`, `compile` (presentation jobs: `deck`, `tree`, `perform`, `follow`, `compose`). Runs from there through `preview`, then stops at the gate. `--style NAME` rewrites `ingest.json.style` first, and is only valid with `--from director` or earlier. |
+| `present-sim <script>` (added October 5, 2026) | `--style literal|creative` · `--perturb mild|strong` · `--seed INT` (default 7) · `--tiebreak none|llm` (default `none`) · `--music PATH` · `--sfx-dir PATH` · `--jobs-dir PATH` · `--no-llm-cache`. Creates a presentation job and runs it to the gate (`design_presentation_simulation.md` §1) |
+| `score <job>` | `--oracle`. Presentation jobs only; runs after `render` (§8 of the same document) |
 
 `<job>` accepts a job id (resolved under `--jobs-dir`) or a path to a job directory.
 
@@ -275,7 +279,9 @@ The renderer is written so that live mode can reuse every template unchanged. Te
 | Every JSON file's schema, source-of-truth and sync rule | `design_data_contracts.md` |
 | Ingest, TTS, ASR, loudness, frame math, beats, captions paging, audio mix | `design_audio_and_timing.md` |
 | LLM backend, prompts, narrator voice selection, bible, segmentation, selection, props, validators, grounding, fallback | `design_planner.md` |
-| The 16 templates: props, limits, layout, motion, SFX cues, validators | `design_templates.md` |
+| The templates (16 shared, 2 creative-only, 1 presentation-only): props, limits, layout, motion, SFX cues, validators | `design_templates.md` |
+| Styles: `literal`, `creative`, the director stage, the license, overlays | `design_styles.md` |
+| Presentation simulation: deck, tree, perturbation, simulated live audio, matcher, scoring | `design_presentation_simulation.md` |
 | Palette, typography, layout zones, motion tokens, avatars, illustration style | `design_visual_direction.md` |
 | Remotion project, clock, compositions, preview, final render, output verification | `design_rendering.md` |
 | Fixtures, gates, falsification, performance budget, evals | `design_testing_and_validation.md` |

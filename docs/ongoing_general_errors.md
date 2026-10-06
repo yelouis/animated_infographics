@@ -31,6 +31,12 @@
 - **The new E2E step 10 is a real gate.** It reports 0 in every column on both Wave F runs. Run on the pre-Wave-F jobs, it caught 3 date stats and 1–3 invented stamps per job, and exited 1.
 - **Real-output review found no new defect that needs work.** The remaining observations are watch items or deliberately unscheduled behaviour, listed in `agent_execution_guide.md` §2. **The queue is complete.**
 
+**New direction from the user (October 5, 2026), specced as two waves in `agent_execution_guide.md`:**
+- **Wave G (G1–G6): a style library.** `literal` (today's output) plus `creative` (motifs and callbacks, metaphors, foreshadowing, asides, under "small embellishments"), and two new 4.5–5.5-minute stories. Contract: `design_styles.md`.
+- **Wave H (H1–H6): the presentation simulation.** Deck from script, animation tree from deck, perturbed "performed" talk, simulated live ASR, causal matcher, render and score. Contract: `design_presentation_simulation.md`.
+
+The guide is now **Active Build: Waves G then H**.
+
 **No question is open for the user.**
 
 ## ⚠️ Unresolved Issues & Suggestions
@@ -206,7 +212,7 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 | DF1 | Video input + PiP of the original speaker | User selects it | The 9:16 PiP placement is an open design question (`design_future_live_and_video.md` §2) |
 | DF2 | 16:9 output | User selects it | Roughly doubles template work |
 | DF3 | Multi-voice narration (character voices) | User selects it | Needs a dialogue-attribution step (see Issue 5 for how often attribution is wrong today). `voice.json` already records `male` separately from `unknown`. |
-| DF4 | **Live mode** (speak in real time, webcam in a corner) | Wave B complete **and** the user answers the three questions in `design_future_live_and_video.md` §4 | The end goal |
+| DF4 | **Live mode** (speak in real time, webcam in a corner). *Prepared mode chosen October 5, 2026; Wave H simulates it offline. Slide import and real-time playback remain deferred* | Wave B complete **and** the user answers the three questions in `design_future_live_and_video.md` §4 | The end goal |
 | DF5 | Reddit URL fetching | User selects it | Terms-of-service review first |
 | DF6 | Public-domain photo sourcing (e.g. Wikimedia) | User selects it | Requires runtime network, which conflicts with the local-only policy as written |
 | DF7 | Historical map borders | User selects it | The MVP uses modern borders |
@@ -333,4 +339,30 @@ Wave C (C1–C7) specced. Issue 6 filed for the user.
   - a quotation spanning two sentences can be split between two beats;
   - the critic's emotion-beat *who* reading is noisy;
   - R7 treats reported speech without quotation marks as narration.
+
+**October 5, 2026: direction and selections (user, in chat).**
+- **Direction:** *"one of the things I noticed is that the generated animations are very literal to what is being said at any given moment. Lets set up something like a style library. We can keep this as one of the styles but lets have a style that is a bit more creative where the animation adds something to the story (also pick more interesting stories that maybe is longer)."*
+- **Direction:** a deck-driven presentation mode with *"a tree of animations that will link each slide to each other as the real time voice is being said"*, simulated by deriving slides from a transcript, perturbing the transcript, generating the video and analysing it (verbatim in `design_presentation_simulation.md`).
+- **Creative ingredients:** all four, "Motifs & callbacks, Visual metaphors, Foreshadowing & reveals, Visual gags & asides".
+- **License:** "Small embellishments".
+- **Slide input:** *"Don't worry about this part for now. I was just explaining the potential future. We do not need to build this out now"*.
+- **Story length:** "4–6 minutes (Recommended)".
+- **Process:** *"Make sure to not actually perform any coding and just update the docs + execution guide for another agent to implement"*.
+
+**October 5, 2026: consequences (designer).**
+- **Two new original fixtures were written:** `story_overdue_book` (756 words; measured cold to `awaiting_review` in 349 s for 5.5 min of narration) and `history_great_stink` (675 words).
+- **One finding from the first run:** the library story's original opening ("As the only librarian in Alder Creek, Oregon, and a grandmother of three, I") is rejected by the voice rule's Form B. That is an accepted false negative by design, and it gave `am_michael`. The opening was rewritten into Form B ("As a grandmother of three, I…") so the fixture exercises `af_heart` on a long story. G1 confirms it.
+- **No prototypes were written,** per the user's instruction. Every uncertain parameter is specified as an initial decision, with the measurement and bar the implementing agent must run and file against:
+  - the director's counts;
+  - the license check;
+  - the matcher's BM25 / hysteresis / dwell;
+  - the presentation bars.
+- **New contracts:**
+  - `design_styles.md` and `design_presentation_simulation.md`;
+  - three templates (`metaphor`, `callback`, `section_title`) in `design_templates.md` §2.17–2.19;
+  - rule R8 in `design_planner.md` §4;
+  - the new job files in `design_data_contracts.md` §10;
+  - the stages and CLI in `design_system_architecture.md`;
+  - fixtures, test rows, gates G15/G16 and the long-story budget in `design_testing_and_validation.md`;
+  - the DF4 path in `design_future_live_and_video.md` §4.
 

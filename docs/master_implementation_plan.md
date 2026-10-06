@@ -76,5 +76,33 @@ The story videos put ≈ 4.5 words/s on screen against 2.6 words/s of narration.
 
 Measured before specifying: graphic words fall from 1.1–1.9 per second to 0.5–0.9, and 39–56% of scenes become nearly wordless. Contract: `design_templates.md` §5.
 
-## After Wave D (deferred; each needs a user selection)
+## Waves E and F: verification fixes (delivered, October 4, 2026)
+- Critic findings enforced on the final scene.
+- Quoted speech never replaced.
+- Dates are never stats.
+- The icon list is shown to the model.
+- No junk text on screen.
+- Era stamps are narration years only.
+
+## Wave G: style library (specced October 5, 2026)
+The user asked for a style that "adds something to the story", keeping today's output as one style. Wave G does five things:
+- adds `--style literal|creative`;
+- adds a story-level **director** that plans motifs and callbacks, visual metaphors, foreshadowing plants and payoffs, and small asides, under the user's "small embellishments" license, checked by a blind license pass;
+- adds two picture templates (`metaphor`, `callback`) and an overlay layer;
+- adds two new ~5-minute fixture stories (measured 5.1 and 5.5 min);
+- restates the time budget per narration minute.
+
+Contract: `design_styles.md`.
+
+## Wave H: presentation simulation (specced October 5, 2026)
+The first step toward live presentations, in prepared mode. The pipeline runs in this order:
+- a deck of key moments is derived from a script;
+- an animation tree is built from the deck alone;
+- the script is perturbed into a "performed" talk, which is narrated and re-transcribed as simulated live ASR;
+- a causal matcher follows the talk through the tree;
+- the result is rendered and scored against ground truth (slide and point accuracy, lag, false switches, ad-lib stability), with an oracle baseline for comparison.
+
+Slide import and real-time playback stay deferred. Contract: `design_presentation_simulation.md`.
+
+## After Wave H (deferred; each needs a user selection)
 Video input with picture-in-picture · 16:9 output · **live mode** (streaming ASR → incremental planning → the same templates on a live clock, webcam in a corner) · multi-voice narration · Reddit URL fetch · public-domain photos · historical borders · a web review editor. See `ongoing_general_errors.md` §4.
