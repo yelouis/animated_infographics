@@ -45,18 +45,20 @@ export const Metaphor: React.FC<MetaphorTemplateProps> = ({
   const setPiece = useSetPiece(props.image_entity);
 
   // Resolve image from set_pieces context or direct entity path
-  let imageUrl: string | null = setPiece?.image || null;
-  if (!imageUrl && props.image_entity && props.image_entity !== "none" && props.image_entity !== "") {
-    if (props.image_entity.startsWith("/") || props.image_entity.startsWith("http")) {
-      imageUrl = props.image_entity;
-    } else if (props.image_entity.includes(".")) {
-      imageUrl = staticFile(
-        props.image_entity.startsWith("job/")
-          ? props.image_entity
-          : `job/${props.image_entity}`
-      );
+  let rawImage: string | null = setPiece?.image || null;
+  if (!rawImage && props.image_entity && props.image_entity !== "none" && props.image_entity !== "") {
+    if (props.image_entity.startsWith("/") || props.image_entity.startsWith("http") || props.image_entity.includes(".")) {
+      rawImage = props.image_entity;
     }
   }
+
+  const imageUrl = rawImage
+    ? rawImage.startsWith("/") || rawImage.startsWith("http")
+      ? rawImage
+      : staticFile(
+          rawImage.startsWith("job/") ? rawImage : `job/${rawImage}`
+        )
+    : null;
 
   // Scene progress for Ken Burns
   const sceneProgress =

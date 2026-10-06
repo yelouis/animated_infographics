@@ -6,7 +6,7 @@ if [ "${1:-}" = "--fast" ]; then
   FAST=1
 fi
 
-if [ -z "${HF_HOME:-}" ] || [ ! -d "${HF_HOME}/hub/models--hexgrad--Kokoro-82M" ]; then
+if [ -z "${HF_HOME:-}" ] || [ ! -d "${HF_HOME}/hub/models--hexgrad--Kokoro-82M" ] || [ ! -d "${HF_HOME}/hub/models--black-forest-labs--FLUX.2-klein-4B" ]; then
   if [ -d "$HOME/.cache/huggingface/hub/models--hexgrad--Kokoro-82M" ]; then
     export HF_HOME="$HOME/.cache/huggingface"
   fi
@@ -47,7 +47,7 @@ run_gate() {
 
   if [ "$FAST" -eq 1 ]; then
     case "$gate" in
-      G11|G12|G13)
+      G11|G12|G13|G15)
         printf "%-4s | %-4s | SKIPPED (--fast)\n" "$gate" "-"
         return 0
         ;;
@@ -109,7 +109,7 @@ run_gate() {
       match=$(grep -o "[0-9]\+ overflows" "$log_file" 2>/dev/null | tail -n 1 || true)
       [ -n "$match" ] && key_num="$match"
       ;;
-    G12|G13)
+    G12|G13|G15)
       if [ "$code" -eq 0 ]; then
         key_num="passed"
       fi
@@ -138,5 +138,6 @@ run_gate "G11" "uv run pytest -q -m slow"              "A7"  "glob"   "tests/slo
 run_gate "G12" "./scripts/e2e.sh"                      "A16" "file"   "./scripts/e2e.sh"
 run_gate "G13" "./scripts/check_offline.sh"            "A22" "file"   "./scripts/check_offline.sh"
 run_gate "G14" "uv run infographics doctor"            "A2"  "file"   "src/animated_infographics/doctor.py"
+run_gate "G15" "./scripts/creative_e2e.sh"             "G6"  "file"   "./scripts/creative_e2e.sh"
 
 exit "$failed"

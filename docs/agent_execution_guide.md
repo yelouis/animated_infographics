@@ -62,13 +62,13 @@
   - `fixtures/scripts/story_overdue_book.txt` (756 words) and `fixtures/scripts/history_great_stink.txt` (675 words). Their SHA-256s are in `design_testing_and_validation.md` §1; they are **not yet** in `fixtures/CHECKSUMS` (G1 adds them).
   - The new design docs `design_styles.md` and `design_presentation_simulation.md`, and the updates listed in `ongoing_general_errors.md` §5 (October 5).
 
-### 1.3 Gates (run bare October 4, 2026; the regression bar)
+### 1.3 Gates (run bare October 6, 2026; the regression bar)
 
 | # | Gate | Result |
 |---|---|---|
-| G1–G3 | ruff / format / mypy | exit 0 (119 files formatted; 59 source files) |
-| G4 | `uv run pytest -q -m "not slow"` | exit 0 · **290 passed** |
-| G5–G7 | renderer typecheck / lint / vitest | exit 0 · 16 vitest |
+| G1–G3 | ruff / format / mypy | exit 0 (131 files formatted; 65 source files) |
+| G4 | `uv run pytest -q -m "not slow"` | exit 0 · **302 passed** |
+| G5–G7 | renderer typecheck / lint / vitest | exit 0 · 19 vitest |
 | G8 | schema sync | exit 0 |
 | G9 | renderer purity | exit 0 |
 | G10 | gallery | exit 0 · 53 goldens, 0 overflows |
@@ -76,8 +76,10 @@
 | G12 | `./scripts/e2e.sh` | exit 0 · 859 s · steps 1–10 |
 | G13 | offline | exit 0 · 235 s |
 | G14 | doctor | exit 0 · 22 OK |
+| G15 | `./scripts/creative_e2e.sh` | exit 0 · steps 1–5 |
 | Budget | `story_recipe_box`, cold | 205.8 s / 191.3 s / 397.1 s (≤ 390 / 210 / 600), 0 cache hits |
 | Budget (long) | `story_overdue_book`, literal cold | 56.87 s/min / 79.80 s/min / 136.67 s/min (≤ 90 / 80 / 170 s/min), 0 cache hits |
+| Budget (long creative) | `story_overdue_book`, creative cold | 59.62 s/min / 80.83 s/min / 140.45 s/min (≤ 110 / 85 / 195 s/min), 0 cache hits |
 
 ### 1.4 Measurements that shaped Waves G and H (October 5, 2026)
 
@@ -454,7 +456,7 @@
 
 ### 5.1 Already delivered
 
-- Waves **A** (verified September 25), **B** (September 26), **C/D** (October 3), **E** and **F** (October 4, 2026), all independently verified.
+- Waves **A** (verified September 25), **B** (September 26), **C/D** (October 3), **E** and **F** (October 4, 2026), and **G** (October 6, 2026), all independently verified.
 - One line per item, with verdicts: `ongoing_general_errors.md` §3. Nothing marked "✓" is reworked.
 
 ### 5.2 Accepted equivalents (checked; do not "fix" these back)
@@ -606,13 +608,13 @@
 ## 9. Definition of Done: Waves G and H
 
 **Wave G**
-- [ ] G1–G6 each landed as one pushed commit scoped to its id, with red and green runs recorded.
-- [ ] Six fixtures in the planner eval, all bars met; `story_overdue_book` voice = `af_heart` / `llm` (or filed).
-- [ ] Literal byte-identity holds against `tests/data/literal_baseline/`.
-- [ ] The director gives a valid plan on 6/6 fixtures; the license check is in place; degradation is tested.
-- [ ] `metaphor`, `callback` and the overlay layer are in the gallery with 0 overlaps.
-- [ ] G15 green on both long stories; the long budgets (literal and creative) are met or filed.
-- [ ] `docs/evals/creative_<date>.md` with stills and judgement.
+- [x] G1–G6 each landed as one pushed commit scoped to its id, with red and green runs recorded.
+- [x] Six fixtures in the planner eval, all bars met; `story_overdue_book` voice = `af_heart` / `llm` (or filed).
+- [x] Literal byte-identity holds against `tests/data/literal_baseline/`.
+- [x] The director gives a valid plan on 6/6 fixtures; the license check is in place; degradation is tested.
+- [x] `metaphor`, `callback` and the overlay layer are in the gallery with 0 overlaps.
+- [x] G15 green on both long stories; the long budgets (literal and creative) are met or filed.
+- [x] `docs/evals/creative_<date>.md` with stills and judgement.
 
 **Wave H**
 - [ ] H1–H6 each landed as one pushed commit scoped to its id.

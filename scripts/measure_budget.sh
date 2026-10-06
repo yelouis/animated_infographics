@@ -16,7 +16,7 @@ cd "$REPO_ROOT" || fail "Cannot cd to repo root"
 DATE_STR=$(date +%Y-%m-%d)
 REPORT_PATH="$REPO_ROOT/docs/evals/budget_$DATE_STR.md"
 
-if [ -z "${HF_HOME:-}" ] || [ ! -d "${HF_HOME}/hub/models--hexgrad--Kokoro-82M" ]; then
+if [ -z "${HF_HOME:-}" ] || [ ! -d "${HF_HOME}/hub/models--hexgrad--Kokoro-82M" ] || [ ! -d "${HF_HOME}/hub/models--black-forest-labs--FLUX.2-klein-4B" ]; then
   if [ -d "$HOME/.cache/huggingface/hub/models--hexgrad--Kokoro-82M" ]; then
     export HF_HOME="$HOME/.cache/huggingface"
   fi

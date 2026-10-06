@@ -21,8 +21,18 @@ from animated_infographics.planner.llm import (
 )
 
 LICENSE_SYSTEM_PROMPT: str = (
-    "You evaluate whether proposed visuals add ungrounded events, dialogue, "
-    "or facts to a story passage. Output JSON matching the schema."
+    "You evaluate whether proposed visuals for a story violate the creative license.\n"
+    "Under the license:\n"
+    "- ALLOWED (verdict 'ok'): Interpretive visual metaphors, mood, and symbolism "
+    "(a metaphor represents meaning symbolically, not literal geography or facts); "
+    "background props, pets, or weather; small thought bubbles or ironic labels "
+    "(<= 3 words) that comment on the scene without asserting new historical or narrative facts.\n"
+    "- NOT ALLOWED: New plot events or character actions ('adds_event'); "
+    "quotes or spoken lines not in narration ('adds_dialogue'); "
+    "new ungrounded historical or factual claims, names, numbers, dates, places, "
+    "or outcomes ('adds_fact'); or visuals that directly contradict what is narrated "
+    "('contradicts').\n"
+    "Output JSON matching the schema."
 )
 
 LICENSE_QUESTION: str = (

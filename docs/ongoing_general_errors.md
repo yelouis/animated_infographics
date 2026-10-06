@@ -31,11 +31,12 @@
 - **The new E2E step 10 is a real gate.** It reports 0 in every column on both Wave F runs. Run on the pre-Wave-F jobs, it caught 3 date stats and 1–3 invented stamps per job, and exited 1.
 - **Real-output review found no new defect that needs work.** The remaining observations are watch items or deliberately unscheduled behaviour, listed in `agent_execution_guide.md` §2. **The queue is complete.**
 
-**New direction from the user (October 5, 2026), specced as two waves in `agent_execution_guide.md`:**
-- **Wave G (G1–G6): a style library.** `literal` (today's output) plus `creative` (motifs and callbacks, metaphors, foreshadowing, asides, under "small embellishments"), and two new 4.5–5.5-minute stories. Contract: `design_styles.md`.
-- **Wave H (H1–H6): the presentation simulation.** Deck from script, animation tree from deck, perturbed "performed" talk, simulated live ASR, causal matcher, render and score. Contract: `design_presentation_simulation.md`.
-
-The guide is now **Active Build: Waves G then H**.
+**Wave G (G1–G6) was delivered as 6 commits on October 6, 2026.**
+- Every gate G1–G15 was run bare (302 fast tests, 19 vitest, G12 E2E, G15 creative E2E, offline gate, doctor). All green; numbers in `agent_execution_guide.md` §1.
+- Each item was verified against its spec: **all 6 do what their specs say** (verdicts in §3).
+- The creative bars hold on real renders: every motif planted before payoff, >= 2 metaphors and >= 2 asides rendered, 0 license failures left, 0 overlay/slot overlaps, word density <= 1.0 graphic word/s, and light share >= 1/3.
+- Long creative budget met: 59.62 s/min new / 80.83 s/min render / 140.45 s/min total (<= 110 / 85 / 195 s/min).
+- The guide is now **Active Build: Wave H (Presentation Simulation)**.
 
 **No question is open for the user.**
 
@@ -209,8 +210,7 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 - G3 — Director + license stages — git log --grep "(g3)" — G1–G14 green bare, 290 passed (+18 tests), 6 slow passed; director and license stages implemented in planner/director.py and planner/license.py; contracts in contracts/director.py exported to schema/director.schema.json and renderer/src/generated/director.ts (G8 green); all 7 validators tested with failing/passing cases and falsified on payoff before plant; live measurement passed cold on 6/6 fixtures within 2 attempts (bar: ≤ 3); ≥ 1 motif with plant/payoff on 4/4 required fixtures; license critic drops evaluated and recorded in docs/evals/planner_2026-10-06.md; degradation to literal verified on 3 failed attempts without pipeline crash; preview storyboard.md formats plan at top; director.json re-validated by preview.
 - G4 — Renderer: metaphor, callback, OverlayLayer, and gallery fixtures — git log --grep "(g4)" — G1–G10, G14 green bare, 290 passed, 19 vitest passed; metaphor and callback templates created and registered (18 total); OverlayLayer implemented per design; overlay bounding boxes disjoint from primary content bounds across all 10 allowed templates; falsification test fails at (540, 240); 16 new goldens cut and verified in check_gallery.sh with 0 overflows, 0.000% diff, and hold motion verified; literal baseline byte-identity holds.
 - G5 — Integration: R8, deterministic scenes, metaphor images, overlays — git log --grep "(g5)" — G1–G10, G14 green bare, 299 passed (+9 tests); selection rule R8 orders metaphor and callback with LLM primary as alternate; R2 never rewrites R8 scenes; deterministic metaphor and callback props planned with rationale "director"; metaphor illustration asset generation wired; compute_scene_overlays enforces allowed templates, token displacement <= 2 beats before payoff, aside displacement <= 1 beat, dropped overlays recorded under overlay_dropped; overlays count toward graphic_words in planner/words.py; contact sheet displays M and C badges on metaphor/callback tiles; report.json records director item fates (rendered, moved, license_dropped, overlay_dropped); end-to-end creative run on story_overdue_book reaches awaiting_review with 0 overflows, 4 rendered tokens/callback, 9 license drops, and 0 plan regressions; literal baseline byte-identity holds.
-
-
+- G6 — Creative E2E (G15), creative long budget, Wave G close-out — git log --grep "(g6)" — G1–G15 green bare, 302 fast passed, 19 vitest passed; scripts/creative_e2e.sh implemented and wired into battery as G15; both creative jobs pass verify.json, word density (0.74 and 0.84 words/s <= 1.0, light share 45.5% and 37.3% >= 33.3%), Wave E/F scene criteria (all 0), and creative bars (every motif planted before payoff, >= 2 metaphors, >= 2 asides, 0 license failures left, 0 overlay overlaps); falsification verified (stub director no motifs -> fails red); cold long creative budget on story_overdue_book measured at 59.62 s/min new / 80.83 s/min render / 140.45 s/min total (<= 110 / 85 / 195 s/min), 0 cache hits; evaluation report docs/evals/creative_2026-10-06.md generated with contact sheets, stills comparisons, and commentary; literal baseline byte-identity holds.
 
 ---
 
