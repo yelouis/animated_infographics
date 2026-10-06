@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Final
+from typing import Any, Final, Literal
 
 from pydantic import TypeAdapter
 
@@ -14,9 +14,12 @@ from animated_infographics.config import (
     SFX_MIN_GAP_FRAMES,
     SFX_VOLUME,
 )
+from animated_infographics.contracts.director import DirectorPlan, OverlayDropped
+from animated_infographics.contracts.icons import ICON_NAMES
 from animated_infographics.contracts.models import (
     Beat,
     Bible,
+    SceneOverlay,
     Storyboard,
     Timeline,
     TimelineAudio,
@@ -32,7 +35,12 @@ from animated_infographics.contracts.models import (
     TimelineSfx,
     Transcript,
 )
-from animated_infographics.contracts.templates import REGISTRY as TEMPLATE_REGISTRY
+from animated_infographics.contracts.templates import (
+    ALLOWED_OVERLAY_TEMPLATES,
+)
+from animated_infographics.contracts.templates import (
+    REGISTRY as TEMPLATE_REGISTRY,
+)
 from animated_infographics.planner.validate import normalize_props_text
 from animated_infographics.timing.captions import paginate
 from animated_infographics.timing.frames import duration_frames, scene_start_frames
@@ -71,6 +79,120 @@ def _get_item_count(scene: Any) -> int:
     return 0
 
 
+def compute_scene_overlays(
+    storyboard: Storyboard,
+    director_plan: DirectorPlan,
+    bible: Bible | None = None,
+) -> tuple[dict[int, list[SceneOverlay]], list[OverlayDropped]]:
+    """Compute overlay assignments for each scene per design_styles.md §3.5.
+
+    Rules:
+    - Motif token on every plant and echo beat.
+    - Aside on its beat.
+    - Allowed templates: ALLOWED_OVERLAY_TEMPLATES.
+    - If beat is forbidden or occupied:
+      - Motif token moves to nearest allowed scene <= 2 beats before payoff.
+      - Aside moves to nearest allowed scene <= 1 beat.
+      - Otherwise dropped and recorded under overlay_dropped.
+    - At most 1 motif token and 1 aside per scene.
+    - When two collide, earlier-planned item wins.
+    """
+    n_scenes = len(storyboard.scenes)
+    scene_overlays: dict[int, list[SceneOverlay]] = {i: [] for i in range(n_scenes)}
+    token_scenes: set[int] = set()
+    aside_scenes: set[int] = set()
+    dropped: list[OverlayDropped] = []
+
+    # 1. Place motif tokens (plants and echoes)
+    for motif in director_plan.motifs:
+        payoff_beat = next(
+            (a.beat_i for a in motif.appearances if a.role == "payoff"),
+            n_scenes,
+        )
+        icon_name = motif.icon
+        if not icon_name and motif.set_piece_id and bible:
+            sp = next((s for s in bible.set_pieces if s.id == motif.set_piece_id), None)
+            if sp and sp.icon:
+                icon_name = sp.icon
+        if not icon_name or icon_name not in ICON_NAMES:
+            icon_name = "Sparkle"
+
+        for app in motif.appearances:
+            if app.role not in ("plant", "echo"):
+                continue
+
+            orig_beat = app.beat_i
+            candidates = [
+                b
+                for b in range(n_scenes)
+                if b < payoff_beat
+                and abs(b - orig_beat) <= 2
+                and storyboard.scenes[b].template in ALLOWED_OVERLAY_TEMPLATES
+                and b not in token_scenes
+            ]
+            candidates.sort(key=lambda b: (abs(b - orig_beat), b))
+
+            if candidates:
+                best_beat = candidates[0]
+                token_scenes.add(best_beat)
+                overlay = SceneOverlay(
+                    kind="motif_token",
+                    icon=icon_name,  # type: ignore[arg-type]
+                    anchor="top_right",
+                    motif_id=motif.id,
+                )
+                scene_overlays[best_beat].append(overlay)
+            else:
+                dropped.append(
+                    OverlayDropped(
+                        item={
+                            "kind": "motif_token",
+                            "motif_id": motif.id,
+                            "beat_i": orig_beat,
+                            "role": app.role,
+                            "icon": icon_name,
+                        },
+                        reason="no_allowed_scene_within_reach",
+                    )
+                )
+
+    # 2. Place asides
+    for aside in director_plan.asides:
+        orig_beat = aside.beat_i
+        candidates = [
+            b
+            for b in range(n_scenes)
+            if abs(b - orig_beat) <= 1
+            and storyboard.scenes[b].template in ALLOWED_OVERLAY_TEMPLATES
+            and b not in aside_scenes
+        ]
+        candidates.sort(key=lambda b: (abs(b - orig_beat), b))
+
+        if candidates:
+            best_beat = candidates[0]
+            aside_scenes.add(best_beat)
+            anchor: Literal["top_right", "bottom_left"] = (
+                "bottom_left" if aside.kind == "prop" else "top_right"
+            )
+            aside_icon = aside.icon if aside.icon in ICON_NAMES else None
+            overlay = SceneOverlay(
+                kind=aside.kind,
+                icon=aside_icon,  # type: ignore[arg-type]
+                text=aside.text,
+                anchor=anchor,
+            )
+            scene_overlays[best_beat].append(overlay)
+        else:
+            dropped.append(
+                OverlayDropped(
+                    item=aside.model_dump(),
+                    reason="no_allowed_scene_within_reach",
+                )
+            )
+
+    return scene_overlays, dropped
+
+
 def compile_timeline(
     transcript: Transcript,
     beats: list[Beat],
@@ -82,6 +204,8 @@ def compile_timeline(
     sfx_files_by_role: dict[str, list[Path]] | None = None,
     sync_probe: bool = False,
     available_images: set[str] | None = None,
+    director_plan: DirectorPlan | None = None,
+    scene_overlays: dict[int, list[SceneOverlay]] | None = None,
 ) -> Timeline:
     """Compile storyboard into fully-resolved Timeline object adhering to design contracts."""
     total_frames = duration_frames(transcript)
@@ -91,6 +215,9 @@ def compile_timeline(
         raise ValueError("Cannot compile timeline from empty storyboard")
 
     starts = scene_start_frames(beats)
+
+    if scene_overlays is None and director_plan is not None:
+        scene_overlays, _ = compute_scene_overlays(storyboard, director_plan, bible)
 
     # 1. Compile timeline scenes
     timeline_scenes: list[TimelineScene] = []
@@ -137,6 +264,8 @@ def compile_timeline(
             spec.props_model.model_validate(clean_props_data) if spec else clean_props_data
         )
 
+        overlays_for_scene = scene_overlays.get(idx, []) if scene_overlays is not None else []
+
         # Build timeline scene dictionary
         sc_dict = {
             "id": sc.id,
@@ -146,6 +275,7 @@ def compile_timeline(
             "hide_captions": hide_captions,
             "timing": timing,
             "props": clean_props,
+            "overlays": overlays_for_scene,
         }
         timeline_scene = _TIMELINE_SCENE_ADAPTER.validate_python(sc_dict)
         timeline_scenes.append(timeline_scene)
@@ -241,6 +371,18 @@ def compile_timeline(
         )
         for s in bible.set_pieces
     }
+
+    # Register metaphor entities in set_pieces_map for metaphor scenes
+    for sc in storyboard.scenes:
+        if sc.template == "metaphor":
+            ent_id = getattr(sc.props, "image_entity", f"metaphor_{sc.beat_i}")
+            if ent_id not in set_pieces_map:
+                has_img = available_images is not None and ent_id in available_images
+                set_pieces_map[ent_id] = TimelineSetPiece(
+                    name=getattr(sc.props, "label", None) or f"Metaphor {sc.beat_i}",
+                    image=f"job/assets/images/{ent_id}.png" if has_img else None,
+                    icon="Sparkle",
+                )
 
     # 5. Captions
     caption_pages = paginate(transcript, to_frames=True)

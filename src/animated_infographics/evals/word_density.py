@@ -37,7 +37,8 @@ def evaluate_job_word_density(job_dir: Path | str) -> dict[str, Any]:
 
     scenes = data.get("scenes", [])
     total_graphic_words = sum(
-        graphic_words(sc.get("template", ""), sc.get("props", {})) for sc in scenes
+        graphic_words(sc.get("template", ""), sc.get("props", {}), sc.get("overlays"))
+        for sc in scenes
     )
     per_second = (total_graphic_words / seconds) if seconds > 0 else 0.0
 
@@ -50,7 +51,7 @@ def evaluate_job_word_density(job_dir: Path | str) -> dict[str, Any]:
     k = sum(
         1
         for sc in post_title_scenes
-        if graphic_words(sc.get("template", ""), sc.get("props", {})) <= 2
+        if graphic_words(sc.get("template", ""), sc.get("props", {}), sc.get("overlays")) <= 2
     )
 
     passed = (per_second <= 1.0) and (k >= (m / 3.0) if m > 0 else True)

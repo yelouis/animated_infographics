@@ -48,13 +48,21 @@ def field_values(props: Mapping[str, Any], path: str) -> list[tuple[str, str]]:
     return _extract_fields(props, parts, "")
 
 
-def graphic_words(template: str, props: Mapping[str, Any]) -> int:
-    """Sum of count_words over every WORD_CAPS[template] path; 0 if template has no entry."""
+def graphic_words(
+    template: str,
+    props: Mapping[str, Any],
+    overlays: Any = None,
+) -> int:
+    """Sum of count_words over every WORD_CAPS[template] path plus overlay text words."""
     caps = WORD_CAPS.get(template)
-    if not caps:
-        return 0
     total = 0
-    for path in caps:
-        for _, val in field_values(props, path):
-            total += count_words(val)
+    if caps:
+        for path in caps:
+            for _, val in field_values(props, path):
+                total += count_words(val)
+    if overlays:
+        for ov in overlays:
+            text = ov.get("text") if isinstance(ov, Mapping) else getattr(ov, "text", None)
+            if text:
+                total += count_words(text)
     return total

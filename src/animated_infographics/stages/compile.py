@@ -6,7 +6,8 @@ import time
 from pathlib import Path
 
 from animated_infographics.audio.mix_prep import prepare_music, prepare_sfx
-from animated_infographics.compile import compile_timeline
+from animated_infographics.compile import compile_timeline, compute_scene_overlays
+from animated_infographics.contracts.director import DirectorPlan
 from animated_infographics.contracts.models import (
     Beats,
     Bible,
@@ -70,6 +71,28 @@ def run_compile_stage(job: Job, ctx: RunContext) -> None:
             if f.is_file() and f.suffix.lower() == ".png":
                 available_images.add(f.stem)
 
+    # Load director plan if present (creative style)
+    director_path = job.dir / "director.json"
+    director_plan: DirectorPlan | None = None
+    scene_overlays_map = None
+    if director_path.is_file():
+        try:
+            director_plan = DirectorPlan.model_validate_json(
+                director_path.read_text(encoding="utf-8")
+            )
+            scene_overlays_map, newly_dropped = compute_scene_overlays(
+                storyboard, director_plan, bible
+            )
+            if newly_dropped:
+                all_dropped = list(director_plan.overlay_dropped) + newly_dropped
+                director_plan = director_plan.model_copy(update={"overlay_dropped": all_dropped})
+                director_path.write_text(
+                    director_plan.model_dump_json(indent=2) + "\n", encoding="utf-8"
+                )
+        except Exception:
+            director_plan = None
+            scene_overlays_map = None
+
     timeline = compile_timeline(
         transcript,
         beats,
@@ -80,6 +103,8 @@ def run_compile_stage(job: Job, ctx: RunContext) -> None:
         sfx_files_by_role=sfx_files_by_role,
         sync_probe=ctx.sync_probe,
         available_images=available_images,
+        director_plan=director_plan,
+        scene_overlays=scene_overlays_map,
     )
 
     timeline_path = job.dir / "timeline.json"

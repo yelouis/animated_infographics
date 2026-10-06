@@ -7,6 +7,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
+from animated_infographics.contracts.director import DirectorPlan
 from animated_infographics.contracts.models import (
     Beat,
     Bible,
@@ -74,14 +75,16 @@ def apply_rules(
     n_scenes: int,
     beats: Sequence[Beat] | None = None,
     bible: Bible | None = None,
+    director_plan: DirectorPlan | None = None,
 ) -> tuple[list[Choice], list[RuleRepair]]:
-    """Apply deterministic rules R1, R6, R2, R4, R5, R7 to template choices in order.
+    """Apply deterministic rules R1, R8, R6, R2, R4, R5, R7 to template choices in order.
 
     Per design_planner.md §4:
     R1: Scene 0 is not title_card / later scene is title_card -> Force / replace with alternate
+    R8: Creative style: director metaphors and motif payoffs
     R6: More than one timeline or comparison in video -> later ones -> alternate or kinetic_quote
     R2: Two consecutive scenes share template (except dialogue, text_thread) ->
-        second -> alternate; if that repeats -> kinetic_quote
+        second -> alternate; if that repeats -> kinetic_quote. R2 never rewrites an R8 scene.
     (R3 applied after props)
     R4: reveal > 2 times -> later ones -> alternate
     R5: kinetic_quote > ceil(0.30 * n_scenes) times (LLM primaries) ->
@@ -109,6 +112,50 @@ def apply_rules(
             )
             res[i] = Choice(beat_i=i, primary=target, alternate="kinetic_quote")
 
+    # R8: Director metaphors and motif payoffs (creative style)
+    r8_scenes: set[int] = set()
+    if director_plan is not None:
+        # Metaphors
+        for met in director_plan.metaphors:
+            b_idx = met.beat_i
+            if 0 < b_idx < len(res):
+                orig_prim = res[b_idx].primary
+                if orig_prim != "metaphor":
+                    repairs.append(
+                        RuleRepair(
+                            rule="R8", scene=f"s{b_idx:03d}", to="metaphor", **{"from": orig_prim}
+                        )
+                    )
+                res[b_idx] = Choice(
+                    beat_i=b_idx,
+                    primary="metaphor",
+                    alternate=orig_prim,
+                )
+                r8_scenes.add(b_idx)
+
+        # Motifs payoff
+        for motif in director_plan.motifs:
+            for app in motif.appearances:
+                if app.role == "payoff":
+                    b_idx = app.beat_i
+                    if 0 < b_idx < len(res):
+                        orig_prim = res[b_idx].primary
+                        if orig_prim != "callback":
+                            repairs.append(
+                                RuleRepair(
+                                    rule="R8",
+                                    scene=f"s{b_idx:03d}",
+                                    to="callback",
+                                    **{"from": orig_prim},
+                                )
+                            )
+                        res[b_idx] = Choice(
+                            beat_i=b_idx,
+                            primary="callback",
+                            alternate=orig_prim,
+                        )
+                        r8_scenes.add(b_idx)
+
     # R6: More than one timeline or comparison in video
     for limit_tmpl in ("timeline", "comparison"):
         indices = [i for i, c in enumerate(res) if c.primary == limit_tmpl]
@@ -122,21 +169,36 @@ def apply_rules(
                 res[idx] = Choice(beat_i=idx, primary=target, alternate=res[idx].alternate)
 
     # R2: Consecutive duplicates (except dialogue, text_thread)
+    # R2 never rewrites an R8 scene: rewrite the other scene instead
     for i in range(1, len(res)):
         if res[i].primary == res[i - 1].primary and res[i].primary not in (
             "dialogue",
             "text_thread",
         ):
-            prev = res[i - 1].primary
-            alt = res[i].alternate
-            if alt != prev and alt != "title_card":
+            rewrite_idx = (i - 1) if (i in r8_scenes and (i - 1) not in r8_scenes) else i
+            if rewrite_idx in r8_scenes:
+                continue
+
+            prev = res[rewrite_idx - 1].primary if rewrite_idx > 0 else "title_card"
+            next_t = res[rewrite_idx + 1].primary if rewrite_idx + 1 < len(res) else None
+            alt = res[rewrite_idx].alternate
+            if alt != prev and alt != "title_card" and alt != next_t:
+                new_prim = alt
+            elif alt != prev and alt != "title_card":
                 new_prim = alt
             else:
                 new_prim = "kinetic_quote"
             repairs.append(
-                RuleRepair(rule="R2", scene=f"s{i:03d}", to=new_prim, **{"from": res[i].primary})
+                RuleRepair(
+                    rule="R2",
+                    scene=f"s{rewrite_idx:03d}",
+                    to=new_prim,
+                    **{"from": res[rewrite_idx].primary},
+                )
             )
-            res[i] = Choice(beat_i=i, primary=new_prim, alternate=res[i].alternate)
+            res[rewrite_idx] = Choice(
+                beat_i=rewrite_idx, primary=new_prim, alternate=res[rewrite_idx].alternate
+            )
 
     # R4: reveal at most 2 times
     reveal_indices = [i for i, c in enumerate(res) if c.primary == "reveal"]
@@ -238,6 +300,7 @@ def plan_template_selection(
     beats: Sequence[Beat],
     bible: Bible,
     backend: LLMBackend,
+    director_plan: DirectorPlan | None = None,
 ) -> tuple[list[Choice], list[RuleRepair], int, int]:
     """Plan visual templates for all narration beats using LLM in 6-beat windows with rule repairs.
 
@@ -252,7 +315,7 @@ def plan_template_selection(
     all_choices: list[Choice] = [Choice(beat_i=0, primary="title_card", alternate="title_card")]
 
     if n_beats == 1:
-        repaired, repairs = apply_rules(all_choices, 1, beats, bible)
+        repaired, repairs = apply_rules(all_choices, 1, beats, bible, director_plan=director_plan)
         return (repaired, repairs, 0, 0)
 
     allowed = allowed_templates(bible)
@@ -344,5 +407,7 @@ def plan_template_selection(
 
         all_choices.extend(window_choices)
 
-    repaired_choices, rule_repairs = apply_rules(all_choices, n_beats, beats, bible)
+    repaired_choices, rule_repairs = apply_rules(
+        all_choices, n_beats, beats, bible, director_plan=director_plan
+    )
     return (repaired_choices, rule_repairs, total_calls, total_cache_hits)

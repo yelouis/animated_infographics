@@ -42,15 +42,31 @@ def run_storyboard_stage(job: Job, ctx: RunContext) -> None:
             pass
 
     style_degraded = False
+    director_plan = None
     if style == "creative":
         degraded_marker = job.dir / ".director_degraded"
         director_json = job.dir / "director.json"
         if degraded_marker.is_file() or not director_json.is_file():
             style_degraded = True
+        else:
+            try:
+                from animated_infographics.contracts.director import DirectorPlan
+
+                director_plan = DirectorPlan.model_validate_json(
+                    director_json.read_text(encoding="utf-8")
+                )
+            except Exception:
+                style_degraded = True
 
     backend = OllamaBackend(no_cache=ctx.no_llm_cache)
     storyboard, plan_report = plan_storyboard(
-        transcript, beats.beats, bible, backend, style=style, style_degraded=style_degraded
+        transcript,
+        beats.beats,
+        bible,
+        backend,
+        style=style,
+        style_degraded=style_degraded,
+        director_plan=director_plan,
     )
 
     storyboard_path = job.dir / "storyboard.json"

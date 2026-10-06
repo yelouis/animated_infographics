@@ -717,3 +717,31 @@ REPLACEABLE_TEMPLATES: Final[frozenset[str]] = frozenset(
 KEPT_TEMPLATES: Final[frozenset[str]] = frozenset(
     {"title_card", "character_intro", "dialogue", "text_thread", "reveal"}
 )
+
+ALLOWED_OVERLAY_TEMPLATES: Final[frozenset[str]] = frozenset(
+    {
+        "kinetic_quote",
+        "stat_callout",
+        "reveal",
+        "cause_effect",
+        "character_intro",
+        "emotion_beat",
+        "relationship_map",
+        "location",
+        "set_piece",
+        "metaphor",
+    }
+)
+
+FORBIDDEN_OVERLAY_TEMPLATES: Final[frozenset[str]] = frozenset(
+    {
+        "title_card",
+        "callback",
+        "icon_list",
+        "comparison",
+        "timeline",
+        "text_thread",
+        "dialogue",
+        "map_focus",
+    }
+)

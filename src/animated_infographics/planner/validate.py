@@ -28,7 +28,14 @@ from animated_infographics.contracts.models import (
     TitleCardProps,
     Transcript,
 )
-from animated_infographics.contracts.templates import REGISTRY, WORD_CAPS, TextSlot, TimelineEvent
+from animated_infographics.contracts.templates import (
+    REGISTRY,
+    WORD_CAPS,
+    CallbackProps,
+    MetaphorProps,
+    TextSlot,
+    TimelineEvent,
+)
 from animated_infographics.planner.grounding import (
     digits_grounded,
     is_kinetic_quote_grounded,
@@ -720,6 +727,26 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
             errors.extend(internal_id_errors(f"props.events[{idx}].label", event.label, bible))
 
         errors.extend(timeline_label_errors(props.events, full_transcript))
+
+    elif isinstance(props, MetaphorProps):
+        if props.cast_ids:
+            for cid in props.cast_ids:
+                if cid not in cast_map:
+                    errors.append(f"props.cast_ids: cast '{cid}' not found in bible")
+        if props.label:
+            errors.extend(_check_slot("props.label", props.label, slots["label"]))
+            errors.extend(text_complete_errors("props.label", props.label))
+            errors.extend(internal_id_errors("props.label", props.label, bible))
+
+    elif isinstance(props, CallbackProps):
+        if props.set_piece_id and props.set_piece_id not in set_pieces_map:
+            errors.append(
+                f"props.set_piece_id: set piece '{props.set_piece_id}' not found in bible"
+            )
+        if props.label:
+            errors.extend(_check_slot("props.label", props.label, slots["label"]))
+            errors.extend(text_complete_errors("props.label", props.label))
+            errors.extend(internal_id_errors("props.label", props.label, bible))
 
     # 9. Word caps (item 9)
     errors.extend(word_cap_errors(template, scene.props))

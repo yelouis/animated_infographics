@@ -209,15 +209,15 @@ def text_expected(visual_description: str) -> bool:
     return False
 
 
-def image_prompt(kind: Literal["place", "set_piece"], visual_description: str) -> str:
-    """Build the exact prompt for a place or set piece per design_visual_direction.md §7."""
+def image_prompt(kind: Literal["place", "set_piece", "metaphor"], visual_description: str) -> str:
+    """Build the exact prompt for a place, set piece, or metaphor per design."""
     clean_desc = visual_description.strip().rstrip(".")
     if kind == "place":
         return (
             f"{clean_desc}. Wide establishing view of the place, "
             f"no people in the foreground. {STYLE}"
         )
-    elif kind == "set_piece":
+    elif kind in ("set_piece", "metaphor"):
         return f"{clean_desc}. One clear central subject. {STYLE}"
     else:
         raise ValueError(f"Unknown illustration kind: {kind}")
@@ -442,7 +442,7 @@ def run_assets(bible: Bible, job: Job, backend: LLMBackend | None = None) -> Ass
     images_dir.mkdir(parents=True, exist_ok=True)
 
     def process_entity(
-        ent_id: str, kind: Literal["place", "set_piece"], visual_desc: str
+        ent_id: str, kind: Literal["place", "set_piece", "metaphor"], visual_desc: str
     ) -> AssetEntity:
         prompt = image_prompt(kind, visual_desc)
         out_path = images_dir / f"{ent_id}.png"
@@ -545,6 +545,19 @@ def run_assets(bible: Bible, job: Job, backend: LLMBackend | None = None) -> Ass
     # Set pieces: up to 3 per bible cap
     for s in bible.set_pieces[:3]:
         entities.append(process_entity(s.id, "set_piece", s.visual_description))
+
+    # Metaphors from director.json if present
+    director_path = job.dir / "director.json"
+    if director_path.is_file():
+        try:
+            from animated_infographics.contracts.director import DirectorPlan
+
+            d_plan = DirectorPlan.model_validate_json(director_path.read_text(encoding="utf-8"))
+            for m in d_plan.metaphors:
+                ent_id = f"metaphor_{m.beat_i}"
+                entities.append(process_entity(ent_id, "metaphor", m.image))
+        except Exception:
+            pass
 
     manifest = AssetManifest(schema_version=1, entities=entities)
     manifest_path = job.dir / "assets" / "manifest.json"

@@ -7,10 +7,12 @@ from typing import Any, Final, get_args, get_origin
 
 from pydantic import BaseModel, ValidationError
 
+from animated_infographics.contracts.director import DirectorPlan
 from animated_infographics.contracts.icons import IconName
 from animated_infographics.contracts.models import (
     Beat,
     Bible,
+    CallbackScene,
     CauseEffectScene,
     CharacterIntroScene,
     ComparisonScene,
@@ -22,6 +24,7 @@ from animated_infographics.contracts.models import (
     KineticQuoteScene,
     LocationScene,
     MapFocusScene,
+    MetaphorScene,
     PlanReport,
     PlanReportScene,
     RelationshipMapScene,
@@ -39,8 +42,10 @@ from animated_infographics.contracts.models import (
 )
 from animated_infographics.contracts.templates import (
     REGISTRY,
+    CallbackProps,
     EmotionBeatProps,
     LocationProps,
+    MetaphorProps,
     SetPieceProps,
     TextThreadProps,
 )
@@ -572,6 +577,7 @@ def plan_storyboard(
     backend: LLMBackend,
     style: str = "literal",
     style_degraded: bool = False,
+    director_plan: DirectorPlan | None = None,
 ) -> tuple[Storyboard, PlanReport]:
     """Execute complete storyboard planning: select -> props with fallback ladder -> rule repairs.
 
@@ -596,7 +602,7 @@ def plan_storyboard(
 
     # 1. Template selection stage
     choices, select_repairs, select_calls, select_hits = plan_template_selection(
-        transcript, beats, bible, backend
+        transcript, beats, bible, backend, director_plan=director_plan
     )
 
     prompt_path = Path(__file__).resolve().parent / "prompts" / "props.md"
@@ -642,6 +648,98 @@ def plan_storyboard(
             )
             continue
 
+        accumulated_errors: list[str] = []
+        scene_result: Scene | None = None
+        fallback_level: int = 0
+        total_scene_attempts = 0
+
+        # Deterministic director scenes (R8: metaphor or callback)
+        if prim_template == "metaphor" and director_plan is not None:
+            met_directive = next((m for m in director_plan.metaphors if m.beat_i == idx), None)
+            if met_directive is not None:
+                d_scene: Scene = MetaphorScene(
+                    id=scene_id,
+                    beat_i=idx,
+                    template="metaphor",
+                    props=MetaphorProps(
+                        image_entity=f"metaphor_{idx}",
+                        label=met_directive.label,
+                        cast_ids=met_directive.cast_ids,
+                    ),
+                    rationale="director",
+                )
+                ctx = PlanContext(transcript=transcript, bible=bible, beat=beat)
+                val_errors = validate_scene(d_scene, ctx)
+                if not val_errors:
+                    scenes.append(d_scene)
+                    plan_report_scenes.append(
+                        PlanReportScene(
+                            id=scene_id,
+                            primary=prim_template,
+                            alternate=alt_template,
+                            final_template=prim_template,
+                            fallback_level=0,
+                            attempts=0,
+                            errors=[],
+                            critic=CriticReport(
+                                status="not_applicable", mismatches=[], changed=False
+                            ),
+                        )
+                    )
+                    continue
+                else:
+                    accumulated_errors.extend(val_errors)
+                    prim_template = alt_template
+                    alt_template = "kinetic_quote"
+
+        if prim_template == "callback" and director_plan is not None:
+            payoff_motif = next(
+                (
+                    m
+                    for m in director_plan.motifs
+                    if any(a.beat_i == idx and a.role == "payoff" for a in m.appearances)
+                ),
+                None,
+            )
+            if payoff_motif is not None:
+                name_words = payoff_motif.name.split()
+                cb_label = " ".join(name_words[:3]) if name_words else None
+                cb_scene: Scene = CallbackScene(
+                    id=scene_id,
+                    beat_i=idx,
+                    template="callback",
+                    props=CallbackProps(
+                        motif_id=payoff_motif.id,
+                        label=cb_label,
+                        set_piece_id=payoff_motif.set_piece_id,
+                        icon=payoff_motif.icon,  # type: ignore[arg-type]
+                    ),
+                    rationale="director",
+                )
+                ctx = PlanContext(transcript=transcript, bible=bible, beat=beat)
+                val_errors = validate_scene(cb_scene, ctx)
+                if not val_errors:
+                    scenes.append(cb_scene)
+                    plan_report_scenes.append(
+                        PlanReportScene(
+                            id=scene_id,
+                            primary=prim_template,
+                            alternate=alt_template,
+                            final_template=prim_template,
+                            fallback_level=0,
+                            attempts=0,
+                            errors=[],
+                            critic=CriticReport(
+                                status="not_applicable", mismatches=[], changed=False
+                            ),
+                        )
+                    )
+                    continue
+                else:
+                    accumulated_errors.extend(val_errors)
+                    prim_template = alt_template
+                    alt_template = "kinetic_quote"
+
         if choice.rhythm_id is not None:
             r_scene = build_rhythm_picture(scene_id, idx, prim_template, choice.rhythm_id)
             ctx = PlanContext(transcript=transcript, bible=bible, beat=beat)
@@ -662,13 +760,9 @@ def plan_storyboard(
                 )
                 continue
             else:
+                accumulated_errors.extend(val_errors)
                 prim_template = alt_template
                 alt_template = "kinetic_quote"
-
-        accumulated_errors: list[str] = []
-        scene_result: Scene | None = None
-        fallback_level: int = 0
-        total_scene_attempts = 0
 
         # Attempt primary template
         p_scene, p_errs, p_attempts = plan_single_template_props(

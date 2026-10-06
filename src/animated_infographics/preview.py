@@ -178,6 +178,12 @@ def format_key_props(scene: Any) -> str:
         return f"region={props.region}, {len(props.markers)} markers"
     if t == "timeline":
         return f"{len(props.events)} events"
+    if t == "metaphor":
+        lbl = f' "{props.label}"' if getattr(props, "label", None) else ""
+        return f"metaphor={props.image_entity}{lbl}"
+    if t == "callback":
+        lbl = f' "{props.label}"' if getattr(props, "label", None) else ""
+        return f"callback={props.motif_id}{lbl}"
     return ""
 
 
@@ -241,6 +247,19 @@ def generate_contact_sheet(
         else:
             # Placeholder tile
             draw.rectangle([x, y, x + tile_w, y + img_h], fill=(11, 19, 38))
+
+        # Draw "M" / "C" badge for metaphor / callback scenes
+        if sc.template in ("metaphor", "callback"):
+            badge_letter = "M" if sc.template == "metaphor" else "C"
+            bx, by = x + 8, y + 8
+            bw, bh = 24, 24
+            draw.rounded_rectangle([bx, by, bx + bw, by + bh], radius=4, fill=(233, 196, 106))
+            bfont: Any
+            try:
+                bfont = ImageFont.truetype(str(font_path), size=14)
+            except Exception:
+                bfont = ImageFont.load_default()
+            draw.text((bx + 6, by + 3), badge_letter, fill=(20, 33, 61), font=bfont)
 
         # Label strip
         is_flagged = sc.id in flagged_scenes
@@ -382,13 +401,176 @@ def generate_preview_report(
         except Exception:
             pass
 
-    report_data = {
+    report_data: dict[str, Any] = {
         "overflow": overflow_entries,
         "fallback_scenes": fallback_scenes,
         "failed_images": failed_images,
         "warnings": warnings,
         "plan_sha256": plan_sha,
     }
+
+    director_items: list[dict[str, Any]] = []
+    director_path = job_dir / "director.json"
+    if director_path.is_file():
+        try:
+            from animated_infographics.contracts.director import DirectorPlan
+
+            d_plan = DirectorPlan.model_validate_json(director_path.read_text(encoding="utf-8"))
+            timeline_path = job_dir / "timeline.json"
+            t_scenes: list[dict[str, Any]] = []
+            if timeline_path.is_file():
+                try:
+                    t_data = json.loads(timeline_path.read_text(encoding="utf-8"))
+                    t_scenes = t_data.get("scenes", [])
+                except Exception:
+                    pass
+
+            # 1. license_dropped
+            for ld in d_plan.license_dropped:
+                director_items.append(
+                    {
+                        "kind": ld.item.get("kind", "license_item"),
+                        "beat_i": ld.item.get("beat_i"),
+                        "fate": "license_dropped",
+                        "verdict": ld.verdict,
+                    }
+                )
+
+            # 2. overlay_dropped
+            for od in d_plan.overlay_dropped:
+                director_items.append(
+                    {
+                        "kind": od.item.get("kind", "overlay_item"),
+                        "beat_i": od.item.get("beat_i"),
+                        "fate": "overlay_dropped",
+                        "reason": od.reason,
+                    }
+                )
+
+            # 3. Metaphors
+            for met in d_plan.metaphors:
+                sc_match = next(
+                    (s for s in t_scenes if s.get("id") == f"s{met.beat_i:03d}"),
+                    None,
+                )
+                fate = (
+                    "rendered"
+                    if (sc_match and sc_match.get("template") == "metaphor")
+                    else "dropped"
+                )
+                director_items.append(
+                    {
+                        "kind": "metaphor",
+                        "beat_i": met.beat_i,
+                        "fate": fate,
+                        "label": met.label,
+                    }
+                )
+
+            # 4. Motifs
+            for motif in d_plan.motifs:
+                for app in motif.appearances:
+                    if app.role == "payoff":
+                        sc_match = next(
+                            (s for s in t_scenes if s.get("id") == f"s{app.beat_i:03d}"),
+                            None,
+                        )
+                        fate = (
+                            "rendered"
+                            if (sc_match and sc_match.get("template") == "callback")
+                            else "dropped"
+                        )
+                        director_items.append(
+                            {
+                                "kind": "callback",
+                                "motif_id": motif.id,
+                                "beat_i": app.beat_i,
+                                "fate": fate,
+                            }
+                        )
+                    elif app.role in ("plant", "echo"):
+                        is_dropped = any(
+                            od.item.get("motif_id") == motif.id
+                            and od.item.get("beat_i") == app.beat_i
+                            for od in d_plan.overlay_dropped
+                        )
+                        if is_dropped:
+                            fate = "overlay_dropped"
+                        else:
+                            orig_sc = next(
+                                (s for s in t_scenes if s.get("id") == f"s{app.beat_i:03d}"),
+                                None,
+                            )
+                            has_in_orig = orig_sc and any(
+                                o.get("kind") == "motif_token" and o.get("motif_id") == motif.id
+                                for o in orig_sc.get("overlays", [])
+                            )
+                            if has_in_orig:
+                                fate = "rendered"
+                            else:
+                                placed_sc = next(
+                                    (
+                                        s
+                                        for s in t_scenes
+                                        if any(
+                                            o.get("kind") == "motif_token"
+                                            and o.get("motif_id") == motif.id
+                                            for o in s.get("overlays", [])
+                                        )
+                                    ),
+                                    None,
+                                )
+                                fate = "moved" if placed_sc else "overlay_dropped"
+                        director_items.append(
+                            {
+                                "kind": "motif_token",
+                                "motif_id": motif.id,
+                                "beat_i": app.beat_i,
+                                "fate": fate,
+                            }
+                        )
+
+            # 5. Asides
+            for aside in d_plan.asides:
+                is_dropped = any(
+                    od.item.get("beat_i") == aside.beat_i and od.item.get("kind") == aside.kind
+                    for od in d_plan.overlay_dropped
+                )
+                if is_dropped:
+                    fate = "overlay_dropped"
+                else:
+                    orig_sc = next(
+                        (s for s in t_scenes if s.get("id") == f"s{aside.beat_i:03d}"),
+                        None,
+                    )
+                    has_in_orig = orig_sc and any(
+                        o.get("kind") == aside.kind for o in orig_sc.get("overlays", [])
+                    )
+                    if has_in_orig:
+                        fate = "rendered"
+                    else:
+                        placed_sc = next(
+                            (
+                                s
+                                for s in t_scenes
+                                if any(o.get("kind") == aside.kind for o in s.get("overlays", []))
+                            ),
+                            None,
+                        )
+                        fate = "moved" if placed_sc else "overlay_dropped"
+                director_items.append(
+                    {
+                        "kind": aside.kind,
+                        "beat_i": aside.beat_i,
+                        "fate": fate,
+                        "text": aside.text,
+                    }
+                )
+        except Exception:
+            pass
+
+    if director_items:
+        report_data["director_items"] = director_items
 
     out_path.write_text(json.dumps(report_data, indent=2) + "\n", encoding="utf-8")
     return report_data
