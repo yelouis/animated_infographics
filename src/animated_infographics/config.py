@@ -27,6 +27,8 @@ SFX_MIN_GAP_FRAMES: Final[int] = 24
 # Frame timing
 LEAD_MS: Final[int] = 200
 END_HOLD_MS: Final[int] = 1500
+ENTER_FRAMES: Final[int] = 12
+EXIT_FRAMES: Final[int] = 8
 
 # Beat constraints
 BEAT_MIN_MS: Final[int] = 1500

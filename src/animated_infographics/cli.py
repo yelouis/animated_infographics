@@ -39,8 +39,10 @@ from animated_infographics.jobs import (
     StageFn,
 )
 from animated_infographics.planner.validate import PlanContext, validate_plan
+from animated_infographics.presentation.compose import run_compose_stage
 from animated_infographics.presentation.deck import run_deck_stage, validate_deck
 from animated_infographics.presentation.deck_bible import run_deck_bible_stage
+from animated_infographics.presentation.follow import run_follow_stage
 from animated_infographics.presentation.hear import run_hear_stage
 from animated_infographics.presentation.perform import run_perform_stage
 from animated_infographics.presentation.speak import run_speak_stage
@@ -95,6 +97,8 @@ STAGE_REGISTRY["tree"] = run_tree_stage
 STAGE_REGISTRY["perform"] = run_perform_stage
 STAGE_REGISTRY["speak"] = run_speak_stage
 STAGE_REGISTRY["hear"] = run_hear_stage
+STAGE_REGISTRY["follow"] = run_follow_stage
+STAGE_REGISTRY["compose"] = run_compose_stage
 
 
 def set_stage_registry(custom: Mapping[str, StageFn]) -> None:
@@ -346,6 +350,8 @@ def present_sim(
             "perform",
             "speak",
             "hear",
+            "follow",
+            "compose",
             "preview",
         ]
         job.run(stages, STAGE_REGISTRY, ctx)
@@ -666,6 +672,8 @@ def rerun(
                     "perform",
                     "speak",
                     "hear",
+                    "follow",
+                    "compose",
                     "preview",
                 }
             ]

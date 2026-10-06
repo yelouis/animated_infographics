@@ -223,6 +223,25 @@ def fake_stages() -> dict[str, Any]:
             encoding="utf-8",
         )
 
+    def fake_follow(j: Job, ctx: RunContext) -> None:
+        data = {
+            "schema_version": 1,
+            "commits": [
+                {
+                    "node_id": "d1_sec",
+                    "at_ms": 0,
+                    "decision_ms": 0,
+                    "compute_ms": 0,
+                    "score": 0.0,
+                }
+            ],
+            "holds": [],
+        }
+        (j.dir / "playback.json").write_text(json.dumps(data), encoding="utf-8")
+
+    def fake_compose(j: Job, ctx: RunContext) -> None:
+        pass
+
     registry = {
         "ingest": fake_ingest,
         "voice": fake_voice,
@@ -240,6 +259,8 @@ def fake_stages() -> dict[str, Any]:
         "perform": fake_perform,
         "speak": fake_speak,
         "hear": fake_hear,
+        "follow": fake_follow,
+        "compose": fake_compose,
         "preview": fake_preview,
         "render": fake_render,
     }
