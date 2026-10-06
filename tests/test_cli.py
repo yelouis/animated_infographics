@@ -192,6 +192,37 @@ def fake_stages() -> dict[str, Any]:
             encoding="utf-8",
         )
 
+    def fake_perform(j: Job, ctx: RunContext) -> None:
+        data = {
+            "schema_version": 1,
+            "seed": 42,
+            "level": "mild",
+            "sentences": [
+                {
+                    "text": "Point A",
+                    "label": {"slide": "d1", "point": 0},
+                    "op": "verbatim",
+                    "source_sentence_id": 1,
+                }
+            ],
+            "op_counts": {"verbatim": 1, "paraphrase": 0, "filler": 0, "adlib": 0, "back_ref": 0},
+        }
+        (j.dir / "performance.json").write_text(json.dumps(data), encoding="utf-8")
+
+    def fake_speak(j: Job, ctx: RunContext) -> None:
+        (j.dir / "audio").mkdir(parents=True, exist_ok=True)
+        (j.dir / "audio" / "narration.wav").write_bytes(b"RIFFdummywav")
+        (j.dir / "speak_timing.json").write_text(
+            json.dumps([{"sentence_i": 0, "start_ms": 0, "end_ms": 1000}]),
+            encoding="utf-8",
+        )
+
+    def fake_hear(j: Job, ctx: RunContext) -> None:
+        (j.dir / "heard.json").write_text(
+            json.dumps(_make_fake_transcript("asr")),
+            encoding="utf-8",
+        )
+
     registry = {
         "ingest": fake_ingest,
         "voice": fake_voice,
@@ -206,6 +237,9 @@ def fake_stages() -> dict[str, Any]:
         "deck": fake_deck,
         "deck_bible": fake_deck_bible,
         "tree": fake_tree,
+        "perform": fake_perform,
+        "speak": fake_speak,
+        "hear": fake_hear,
         "preview": fake_preview,
         "render": fake_render,
     }

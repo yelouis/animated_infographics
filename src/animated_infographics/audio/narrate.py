@@ -210,6 +210,24 @@ def narrate(
     final_wav_path = audio_dir / "narration.wav"
 
     sentence_specs = build_sentence_list(ingest)
+    return synthesize_narration(
+        sentence_specs=sentence_specs,
+        voice=voice,
+        raw_wav_path=raw_wav_path,
+        final_wav_path=final_wav_path,
+    )
+
+
+def synthesize_narration(
+    sentence_specs: list[tuple[str, int, bool]],
+    voice: VoiceDecision,
+    raw_wav_path: Path,
+    final_wav_path: Path,
+) -> tuple[Transcript, NarrationOffsets]:
+    """Synthesize audio from sentence specs with Kokoro, perform loudnorm,
+
+    and return transcript and offsets.
+    """
     pipeline = KPipeline(lang_code="a", repo_id="hexgrad/Kokoro-82M", device="cpu")
 
     audio_chunks: list[np.ndarray] = []

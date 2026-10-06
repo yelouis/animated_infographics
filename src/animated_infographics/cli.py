@@ -41,6 +41,9 @@ from animated_infographics.jobs import (
 from animated_infographics.planner.validate import PlanContext, validate_plan
 from animated_infographics.presentation.deck import run_deck_stage, validate_deck
 from animated_infographics.presentation.deck_bible import run_deck_bible_stage
+from animated_infographics.presentation.hear import run_hear_stage
+from animated_infographics.presentation.perform import run_perform_stage
+from animated_infographics.presentation.speak import run_speak_stage
 from animated_infographics.presentation.tree import run_tree_stage
 from animated_infographics.stages.assets import run_assets_stage
 from animated_infographics.stages.bible import run_bible_stage
@@ -89,6 +92,9 @@ STAGE_REGISTRY["render"] = run_render_stage
 STAGE_REGISTRY["deck"] = run_deck_stage
 STAGE_REGISTRY["deck_bible"] = run_deck_bible_stage
 STAGE_REGISTRY["tree"] = run_tree_stage
+STAGE_REGISTRY["perform"] = run_perform_stage
+STAGE_REGISTRY["speak"] = run_speak_stage
+STAGE_REGISTRY["hear"] = run_hear_stage
 
 
 def set_stage_registry(custom: Mapping[str, StageFn]) -> None:
@@ -330,7 +336,18 @@ def present_sim(
             now=now,
         )
 
-        stages = ["ingest", "voice", "deck", "deck_bible", "tree", "assets", "preview"]
+        stages = [
+            "ingest",
+            "voice",
+            "deck",
+            "deck_bible",
+            "tree",
+            "assets",
+            "perform",
+            "speak",
+            "hear",
+            "preview",
+        ]
         job.run(stages, STAGE_REGISTRY, ctx)
 
         plan_sha = job.plan_sha256()
@@ -639,7 +656,18 @@ def rerun(
             stages_to_run = [
                 s
                 for s in PRESENTATION_STAGES[idx:]
-                if s in STAGE_REGISTRY and s in {"deck", "deck_bible", "tree", "assets", "preview"}
+                if s in STAGE_REGISTRY
+                and s
+                in {
+                    "deck",
+                    "deck_bible",
+                    "tree",
+                    "assets",
+                    "perform",
+                    "speak",
+                    "hear",
+                    "preview",
+                }
             ]
             ctx = RunContext(style=eff_style)
             job.run(stages_to_run, STAGE_REGISTRY, ctx)

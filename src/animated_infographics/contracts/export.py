@@ -21,6 +21,7 @@ from animated_infographics.contracts.models import (
     Transcript,
     VoiceDecision,
 )
+from animated_infographics.contracts.performance import PerformancePlan
 from animated_infographics.contracts.styles import StyleSpec
 from animated_infographics.contracts.templates import REGISTRY
 from animated_infographics.contracts.tree import TreePlan
@@ -106,6 +107,7 @@ def export_all(out_dir: Path, project_root: Path) -> None:
         "director.schema.json": generate_schema(DirectorPlan),
         "deck.schema.json": generate_schema(DeckPlan),
         "tree.schema.json": generate_schema(TreePlan),
+        "performance.schema.json": generate_schema(PerformancePlan),
     }
 
     for filename, schema in schemas.items():
@@ -149,6 +151,11 @@ def export_all(out_dir: Path, project_root: Path) -> None:
     tree_path = renderer_gen_dir / "tree.ts"
     tree_ts = generate_contracts_ts(schemas["tree.schema.json"], project_root)
     tree_path.write_text(tree_ts, encoding="utf-8")
+
+    # 10. Performance TS
+    performance_path = renderer_gen_dir / "performance.ts"
+    performance_ts = generate_contracts_ts(schemas["performance.schema.json"], project_root)
+    performance_path.write_text(performance_ts, encoding="utf-8")
 
 
 def main() -> None:

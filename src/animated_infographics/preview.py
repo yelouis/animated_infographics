@@ -763,5 +763,14 @@ def generate_preview_report(
     if director_items:
         report_data["director_items"] = director_items
 
+    perf_path = job_dir / "performance.json"
+    if perf_path.is_file():
+        try:
+            perf_data = json.loads(perf_path.read_text(encoding="utf-8"))
+            if "op_counts" in perf_data:
+                report_data["op_counts"] = perf_data["op_counts"]
+        except Exception:
+            pass
+
     out_path.write_text(json.dumps(report_data, indent=2) + "\n", encoding="utf-8")
     return report_data
