@@ -202,7 +202,173 @@ export type PlanSha256 = string;
 export type EndFrame2 = number;
 export type HideCaptions = boolean;
 export type Id = string;
+export type Anchor = "top_right" | "bottom_left";
 export type Icon1 =
+  | (
+      | "Airplane"
+      | "Armchair"
+      | "Baby"
+      | "Bank"
+      | "Bed"
+      | "BeerBottle"
+      | "Bell"
+      | "Bicycle"
+      | "Bird"
+      | "Boat"
+      | "Bomb"
+      | "Book"
+      | "BookOpen"
+      | "Bookmark"
+      | "Bread"
+      | "Briefcase"
+      | "Broadcast"
+      | "Bug"
+      | "Building"
+      | "BuildingApartment"
+      | "BuildingOffice"
+      | "Buildings"
+      | "Bus"
+      | "Cake"
+      | "Calendar"
+      | "CalendarBlank"
+      | "Camera"
+      | "Car"
+      | "CarProfile"
+      | "Cat"
+      | "Certificate"
+      | "Chat"
+      | "ChatCircle"
+      | "ChatDots"
+      | "Church"
+      | "Clock"
+      | "Cloud"
+      | "CloudLightning"
+      | "CloudRain"
+      | "Coffee"
+      | "Coins"
+      | "Compass"
+      | "Cookie"
+      | "CookingPot"
+      | "CreditCard"
+      | "Crosshair"
+      | "Crown"
+      | "CurrencyDollar"
+      | "CurrencyEur"
+      | "CurrencyGbp"
+      | "Dog"
+      | "Door"
+      | "Drop"
+      | "Envelope"
+      | "EnvelopeSimple"
+      | "ExclamationMark"
+      | "Eye"
+      | "Factory"
+      | "File"
+      | "FileText"
+      | "Files"
+      | "Fire"
+      | "FirstAid"
+      | "Fish"
+      | "Flower"
+      | "ForkKnife"
+      | "Gavel"
+      | "Gear"
+      | "GenderIntersex"
+      | "Hamburger"
+      | "Hammer"
+      | "HandCoins"
+      | "HandFist"
+      | "HandsClapping"
+      | "HandsPraying"
+      | "Handshake"
+      | "Heart"
+      | "HeartBreak"
+      | "Heartbeat"
+      | "Horse"
+      | "Hospital"
+      | "Hourglass"
+      | "House"
+      | "HouseLine"
+      | "IdentificationBadge"
+      | "IdentificationCard"
+      | "Key"
+      | "Leaf"
+      | "Lightbulb"
+      | "Lock"
+      | "LockOpen"
+      | "MagnifyingGlass"
+      | "MapPin"
+      | "Medal"
+      | "Megaphone"
+      | "Microphone"
+      | "Moon"
+      | "Newspaper"
+      | "Notebook"
+      | "OrangeSlice"
+      | "Package"
+      | "Phone"
+      | "PhoneCall"
+      | "PiggyBank"
+      | "Pill"
+      | "Pizza"
+      | "Plant"
+      | "PoliceCar"
+      | "Question"
+      | "Receipt"
+      | "RocketLaunch"
+      | "Scales"
+      | "Screwdriver"
+      | "Scroll"
+      | "Shield"
+      | "ShieldChevron"
+      | "ShieldWarning"
+      | "Skull"
+      | "Smiley"
+      | "SmileyAngry"
+      | "SmileyMeh"
+      | "SmileyNervous"
+      | "SmileySad"
+      | "SmileyWink"
+      | "Snowflake"
+      | "Sparkle"
+      | "Stethoscope"
+      | "Storefront"
+      | "Suitcase"
+      | "Sun"
+      | "Sword"
+      | "Syringe"
+      | "Tag"
+      | "Target"
+      | "Thermometer"
+      | "ThumbsDown"
+      | "ThumbsUp"
+      | "Timer"
+      | "Train"
+      | "Trash"
+      | "Tree"
+      | "TrendDown"
+      | "TrendUp"
+      | "Trophy"
+      | "Truck"
+      | "User"
+      | "UserCheck"
+      | "UserFocus"
+      | "UserMinus"
+      | "UserPlus"
+      | "Users"
+      | "Wallet"
+      | "Warehouse"
+      | "Watch"
+      | "WaveSine"
+      | "Wine"
+      | "Wrench"
+    )
+  | null;
+export type Kind = "motif_token" | "thought" | "label" | "prop";
+export type MotifId = string | null;
+export type Text1 = string | null;
+export type Overlays = SceneOverlay[];
+export type Icon2 =
   | (
       | "Airplane"
       | "Armchair"
@@ -372,20 +538,22 @@ export type ItemFrames = number[];
 export type EndFrame3 = number;
 export type HideCaptions1 = boolean;
 export type Id1 = string;
+export type Overlays1 = SceneOverlay[];
 export type AttributionCastId = string | null;
 /**
  * @maxItems 3
  */
 export type Emphasis = [] | [string] | [string, string] | [string, string, string];
-export type Text1 = string;
+export type Text2 = string;
 export type StartFrame3 = number;
 export type Template1 = "kinetic_quote";
 export type EndFrame4 = number;
 export type HideCaptions2 = boolean;
 export type Id2 = string;
+export type Overlays2 = SceneOverlay[];
 export type Decimals = 0 | 1 | 2;
 export type DisplayScale = "none" | "thousand" | "million" | "billion";
-export type Icon2 =
+export type Icon3 =
   | (
       | "Airplane"
       | "Armchair"
@@ -554,13 +722,14 @@ export type Template2 = "stat_callout";
 export type EndFrame5 = number;
 export type HideCaptions3 = boolean;
 export type Id3 = string;
+export type Overlays3 = SceneOverlay[];
 export type Heading = string | null;
 /**
  * @minItems 2
  * @maxItems 3
  */
 export type Items = [IconListItem, IconListItem] | [IconListItem, IconListItem, IconListItem];
-export type Icon3 =
+export type Icon4 =
   | "Airplane"
   | "Armchair"
   | "Baby"
@@ -724,19 +893,21 @@ export type Template3 = "icon_list";
 export type EndFrame6 = number;
 export type HideCaptions4 = boolean;
 export type Id4 = string;
+export type Overlays4 = SceneOverlay[];
 export type Kicker = string;
-export type Text2 = string;
+export type Text3 = string;
 export type StartFrame6 = number;
 export type Template4 = "reveal";
 export type EndFrame7 = number;
 export type HideCaptions5 = boolean;
 export type Id5 = string;
+export type Overlays5 = SceneOverlay[];
 /**
  * @minItems 2
  * @maxItems 3
  */
 export type Nodes = [CauseEffectNode, CauseEffectNode] | [CauseEffectNode, CauseEffectNode, CauseEffectNode];
-export type Icon4 =
+export type Icon5 =
   | (
       | "Airplane"
       | "Armchair"
@@ -903,9 +1074,10 @@ export type Template5 = "cause_effect";
 export type EndFrame8 = number;
 export type HideCaptions6 = boolean;
 export type Id6 = string;
+export type Overlays6 = SceneOverlay[];
 export type CastId = string | null;
 export type Heading1 = string;
-export type Icon5 =
+export type Icon6 =
   | (
       | "Airplane"
       | "Armchair"
@@ -1076,6 +1248,7 @@ export type Template6 = "comparison";
 export type EndFrame9 = number;
 export type HideCaptions7 = boolean;
 export type Id7 = string;
+export type Overlays7 = SceneOverlay[];
 export type CastId1 = string;
 export type Descriptor = string;
 export type StartFrame9 = number;
@@ -1083,19 +1256,21 @@ export type Template7 = "character_intro";
 export type EndFrame10 = number;
 export type HideCaptions8 = boolean;
 export type Id8 = string;
+export type Overlays8 = SceneOverlay[];
 /**
  * @minItems 1
  * @maxItems 2
  */
 export type Lines = [DialogueLine] | [DialogueLine, DialogueLine];
 export type CastId2 = string;
-export type Text3 = string;
+export type Text4 = string;
 export type Tone = "neutral" | "angry" | "happy" | "sad" | "shocked" | "sarcastic";
 export type StartFrame10 = number;
 export type Template8 = "dialogue";
 export type EndFrame11 = number;
 export type HideCaptions9 = boolean;
 export type Id9 = string;
+export type Overlays9 = SceneOverlay[];
 export type ContactCastId = string | null;
 export type ContactName = string;
 /**
@@ -1104,12 +1279,13 @@ export type ContactName = string;
  */
 export type Messages = [TextMessage, TextMessage] | [TextMessage, TextMessage, TextMessage];
 export type From = "me" | "them";
-export type Text4 = string;
+export type Text5 = string;
 export type StartFrame11 = number;
 export type Template9 = "text_thread";
 export type EndFrame12 = number;
 export type HideCaptions10 = boolean;
 export type Id10 = string;
+export type Overlays10 = SceneOverlay[];
 export type CastId3 = string;
 export type Emotion = "neutral" | "happy" | "sad" | "angry" | "shocked" | "confused" | "smug" | "nervous";
 export type StartFrame12 = number;
@@ -1117,6 +1293,7 @@ export type Template10 = "emotion_beat";
 export type EndFrame13 = number;
 export type HideCaptions11 = boolean;
 export type Id11 = string;
+export type Overlays11 = SceneOverlay[];
 /**
  * @minItems 2
  * @maxItems 5
@@ -1146,6 +1323,7 @@ export type Template11 = "relationship_map";
 export type EndFrame14 = number;
 export type HideCaptions12 = boolean;
 export type Id12 = string;
+export type Overlays12 = SceneOverlay[];
 export type EraLabel = string | null;
 export type PlaceId = string;
 export type StartFrame14 = number;
@@ -1153,12 +1331,14 @@ export type Template12 = "location";
 export type EndFrame15 = number;
 export type HideCaptions13 = boolean;
 export type Id13 = string;
+export type Overlays13 = SceneOverlay[];
 export type SetPieceId = string;
 export type StartFrame15 = number;
 export type Template13 = "set_piece";
 export type EndFrame16 = number;
 export type HideCaptions14 = boolean;
 export type Id14 = string;
+export type Overlays14 = SceneOverlay[];
 /**
  * @minItems 1
  * @maxItems 3
@@ -1173,6 +1353,7 @@ export type Template14 = "map_focus";
 export type EndFrame17 = number;
 export type HideCaptions15 = boolean;
 export type Id15 = string;
+export type Overlays15 = SceneOverlay[];
 /**
  * @minItems 3
  * @maxItems 4
@@ -1184,6 +1365,188 @@ export type Label4 = string;
 export type HighlightIndex = number;
 export type StartFrame17 = number;
 export type Template15 = "timeline";
+export type EndFrame18 = number;
+export type HideCaptions16 = boolean;
+export type Id16 = string;
+export type Overlays16 = SceneOverlay[];
+/**
+ * @maxItems 2
+ */
+export type CastIds1 = [] | [string] | [string, string];
+export type ImageEntity = string;
+export type Label5 = string | null;
+export type StartFrame18 = number;
+export type Template16 = "metaphor";
+export type EndFrame19 = number;
+export type HideCaptions17 = boolean;
+export type Id17 = string;
+export type Overlays17 = SceneOverlay[];
+export type Icon7 =
+  | (
+      | "Airplane"
+      | "Armchair"
+      | "Baby"
+      | "Bank"
+      | "Bed"
+      | "BeerBottle"
+      | "Bell"
+      | "Bicycle"
+      | "Bird"
+      | "Boat"
+      | "Bomb"
+      | "Book"
+      | "BookOpen"
+      | "Bookmark"
+      | "Bread"
+      | "Briefcase"
+      | "Broadcast"
+      | "Bug"
+      | "Building"
+      | "BuildingApartment"
+      | "BuildingOffice"
+      | "Buildings"
+      | "Bus"
+      | "Cake"
+      | "Calendar"
+      | "CalendarBlank"
+      | "Camera"
+      | "Car"
+      | "CarProfile"
+      | "Cat"
+      | "Certificate"
+      | "Chat"
+      | "ChatCircle"
+      | "ChatDots"
+      | "Church"
+      | "Clock"
+      | "Cloud"
+      | "CloudLightning"
+      | "CloudRain"
+      | "Coffee"
+      | "Coins"
+      | "Compass"
+      | "Cookie"
+      | "CookingPot"
+      | "CreditCard"
+      | "Crosshair"
+      | "Crown"
+      | "CurrencyDollar"
+      | "CurrencyEur"
+      | "CurrencyGbp"
+      | "Dog"
+      | "Door"
+      | "Drop"
+      | "Envelope"
+      | "EnvelopeSimple"
+      | "ExclamationMark"
+      | "Eye"
+      | "Factory"
+      | "File"
+      | "FileText"
+      | "Files"
+      | "Fire"
+      | "FirstAid"
+      | "Fish"
+      | "Flower"
+      | "ForkKnife"
+      | "Gavel"
+      | "Gear"
+      | "GenderIntersex"
+      | "Hamburger"
+      | "Hammer"
+      | "HandCoins"
+      | "HandFist"
+      | "HandsClapping"
+      | "HandsPraying"
+      | "Handshake"
+      | "Heart"
+      | "HeartBreak"
+      | "Heartbeat"
+      | "Horse"
+      | "Hospital"
+      | "Hourglass"
+      | "House"
+      | "HouseLine"
+      | "IdentificationBadge"
+      | "IdentificationCard"
+      | "Key"
+      | "Leaf"
+      | "Lightbulb"
+      | "Lock"
+      | "LockOpen"
+      | "MagnifyingGlass"
+      | "MapPin"
+      | "Medal"
+      | "Megaphone"
+      | "Microphone"
+      | "Moon"
+      | "Newspaper"
+      | "Notebook"
+      | "OrangeSlice"
+      | "Package"
+      | "Phone"
+      | "PhoneCall"
+      | "PiggyBank"
+      | "Pill"
+      | "Pizza"
+      | "Plant"
+      | "PoliceCar"
+      | "Question"
+      | "Receipt"
+      | "RocketLaunch"
+      | "Scales"
+      | "Screwdriver"
+      | "Scroll"
+      | "Shield"
+      | "ShieldChevron"
+      | "ShieldWarning"
+      | "Skull"
+      | "Smiley"
+      | "SmileyAngry"
+      | "SmileyMeh"
+      | "SmileyNervous"
+      | "SmileySad"
+      | "SmileyWink"
+      | "Snowflake"
+      | "Sparkle"
+      | "Stethoscope"
+      | "Storefront"
+      | "Suitcase"
+      | "Sun"
+      | "Sword"
+      | "Syringe"
+      | "Tag"
+      | "Target"
+      | "Thermometer"
+      | "ThumbsDown"
+      | "ThumbsUp"
+      | "Timer"
+      | "Train"
+      | "Trash"
+      | "Tree"
+      | "TrendDown"
+      | "TrendUp"
+      | "Trophy"
+      | "Truck"
+      | "User"
+      | "UserCheck"
+      | "UserFocus"
+      | "UserMinus"
+      | "UserPlus"
+      | "Users"
+      | "Wallet"
+      | "Warehouse"
+      | "Watch"
+      | "WaveSine"
+      | "Wine"
+      | "Wrench"
+    )
+  | null;
+export type Label6 = string | null;
+export type MotifId1 = string;
+export type SetPieceId1 = string | null;
+export type StartFrame19 = number;
+export type Template17 = "callback";
 export type Scenes = (
   | TimelineTitleCardScene
   | TimelineKineticQuoteScene
@@ -1201,9 +1564,11 @@ export type Scenes = (
   | TimelineSetPieceScene
   | TimelineMapFocusScene
   | TimelineTimelineScene
+  | TimelineMetaphorScene
+  | TimelineCallbackScene
 )[];
 export type SchemaVersion = 1;
-export type Icon6 =
+export type Icon8 =
   | "Airplane"
   | "Armchair"
   | "Baby"
@@ -1447,13 +1812,21 @@ export interface TimelineTitleCardScene {
   end_frame: EndFrame2;
   hide_captions?: HideCaptions;
   id: Id;
+  overlays?: Overlays;
   props: TitleCardProps;
   start_frame: StartFrame2;
   template?: Template;
   timing?: TimelineSceneTiming;
 }
-export interface TitleCardProps {
+export interface SceneOverlay {
+  anchor: Anchor;
   icon?: Icon1;
+  kind: Kind;
+  motif_id?: MotifId;
+  text?: Text1;
+}
+export interface TitleCardProps {
+  icon?: Icon2;
   subtitle?: Subtitle;
   title: Title;
 }
@@ -1465,6 +1838,7 @@ export interface TimelineKineticQuoteScene {
   end_frame: EndFrame3;
   hide_captions?: HideCaptions1;
   id: Id1;
+  overlays?: Overlays1;
   props: KineticQuoteProps;
   start_frame: StartFrame3;
   template?: Template1;
@@ -1473,12 +1847,13 @@ export interface TimelineKineticQuoteScene {
 export interface KineticQuoteProps {
   attribution_cast_id?: AttributionCastId;
   emphasis?: Emphasis;
-  text: Text1;
+  text: Text2;
 }
 export interface TimelineStatCalloutScene {
   end_frame: EndFrame4;
   hide_captions?: HideCaptions2;
   id: Id2;
+  overlays?: Overlays2;
   props: StatCalloutProps;
   start_frame: StartFrame4;
   template?: Template2;
@@ -1487,7 +1862,7 @@ export interface TimelineStatCalloutScene {
 export interface StatCalloutProps {
   decimals: Decimals;
   display_scale?: DisplayScale;
-  icon?: Icon2;
+  icon?: Icon3;
   prefix?: Prefix;
   suffix?: Suffix;
   value: Value;
@@ -1496,6 +1871,7 @@ export interface TimelineIconListScene {
   end_frame: EndFrame5;
   hide_captions?: HideCaptions3;
   id: Id3;
+  overlays?: Overlays3;
   props: IconListProps;
   start_frame: StartFrame5;
   template?: Template3;
@@ -1506,13 +1882,14 @@ export interface IconListProps {
   items: Items;
 }
 export interface IconListItem {
-  icon: Icon3;
+  icon: Icon4;
   label: Label;
 }
 export interface TimelineRevealScene {
   end_frame: EndFrame6;
   hide_captions?: HideCaptions4;
   id: Id4;
+  overlays?: Overlays4;
   props: RevealProps;
   start_frame: StartFrame6;
   template?: Template4;
@@ -1520,12 +1897,13 @@ export interface TimelineRevealScene {
 }
 export interface RevealProps {
   kicker: Kicker;
-  text: Text2;
+  text: Text3;
 }
 export interface TimelineCauseEffectScene {
   end_frame: EndFrame7;
   hide_captions?: HideCaptions5;
   id: Id5;
+  overlays?: Overlays5;
   props: CauseEffectProps;
   start_frame: StartFrame7;
   template?: Template5;
@@ -1535,13 +1913,14 @@ export interface CauseEffectProps {
   nodes: Nodes;
 }
 export interface CauseEffectNode {
-  icon?: Icon4;
+  icon?: Icon5;
   label: Label1;
 }
 export interface TimelineComparisonScene {
   end_frame: EndFrame8;
   hide_captions?: HideCaptions6;
   id: Id6;
+  overlays?: Overlays6;
   props: ComparisonProps;
   start_frame: StartFrame8;
   template?: Template6;
@@ -1554,13 +1933,14 @@ export interface ComparisonProps {
 export interface ComparisonPanel {
   cast_id?: CastId;
   heading: Heading1;
-  icon?: Icon5;
+  icon?: Icon6;
   points: Points;
 }
 export interface TimelineCharacterIntroScene {
   end_frame: EndFrame9;
   hide_captions?: HideCaptions7;
   id: Id7;
+  overlays?: Overlays7;
   props: CharacterIntroProps;
   start_frame: StartFrame9;
   template?: Template7;
@@ -1574,6 +1954,7 @@ export interface TimelineDialogueScene {
   end_frame: EndFrame10;
   hide_captions?: HideCaptions8;
   id: Id8;
+  overlays?: Overlays8;
   props: DialogueProps;
   start_frame: StartFrame10;
   template?: Template8;
@@ -1584,13 +1965,14 @@ export interface DialogueProps {
 }
 export interface DialogueLine {
   cast_id: CastId2;
-  text: Text3;
+  text: Text4;
   tone?: Tone;
 }
 export interface TimelineTextThreadScene {
   end_frame: EndFrame11;
   hide_captions?: HideCaptions9;
   id: Id9;
+  overlays?: Overlays9;
   props: TextThreadProps;
   start_frame: StartFrame11;
   template?: Template9;
@@ -1603,12 +1985,13 @@ export interface TextThreadProps {
 }
 export interface TextMessage {
   from: From;
-  text: Text4;
+  text: Text5;
 }
 export interface TimelineEmotionBeatScene {
   end_frame: EndFrame12;
   hide_captions?: HideCaptions10;
   id: Id10;
+  overlays?: Overlays10;
   props: EmotionBeatProps;
   start_frame: StartFrame12;
   template?: Template10;
@@ -1622,6 +2005,7 @@ export interface TimelineRelationshipMapScene {
   end_frame: EndFrame13;
   hide_captions?: HideCaptions11;
   id: Id11;
+  overlays?: Overlays11;
   props: RelationshipMapProps;
   start_frame: StartFrame13;
   template?: Template11;
@@ -1641,6 +2025,7 @@ export interface TimelineLocationScene {
   end_frame: EndFrame14;
   hide_captions?: HideCaptions12;
   id: Id12;
+  overlays?: Overlays12;
   props: LocationProps;
   start_frame: StartFrame14;
   template?: Template12;
@@ -1654,6 +2039,7 @@ export interface TimelineSetPieceScene {
   end_frame: EndFrame15;
   hide_captions?: HideCaptions13;
   id: Id13;
+  overlays?: Overlays13;
   props: SetPieceProps;
   start_frame: StartFrame15;
   template?: Template13;
@@ -1666,6 +2052,7 @@ export interface TimelineMapFocusScene {
   end_frame: EndFrame16;
   hide_captions?: HideCaptions14;
   id: Id14;
+  overlays?: Overlays14;
   props: MapFocusProps;
   start_frame: StartFrame16;
   template?: Template14;
@@ -1684,6 +2071,7 @@ export interface TimelineTimelineScene {
   end_frame: EndFrame17;
   hide_captions?: HideCaptions15;
   id: Id15;
+  overlays?: Overlays15;
   props: TimelineProps;
   start_frame: StartFrame17;
   template?: Template15;
@@ -1697,11 +2085,42 @@ export interface TimelineEvent {
   date_label: DateLabel;
   label: Label4;
 }
+export interface TimelineMetaphorScene {
+  end_frame: EndFrame18;
+  hide_captions?: HideCaptions16;
+  id: Id16;
+  overlays?: Overlays16;
+  props: MetaphorProps;
+  start_frame: StartFrame18;
+  template?: Template16;
+  timing?: TimelineSceneTiming;
+}
+export interface MetaphorProps {
+  cast_ids?: CastIds1;
+  image_entity: ImageEntity;
+  label?: Label5;
+}
+export interface TimelineCallbackScene {
+  end_frame: EndFrame19;
+  hide_captions?: HideCaptions17;
+  id: Id17;
+  overlays?: Overlays17;
+  props: CallbackProps;
+  start_frame: StartFrame19;
+  template?: Template17;
+  timing?: TimelineSceneTiming;
+}
+export interface CallbackProps {
+  icon?: Icon7;
+  label?: Label6;
+  motif_id: MotifId1;
+  set_piece_id?: SetPieceId1;
+}
 export interface SetPieces {
   [k: string]: TimelineSetPiece;
 }
 export interface TimelineSetPiece {
-  icon: Icon6;
+  icon: Icon8;
   image?: Image1;
   name: Name2;
 }

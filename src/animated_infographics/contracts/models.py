@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_valid
 from animated_infographics.contracts.icons import IconName
 from animated_infographics.contracts.styles import StyleName
 from animated_infographics.contracts.templates import (
+    CallbackProps,
     CauseEffectProps,
     CharacterIntroProps,
     ComparisonProps,
@@ -20,6 +21,7 @@ from animated_infographics.contracts.templates import (
     KineticQuoteProps,
     LocationProps,
     MapFocusProps,
+    MetaphorProps,
     RelationshipMapProps,
     RevealProps,
     SetPieceProps,
@@ -553,6 +555,26 @@ class TimelineSceneModel(BaseModel):
     rationale: str = Field(default="", max_length=140)
 
 
+class MetaphorScene(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    id: str = Field(pattern=r"^s\d{3}$")
+    beat_i: int
+    template: Literal["metaphor"] = "metaphor"
+    props: MetaphorProps
+    mute_sfx: bool = False
+    rationale: str = Field(default="", max_length=140)
+
+
+class CallbackScene(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    id: str = Field(pattern=r"^s\d{3}$")
+    beat_i: int
+    template: Literal["callback"] = "callback"
+    props: CallbackProps
+    mute_sfx: bool = False
+    rationale: str = Field(default="", max_length=140)
+
+
 SceneUnion = (
     TitleCardScene
     | KineticQuoteScene
@@ -570,6 +592,8 @@ SceneUnion = (
     | SetPieceScene
     | MapFocusScene
     | TimelineSceneModel
+    | MetaphorScene
+    | CallbackScene
 )
 Scene = Annotated[SceneUnion, Field(discriminator="template")]
 
@@ -736,6 +760,16 @@ class TimelineSceneTiming(BaseModel):
     count_frames: int | None = None
 
 
+class SceneOverlay(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    kind: Literal["motif_token", "thought", "label", "prop"]
+    icon: IconName | None = None
+    text: str | None = None
+    anchor: Literal["top_right", "bottom_left"]
+    motif_id: str | None = None
+
+
 # Timeline Scenes (discriminated union on template)
 class TimelineTitleCardScene(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
@@ -746,6 +780,7 @@ class TimelineTitleCardScene(BaseModel):
     hide_captions: bool = False
     timing: TimelineSceneTiming = Field(default_factory=TimelineSceneTiming)
     props: TitleCardProps
+    overlays: list[SceneOverlay] = Field(default_factory=list)
 
 
 class TimelineKineticQuoteScene(BaseModel):
@@ -757,6 +792,7 @@ class TimelineKineticQuoteScene(BaseModel):
     hide_captions: bool = False
     timing: TimelineSceneTiming = Field(default_factory=TimelineSceneTiming)
     props: KineticQuoteProps
+    overlays: list[SceneOverlay] = Field(default_factory=list)
 
 
 class TimelineStatCalloutScene(BaseModel):
@@ -768,6 +804,7 @@ class TimelineStatCalloutScene(BaseModel):
     hide_captions: bool = False
     timing: TimelineSceneTiming = Field(default_factory=TimelineSceneTiming)
     props: StatCalloutProps
+    overlays: list[SceneOverlay] = Field(default_factory=list)
 
 
 class TimelineIconListScene(BaseModel):
@@ -779,6 +816,7 @@ class TimelineIconListScene(BaseModel):
     hide_captions: bool = False
     timing: TimelineSceneTiming = Field(default_factory=TimelineSceneTiming)
     props: IconListProps
+    overlays: list[SceneOverlay] = Field(default_factory=list)
 
 
 class TimelineRevealScene(BaseModel):
@@ -790,6 +828,7 @@ class TimelineRevealScene(BaseModel):
     hide_captions: bool = False
     timing: TimelineSceneTiming = Field(default_factory=TimelineSceneTiming)
     props: RevealProps
+    overlays: list[SceneOverlay] = Field(default_factory=list)
 
 
 class TimelineCauseEffectScene(BaseModel):
@@ -801,6 +840,7 @@ class TimelineCauseEffectScene(BaseModel):
     hide_captions: bool = False
     timing: TimelineSceneTiming = Field(default_factory=TimelineSceneTiming)
     props: CauseEffectProps
+    overlays: list[SceneOverlay] = Field(default_factory=list)
 
 
 class TimelineComparisonScene(BaseModel):
@@ -812,6 +852,7 @@ class TimelineComparisonScene(BaseModel):
     hide_captions: bool = False
     timing: TimelineSceneTiming = Field(default_factory=TimelineSceneTiming)
     props: ComparisonProps
+    overlays: list[SceneOverlay] = Field(default_factory=list)
 
 
 class TimelineCharacterIntroScene(BaseModel):
@@ -823,6 +864,7 @@ class TimelineCharacterIntroScene(BaseModel):
     hide_captions: bool = False
     timing: TimelineSceneTiming = Field(default_factory=TimelineSceneTiming)
     props: CharacterIntroProps
+    overlays: list[SceneOverlay] = Field(default_factory=list)
 
 
 class TimelineDialogueScene(BaseModel):
@@ -834,6 +876,7 @@ class TimelineDialogueScene(BaseModel):
     hide_captions: bool = False
     timing: TimelineSceneTiming = Field(default_factory=TimelineSceneTiming)
     props: DialogueProps
+    overlays: list[SceneOverlay] = Field(default_factory=list)
 
 
 class TimelineTextThreadScene(BaseModel):
@@ -845,6 +888,7 @@ class TimelineTextThreadScene(BaseModel):
     hide_captions: bool = False
     timing: TimelineSceneTiming = Field(default_factory=TimelineSceneTiming)
     props: TextThreadProps
+    overlays: list[SceneOverlay] = Field(default_factory=list)
 
 
 class TimelineEmotionBeatScene(BaseModel):
@@ -856,6 +900,7 @@ class TimelineEmotionBeatScene(BaseModel):
     hide_captions: bool = False
     timing: TimelineSceneTiming = Field(default_factory=TimelineSceneTiming)
     props: EmotionBeatProps
+    overlays: list[SceneOverlay] = Field(default_factory=list)
 
 
 class TimelineRelationshipMapScene(BaseModel):
@@ -867,6 +912,7 @@ class TimelineRelationshipMapScene(BaseModel):
     hide_captions: bool = False
     timing: TimelineSceneTiming = Field(default_factory=TimelineSceneTiming)
     props: RelationshipMapProps
+    overlays: list[SceneOverlay] = Field(default_factory=list)
 
 
 class TimelineLocationScene(BaseModel):
@@ -878,6 +924,7 @@ class TimelineLocationScene(BaseModel):
     hide_captions: bool = False
     timing: TimelineSceneTiming = Field(default_factory=TimelineSceneTiming)
     props: LocationProps
+    overlays: list[SceneOverlay] = Field(default_factory=list)
 
 
 class TimelineSetPieceScene(BaseModel):
@@ -889,6 +936,7 @@ class TimelineSetPieceScene(BaseModel):
     hide_captions: bool = False
     timing: TimelineSceneTiming = Field(default_factory=TimelineSceneTiming)
     props: SetPieceProps
+    overlays: list[SceneOverlay] = Field(default_factory=list)
 
 
 class TimelineMapFocusScene(BaseModel):
@@ -900,6 +948,7 @@ class TimelineMapFocusScene(BaseModel):
     hide_captions: bool = False
     timing: TimelineSceneTiming = Field(default_factory=TimelineSceneTiming)
     props: MapFocusProps
+    overlays: list[SceneOverlay] = Field(default_factory=list)
 
 
 class TimelineTimelineScene(BaseModel):
@@ -911,6 +960,31 @@ class TimelineTimelineScene(BaseModel):
     hide_captions: bool = False
     timing: TimelineSceneTiming = Field(default_factory=TimelineSceneTiming)
     props: TimelineProps
+    overlays: list[SceneOverlay] = Field(default_factory=list)
+
+
+class TimelineMetaphorScene(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    id: str = Field(pattern=r"^s\d{3}$")
+    template: Literal["metaphor"] = "metaphor"
+    start_frame: int = Field(ge=0)
+    end_frame: int = Field(ge=0)
+    hide_captions: bool = False
+    timing: TimelineSceneTiming = Field(default_factory=TimelineSceneTiming)
+    props: MetaphorProps
+    overlays: list[SceneOverlay] = Field(default_factory=list)
+
+
+class TimelineCallbackScene(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    id: str = Field(pattern=r"^s\d{3}$")
+    template: Literal["callback"] = "callback"
+    start_frame: int = Field(ge=0)
+    end_frame: int = Field(ge=0)
+    hide_captions: bool = False
+    timing: TimelineSceneTiming = Field(default_factory=TimelineSceneTiming)
+    props: CallbackProps
+    overlays: list[SceneOverlay] = Field(default_factory=list)
 
 
 TimelineSceneUnion = (
@@ -930,6 +1004,8 @@ TimelineSceneUnion = (
     | TimelineSetPieceScene
     | TimelineMapFocusScene
     | TimelineTimelineScene
+    | TimelineMetaphorScene
+    | TimelineCallbackScene
 )
 TimelineScene = Annotated[TimelineSceneUnion, Field(discriminator="template")]
 
@@ -972,6 +1048,14 @@ class Timeline(BaseModel):
     set_pieces: dict[str, TimelineSetPiece] = Field(default_factory=dict)
     scenes: list[TimelineScene] = Field(default_factory=list)
     captions: TimelineCaptions = Field(default_factory=TimelineCaptions)
+
+    @model_serializer(mode="wrap")
+    def _serialize(self, handler: Any) -> dict[str, Any]:
+        data = handler(self)
+        for s in data.get("scenes", []):
+            if "overlays" in s and not s["overlays"]:
+                s.pop("overlays", None)
+        return data
 
     @model_validator(mode="after")
     def validate_timeline_scenes(self) -> "Timeline":

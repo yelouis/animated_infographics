@@ -9,7 +9,7 @@ import type {
 } from "../generated/contracts";
 import { Background } from "../story/Background";
 import { EntitiesProvider } from "../story/entities";
-import { getTemplateComponent } from "../templates";
+import { getTemplateComponent, type TemplateComponentProps } from "../templates";
 import { getDefaultTiming } from "../story/timing";
 import { AvatarSheet } from "./AvatarSheet";
 import { avatarSheetFixtures } from "./fixtures/avatar_sheet";
@@ -30,11 +30,16 @@ import { textThreadFixtures } from "./fixtures/text_thread";
 import { captionFixtures } from "./fixtures/captions";
 import { timelineFixtures } from "./fixtures/timeline";
 import { titleCardFixtures } from "./fixtures/title_card";
+import { metaphorFixtures } from "./fixtures/metaphor";
+import { callbackFixtures } from "./fixtures/callback";
+import { overlaysFixtures } from "./fixtures/overlays";
+import type { AllowedOverlayTemplate } from "../theme/overlayLayout";
+import { OverlayLayer } from "../story/OverlayLayer";
 import { Captions } from "../story/Captions";
 
 export interface GalleryProps {
   template: string;
-  variant: "min" | "typical" | "max" | "worst" | "long_active";
+  variant: string;
 }
 
 const GALLERY_CAST: Record<string, TimelineCastMember> = {
@@ -201,6 +206,15 @@ export const Gallery: React.FC<GalleryProps> = ({ template, variant }) => {
     props = mapFocusFixtures[standardVariant] || mapFocusFixtures.typical;
   } else if (template === "timeline") {
     props = timelineFixtures[standardVariant] || timelineFixtures.typical;
+  } else if (template === "metaphor") {
+    props = metaphorFixtures[standardVariant] || metaphorFixtures.typical;
+  } else if (template === "callback") {
+    props = callbackFixtures[standardVariant] || callbackFixtures.typical;
+  } else if (template === "overlays") {
+    const overlayFixture =
+      overlaysFixtures[variant as AllowedOverlayTemplate] ||
+      overlaysFixtures.location;
+    props = overlayFixture.props;
   }
 
   if (template === "captions") {
@@ -221,10 +235,13 @@ export const Gallery: React.FC<GalleryProps> = ({ template, variant }) => {
     );
   }
 
-  const timing = getDefaultTiming(template, props, 150);
+  const actualTemplate = template === "overlays" ? variant : template;
+  const timing = getDefaultTiming(actualTemplate, props, 150);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const Component = template === "avatar_sheet" ? (AvatarSheet as unknown as React.FC<any>) : getTemplateComponent(template);
+  const Component =
+    template === "avatar_sheet"
+      ? (AvatarSheet as unknown as React.FC<TemplateComponentProps>)
+      : getTemplateComponent(actualTemplate);
 
   const places = useMemo(() => {
     if (variant === "worst") {
@@ -237,7 +254,10 @@ export const Gallery: React.FC<GalleryProps> = ({ template, variant }) => {
         },
       };
     }
-    if (variant === "typical") {
+    if (
+      variant === "typical" ||
+      (template === "overlays" && variant === "location")
+    ) {
       return {
         ...GALLERY_PLACES,
         p1: {
@@ -247,10 +267,15 @@ export const Gallery: React.FC<GalleryProps> = ({ template, variant }) => {
       };
     }
     return GALLERY_PLACES;
-  }, [variant]);
+  }, [template, variant]);
 
   const setPieces = useMemo(() => {
-    if (variant === "typical") {
+    if (
+      (template === "set_piece" && variant === "typical") ||
+      (template === "metaphor" && (variant === "typical" || variant === "max")) ||
+      (template === "callback" && variant === "max") ||
+      (template === "overlays" && (variant === "set_piece" || variant === "metaphor"))
+    ) {
       return {
         ...GALLERY_SET_PIECES,
         sp1: {
@@ -260,7 +285,15 @@ export const Gallery: React.FC<GalleryProps> = ({ template, variant }) => {
       };
     }
     return GALLERY_SET_PIECES;
-  }, [variant]);
+  }, [template, variant]);
+
+  const currentOverlays =
+    template === "overlays"
+      ? (
+          overlaysFixtures[variant as AllowedOverlayTemplate] ||
+          overlaysFixtures.location
+        ).overlays
+      : undefined;
 
   return (
     <EntitiesProvider
@@ -292,6 +325,12 @@ export const Gallery: React.FC<GalleryProps> = ({ template, variant }) => {
               timing={timing}
               isGallery={true}
             />
+            {currentOverlays && currentOverlays.length > 0 && (
+              <OverlayLayer
+                overlays={currentOverlays}
+                sceneId={`gallery-${template}-${variant}`}
+              />
+            )}
           </div>
         </RemotionSceneClock>
       </RemotionGlobalClock>

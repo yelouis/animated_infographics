@@ -81,6 +81,216 @@
       "title": "AvatarConfig",
       "type": "object"
     },
+    "CallbackProps": {
+      "additionalProperties": false,
+      "properties": {
+        "icon": {
+          "anyOf": [
+            {
+              "enum": [
+                "Airplane",
+                "Armchair",
+                "Baby",
+                "Bank",
+                "Bed",
+                "BeerBottle",
+                "Bell",
+                "Bicycle",
+                "Bird",
+                "Boat",
+                "Bomb",
+                "Book",
+                "BookOpen",
+                "Bookmark",
+                "Bread",
+                "Briefcase",
+                "Broadcast",
+                "Bug",
+                "Building",
+                "BuildingApartment",
+                "BuildingOffice",
+                "Buildings",
+                "Bus",
+                "Cake",
+                "Calendar",
+                "CalendarBlank",
+                "Camera",
+                "Car",
+                "CarProfile",
+                "Cat",
+                "Certificate",
+                "Chat",
+                "ChatCircle",
+                "ChatDots",
+                "Church",
+                "Clock",
+                "Cloud",
+                "CloudLightning",
+                "CloudRain",
+                "Coffee",
+                "Coins",
+                "Compass",
+                "Cookie",
+                "CookingPot",
+                "CreditCard",
+                "Crosshair",
+                "Crown",
+                "CurrencyDollar",
+                "CurrencyEur",
+                "CurrencyGbp",
+                "Dog",
+                "Door",
+                "Drop",
+                "Envelope",
+                "EnvelopeSimple",
+                "ExclamationMark",
+                "Eye",
+                "Factory",
+                "File",
+                "FileText",
+                "Files",
+                "Fire",
+                "FirstAid",
+                "Fish",
+                "Flower",
+                "ForkKnife",
+                "Gavel",
+                "Gear",
+                "GenderIntersex",
+                "Hamburger",
+                "Hammer",
+                "HandCoins",
+                "HandFist",
+                "HandsClapping",
+                "HandsPraying",
+                "Handshake",
+                "Heart",
+                "HeartBreak",
+                "Heartbeat",
+                "Horse",
+                "Hospital",
+                "Hourglass",
+                "House",
+                "HouseLine",
+                "IdentificationBadge",
+                "IdentificationCard",
+                "Key",
+                "Leaf",
+                "Lightbulb",
+                "Lock",
+                "LockOpen",
+                "MagnifyingGlass",
+                "MapPin",
+                "Medal",
+                "Megaphone",
+                "Microphone",
+                "Moon",
+                "Newspaper",
+                "Notebook",
+                "OrangeSlice",
+                "Package",
+                "Phone",
+                "PhoneCall",
+                "PiggyBank",
+                "Pill",
+                "Pizza",
+                "Plant",
+                "PoliceCar",
+                "Question",
+                "Receipt",
+                "RocketLaunch",
+                "Scales",
+                "Screwdriver",
+                "Scroll",
+                "Shield",
+                "ShieldChevron",
+                "ShieldWarning",
+                "Skull",
+                "Smiley",
+                "SmileyAngry",
+                "SmileyMeh",
+                "SmileyNervous",
+                "SmileySad",
+                "SmileyWink",
+                "Snowflake",
+                "Sparkle",
+                "Stethoscope",
+                "Storefront",
+                "Suitcase",
+                "Sun",
+                "Sword",
+                "Syringe",
+                "Tag",
+                "Target",
+                "Thermometer",
+                "ThumbsDown",
+                "ThumbsUp",
+                "Timer",
+                "Train",
+                "Trash",
+                "Tree",
+                "TrendDown",
+                "TrendUp",
+                "Trophy",
+                "Truck",
+                "User",
+                "UserCheck",
+                "UserFocus",
+                "UserMinus",
+                "UserPlus",
+                "Users",
+                "Wallet",
+                "Warehouse",
+                "Watch",
+                "WaveSine",
+                "Wine",
+                "Wrench"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Icon"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "maxLength": 24,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label"
+        },
+        "motif_id": {
+          "title": "Motif Id",
+          "type": "string"
+        },
+        "set_piece_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Set Piece Id"
+        }
+      },
+      "required": [
+        "motif_id"
+      ],
+      "title": "CallbackProps",
+      "type": "object"
+    },
     "CaptionPage": {
       "additionalProperties": false,
       "properties": {
@@ -1010,6 +1220,41 @@
       "title": "MapMarker",
       "type": "object"
     },
+    "MetaphorProps": {
+      "additionalProperties": false,
+      "properties": {
+        "cast_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 2,
+          "title": "Cast Ids",
+          "type": "array"
+        },
+        "image_entity": {
+          "title": "Image Entity",
+          "type": "string"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "maxLength": 24,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label"
+        }
+      },
+      "required": [
+        "image_entity"
+      ],
+      "title": "MetaphorProps",
+      "type": "object"
+    },
     "RelationshipEdge": {
       "additionalProperties": false,
       "properties": {
@@ -1099,6 +1344,230 @@
         "text"
       ],
       "title": "RevealProps",
+      "type": "object"
+    },
+    "SceneOverlay": {
+      "additionalProperties": false,
+      "properties": {
+        "anchor": {
+          "enum": [
+            "top_right",
+            "bottom_left"
+          ],
+          "title": "Anchor",
+          "type": "string"
+        },
+        "icon": {
+          "anyOf": [
+            {
+              "enum": [
+                "Airplane",
+                "Armchair",
+                "Baby",
+                "Bank",
+                "Bed",
+                "BeerBottle",
+                "Bell",
+                "Bicycle",
+                "Bird",
+                "Boat",
+                "Bomb",
+                "Book",
+                "BookOpen",
+                "Bookmark",
+                "Bread",
+                "Briefcase",
+                "Broadcast",
+                "Bug",
+                "Building",
+                "BuildingApartment",
+                "BuildingOffice",
+                "Buildings",
+                "Bus",
+                "Cake",
+                "Calendar",
+                "CalendarBlank",
+                "Camera",
+                "Car",
+                "CarProfile",
+                "Cat",
+                "Certificate",
+                "Chat",
+                "ChatCircle",
+                "ChatDots",
+                "Church",
+                "Clock",
+                "Cloud",
+                "CloudLightning",
+                "CloudRain",
+                "Coffee",
+                "Coins",
+                "Compass",
+                "Cookie",
+                "CookingPot",
+                "CreditCard",
+                "Crosshair",
+                "Crown",
+                "CurrencyDollar",
+                "CurrencyEur",
+                "CurrencyGbp",
+                "Dog",
+                "Door",
+                "Drop",
+                "Envelope",
+                "EnvelopeSimple",
+                "ExclamationMark",
+                "Eye",
+                "Factory",
+                "File",
+                "FileText",
+                "Files",
+                "Fire",
+                "FirstAid",
+                "Fish",
+                "Flower",
+                "ForkKnife",
+                "Gavel",
+                "Gear",
+                "GenderIntersex",
+                "Hamburger",
+                "Hammer",
+                "HandCoins",
+                "HandFist",
+                "HandsClapping",
+                "HandsPraying",
+                "Handshake",
+                "Heart",
+                "HeartBreak",
+                "Heartbeat",
+                "Horse",
+                "Hospital",
+                "Hourglass",
+                "House",
+                "HouseLine",
+                "IdentificationBadge",
+                "IdentificationCard",
+                "Key",
+                "Leaf",
+                "Lightbulb",
+                "Lock",
+                "LockOpen",
+                "MagnifyingGlass",
+                "MapPin",
+                "Medal",
+                "Megaphone",
+                "Microphone",
+                "Moon",
+                "Newspaper",
+                "Notebook",
+                "OrangeSlice",
+                "Package",
+                "Phone",
+                "PhoneCall",
+                "PiggyBank",
+                "Pill",
+                "Pizza",
+                "Plant",
+                "PoliceCar",
+                "Question",
+                "Receipt",
+                "RocketLaunch",
+                "Scales",
+                "Screwdriver",
+                "Scroll",
+                "Shield",
+                "ShieldChevron",
+                "ShieldWarning",
+                "Skull",
+                "Smiley",
+                "SmileyAngry",
+                "SmileyMeh",
+                "SmileyNervous",
+                "SmileySad",
+                "SmileyWink",
+                "Snowflake",
+                "Sparkle",
+                "Stethoscope",
+                "Storefront",
+                "Suitcase",
+                "Sun",
+                "Sword",
+                "Syringe",
+                "Tag",
+                "Target",
+                "Thermometer",
+                "ThumbsDown",
+                "ThumbsUp",
+                "Timer",
+                "Train",
+                "Trash",
+                "Tree",
+                "TrendDown",
+                "TrendUp",
+                "Trophy",
+                "Truck",
+                "User",
+                "UserCheck",
+                "UserFocus",
+                "UserMinus",
+                "UserPlus",
+                "Users",
+                "Wallet",
+                "Warehouse",
+                "Watch",
+                "WaveSine",
+                "Wine",
+                "Wrench"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Icon"
+        },
+        "kind": {
+          "enum": [
+            "motif_token",
+            "thought",
+            "label",
+            "prop"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "motif_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Motif Id"
+        },
+        "text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Text"
+        }
+      },
+      "required": [
+        "kind",
+        "anchor"
+      ],
+      "title": "SceneOverlay",
       "type": "object"
     },
     "SetPieceProps": {
@@ -1437,6 +1906,58 @@
       "title": "TimelineAudio",
       "type": "object"
     },
+    "TimelineCallbackScene": {
+      "additionalProperties": false,
+      "properties": {
+        "end_frame": {
+          "minimum": 0,
+          "title": "End Frame",
+          "type": "integer"
+        },
+        "hide_captions": {
+          "default": false,
+          "title": "Hide Captions",
+          "type": "boolean"
+        },
+        "id": {
+          "pattern": "^s\\d{3}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "overlays": {
+          "items": {
+            "$ref": "#/$defs/SceneOverlay"
+          },
+          "title": "Overlays",
+          "type": "array"
+        },
+        "props": {
+          "$ref": "#/$defs/CallbackProps"
+        },
+        "start_frame": {
+          "minimum": 0,
+          "title": "Start Frame",
+          "type": "integer"
+        },
+        "template": {
+          "const": "callback",
+          "default": "callback",
+          "title": "Template",
+          "type": "string"
+        },
+        "timing": {
+          "$ref": "#/$defs/TimelineSceneTiming"
+        }
+      },
+      "required": [
+        "id",
+        "start_frame",
+        "end_frame",
+        "props"
+      ],
+      "title": "TimelineCallbackScene",
+      "type": "object"
+    },
     "TimelineCaptions": {
       "additionalProperties": false,
       "properties": {
@@ -1494,6 +2015,13 @@
           "title": "Id",
           "type": "string"
         },
+        "overlays": {
+          "items": {
+            "$ref": "#/$defs/SceneOverlay"
+          },
+          "title": "Overlays",
+          "type": "array"
+        },
         "props": {
           "$ref": "#/$defs/CauseEffectProps"
         },
@@ -1539,6 +2067,13 @@
           "title": "Id",
           "type": "string"
         },
+        "overlays": {
+          "items": {
+            "$ref": "#/$defs/SceneOverlay"
+          },
+          "title": "Overlays",
+          "type": "array"
+        },
         "props": {
           "$ref": "#/$defs/CharacterIntroProps"
         },
@@ -1583,6 +2118,13 @@
           "pattern": "^s\\d{3}$",
           "title": "Id",
           "type": "string"
+        },
+        "overlays": {
+          "items": {
+            "$ref": "#/$defs/SceneOverlay"
+          },
+          "title": "Overlays",
+          "type": "array"
         },
         "props": {
           "$ref": "#/$defs/ComparisonProps"
@@ -1641,6 +2183,13 @@
           "title": "Id",
           "type": "string"
         },
+        "overlays": {
+          "items": {
+            "$ref": "#/$defs/SceneOverlay"
+          },
+          "title": "Overlays",
+          "type": "array"
+        },
         "props": {
           "$ref": "#/$defs/DialogueProps"
         },
@@ -1685,6 +2234,13 @@
           "pattern": "^s\\d{3}$",
           "title": "Id",
           "type": "string"
+        },
+        "overlays": {
+          "items": {
+            "$ref": "#/$defs/SceneOverlay"
+          },
+          "title": "Overlays",
+          "type": "array"
         },
         "props": {
           "$ref": "#/$defs/EmotionBeatProps"
@@ -1754,6 +2310,13 @@
           "title": "Id",
           "type": "string"
         },
+        "overlays": {
+          "items": {
+            "$ref": "#/$defs/SceneOverlay"
+          },
+          "title": "Overlays",
+          "type": "array"
+        },
         "props": {
           "$ref": "#/$defs/IconListProps"
         },
@@ -1798,6 +2361,13 @@
           "pattern": "^s\\d{3}$",
           "title": "Id",
           "type": "string"
+        },
+        "overlays": {
+          "items": {
+            "$ref": "#/$defs/SceneOverlay"
+          },
+          "title": "Overlays",
+          "type": "array"
         },
         "props": {
           "$ref": "#/$defs/KineticQuoteProps"
@@ -1844,6 +2414,13 @@
           "title": "Id",
           "type": "string"
         },
+        "overlays": {
+          "items": {
+            "$ref": "#/$defs/SceneOverlay"
+          },
+          "title": "Overlays",
+          "type": "array"
+        },
         "props": {
           "$ref": "#/$defs/LocationProps"
         },
@@ -1889,6 +2466,13 @@
           "title": "Id",
           "type": "string"
         },
+        "overlays": {
+          "items": {
+            "$ref": "#/$defs/SceneOverlay"
+          },
+          "title": "Overlays",
+          "type": "array"
+        },
         "props": {
           "$ref": "#/$defs/MapFocusProps"
         },
@@ -1914,6 +2498,58 @@
         "props"
       ],
       "title": "TimelineMapFocusScene",
+      "type": "object"
+    },
+    "TimelineMetaphorScene": {
+      "additionalProperties": false,
+      "properties": {
+        "end_frame": {
+          "minimum": 0,
+          "title": "End Frame",
+          "type": "integer"
+        },
+        "hide_captions": {
+          "default": false,
+          "title": "Hide Captions",
+          "type": "boolean"
+        },
+        "id": {
+          "pattern": "^s\\d{3}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "overlays": {
+          "items": {
+            "$ref": "#/$defs/SceneOverlay"
+          },
+          "title": "Overlays",
+          "type": "array"
+        },
+        "props": {
+          "$ref": "#/$defs/MetaphorProps"
+        },
+        "start_frame": {
+          "minimum": 0,
+          "title": "Start Frame",
+          "type": "integer"
+        },
+        "template": {
+          "const": "metaphor",
+          "default": "metaphor",
+          "title": "Template",
+          "type": "string"
+        },
+        "timing": {
+          "$ref": "#/$defs/TimelineSceneTiming"
+        }
+      },
+      "required": [
+        "id",
+        "start_frame",
+        "end_frame",
+        "props"
+      ],
+      "title": "TimelineMetaphorScene",
       "type": "object"
     },
     "TimelineMusic": {
@@ -2239,6 +2875,13 @@
           "title": "Id",
           "type": "string"
         },
+        "overlays": {
+          "items": {
+            "$ref": "#/$defs/SceneOverlay"
+          },
+          "title": "Overlays",
+          "type": "array"
+        },
         "props": {
           "$ref": "#/$defs/RelationshipMapProps"
         },
@@ -2283,6 +2926,13 @@
           "pattern": "^s\\d{3}$",
           "title": "Id",
           "type": "string"
+        },
+        "overlays": {
+          "items": {
+            "$ref": "#/$defs/SceneOverlay"
+          },
+          "title": "Overlays",
+          "type": "array"
         },
         "props": {
           "$ref": "#/$defs/RevealProps"
@@ -2547,6 +3197,13 @@
           "title": "Id",
           "type": "string"
         },
+        "overlays": {
+          "items": {
+            "$ref": "#/$defs/SceneOverlay"
+          },
+          "title": "Overlays",
+          "type": "array"
+        },
         "props": {
           "$ref": "#/$defs/SetPieceProps"
         },
@@ -2619,6 +3276,13 @@
           "title": "Id",
           "type": "string"
         },
+        "overlays": {
+          "items": {
+            "$ref": "#/$defs/SceneOverlay"
+          },
+          "title": "Overlays",
+          "type": "array"
+        },
         "props": {
           "$ref": "#/$defs/StatCalloutProps"
         },
@@ -2663,6 +3327,13 @@
           "pattern": "^s\\d{3}$",
           "title": "Id",
           "type": "string"
+        },
+        "overlays": {
+          "items": {
+            "$ref": "#/$defs/SceneOverlay"
+          },
+          "title": "Overlays",
+          "type": "array"
         },
         "props": {
           "$ref": "#/$defs/TextThreadProps"
@@ -2709,6 +3380,13 @@
           "title": "Id",
           "type": "string"
         },
+        "overlays": {
+          "items": {
+            "$ref": "#/$defs/SceneOverlay"
+          },
+          "title": "Overlays",
+          "type": "array"
+        },
         "props": {
           "$ref": "#/$defs/TimelineProps"
         },
@@ -2753,6 +3431,13 @@
           "pattern": "^s\\d{3}$",
           "title": "Id",
           "type": "string"
+        },
+        "overlays": {
+          "items": {
+            "$ref": "#/$defs/SceneOverlay"
+          },
+          "title": "Overlays",
+          "type": "array"
         },
         "props": {
           "$ref": "#/$defs/TitleCardProps"
@@ -3033,6 +3718,7 @@
       "items": {
         "discriminator": {
           "mapping": {
+            "callback": "#/$defs/TimelineCallbackScene",
             "cause_effect": "#/$defs/TimelineCauseEffectScene",
             "character_intro": "#/$defs/TimelineCharacterIntroScene",
             "comparison": "#/$defs/TimelineComparisonScene",
@@ -3042,6 +3728,7 @@
             "kinetic_quote": "#/$defs/TimelineKineticQuoteScene",
             "location": "#/$defs/TimelineLocationScene",
             "map_focus": "#/$defs/TimelineMapFocusScene",
+            "metaphor": "#/$defs/TimelineMetaphorScene",
             "relationship_map": "#/$defs/TimelineRelationshipMapScene",
             "reveal": "#/$defs/TimelineRevealScene",
             "set_piece": "#/$defs/TimelineSetPieceScene",
@@ -3100,6 +3787,12 @@
           },
           {
             "$ref": "#/$defs/TimelineTimelineScene"
+          },
+          {
+            "$ref": "#/$defs/TimelineMetaphorScene"
+          },
+          {
+            "$ref": "#/$defs/TimelineCallbackScene"
           }
         ]
       },

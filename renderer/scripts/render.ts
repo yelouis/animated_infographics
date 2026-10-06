@@ -293,8 +293,11 @@ async function main() {
             "set_piece",
             "map_focus",
             "timeline",
+            "metaphor",
+            "callback",
+            "overlays",
           ];
-      type GalleryVariant = "min" | "typical" | "max" | "worst" | "long_active";
+      type GalleryVariant = "min" | "typical" | "max" | "worst" | "long_active" | string;
       const variants: GalleryVariant[] = options.variant
         ? [options.variant as GalleryVariant]
         : ["min", "typical", "max"];
@@ -308,6 +311,22 @@ async function main() {
         }
         if (tmpl === "captions") {
           tmplVariants = options.variant ? [options.variant as GalleryVariant] : ["long_active"];
+        }
+        if (tmpl === "overlays") {
+          tmplVariants = options.variant
+            ? [options.variant as GalleryVariant]
+            : [
+                "kinetic_quote",
+                "stat_callout",
+                "reveal",
+                "cause_effect",
+                "character_intro",
+                "emotion_beat",
+                "relationship_map",
+                "location",
+                "set_piece",
+                "metaphor",
+              ];
         }
         for (const variant of tmplVariants) {
           const inputProps = { template: tmpl, variant };

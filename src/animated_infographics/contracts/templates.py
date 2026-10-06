@@ -1,4 +1,4 @@
-"""Template specifications, registry, and props models for all 16 templates."""
+"""Template specifications, registry, and props models for all 18 templates."""
 
 from typing import Annotated, Final, Literal
 
@@ -275,7 +275,26 @@ class TimelineProps(BaseModel):
         return self
 
 
-# Union of all 16 template props models
+# 2.17 metaphor
+class MetaphorProps(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    image_entity: str
+    label: str | None = Field(default=None, max_length=24)
+    cast_ids: list[str] = Field(default_factory=list, max_length=2)
+
+
+# 2.18 callback
+class CallbackProps(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    motif_id: str
+    label: str | None = Field(default=None, max_length=24)
+    set_piece_id: str | None = None
+    icon: IconName | None = None
+
+
+# Union of all 18 template props models
 TemplateProps = (
     TitleCardProps
     | KineticQuoteProps
@@ -293,6 +312,8 @@ TemplateProps = (
     | SetPieceProps
     | MapFocusProps
     | TimelineProps
+    | MetaphorProps
+    | CallbackProps
 )
 
 
@@ -632,6 +653,41 @@ REGISTRY: dict[str, TemplateSpec] = {
         spread=0.6,
         requires={"cast": False, "places": False, "set_pieces": False, "geo": False},
     ),
+    "metaphor": TemplateSpec(
+        name="metaphor",
+        category="place_time",
+        props_model=MetaphorProps,
+        use_when="creative style: an ungrounded visual metaphor placed by rule R8.",
+        writing_rules=[
+            "label is optional, at most 3 words",
+            "cast_ids has at most 2 cast avatars",
+        ],
+        slots={
+            "label": TextSlot(
+                font="display", weight=800, size_max=72, size_min=48, max_lines=2, box_width=880
+            ),
+        },
+        sfx_cues=[SfxCue(role="whoosh", at="start")],
+        spread=None,
+        requires={"cast": False, "places": False, "set_pieces": False, "geo": False},
+    ),
+    "callback": TemplateSpec(
+        name="callback",
+        category="place_time",
+        props_model=CallbackProps,
+        use_when="creative style: payoff scene calling back to a recurring motif.",
+        writing_rules=[
+            "label is optional, at most 3 words",
+        ],
+        slots={
+            "label": TextSlot(
+                font="display", weight=800, size_max=72, size_min=48, max_lines=2, box_width=880
+            ),
+        },
+        sfx_cues=[SfxCue(role="ding", at="item")],
+        spread=0.4,
+        requires={"cast": False, "places": False, "set_pieces": False, "geo": False},
+    ),
 }
 
 WORD_CAPS: Final[dict[str, dict[str, int]]] = {
@@ -648,10 +704,12 @@ WORD_CAPS: Final[dict[str, dict[str, int]]] = {
     "location": {"era_label": 2},
     "map_focus": {"markers[].label": 3},
     "timeline": {"events[].date_label": 3, "events[].label": 3},
+    "metaphor": {"label": 3},
+    "callback": {"label": 3},
 }
 
 PICTURE_TEMPLATES: Final[frozenset[str]] = frozenset(
-    {"emotion_beat", "set_piece", "location", "stat_callout", "map_focus"}
+    {"emotion_beat", "set_piece", "location", "stat_callout", "map_focus", "metaphor", "callback"}
 )
 REPLACEABLE_TEMPLATES: Final[frozenset[str]] = frozenset(
     {"kinetic_quote", "cause_effect", "icon_list", "comparison", "timeline", "relationship_map"}

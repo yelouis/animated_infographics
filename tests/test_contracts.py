@@ -240,7 +240,9 @@ def test_props_examples_from_json() -> None:
     with open(data_path, encoding="utf-8") as f:
         examples = json.load(f)
 
-    assert len(examples) == 16, f"Expected 16 templates in props_examples.json, got {len(examples)}"
+    assert len(examples) == len(REGISTRY), (
+        f"Expected {len(REGISTRY)} templates in props_examples.json, got {len(examples)}"
+    )
 
     scene_adapter: TypeAdapter[Scene] = TypeAdapter(Scene)
 

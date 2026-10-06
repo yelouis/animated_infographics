@@ -171,9 +171,9 @@ def test_word_caps_paths_resolve():
 
 
 def test_template_classes_partition_registry():
-    """Assert PICTURE, REPLACEABLE, KEPT classes partition the 16 templates."""
+    """Assert PICTURE, REPLACEABLE, KEPT classes partition the 18 templates."""
     all_registry_templates = set(REGISTRY.keys())
-    assert len(all_registry_templates) == 16
+    assert len(all_registry_templates) == 18
 
     # Pairwise disjoint
     assert PICTURE_TEMPLATES.isdisjoint(REPLACEABLE_TEMPLATES)

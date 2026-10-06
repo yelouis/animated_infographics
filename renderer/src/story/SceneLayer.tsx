@@ -3,6 +3,7 @@ import { RemotionSceneClock } from "../clock/remotion/RemotionSceneClock";
 import type { Scenes } from "../generated/contracts";
 import { getTemplateComponent } from "../templates";
 import { EXIT_FRAMES } from "../theme/motion";
+import { OverlayLayer } from "./OverlayLayer";
 import { SyncProbe } from "./SyncProbe";
 
 export interface SceneLayerProps {
@@ -56,6 +57,13 @@ export const SceneLayer: React.FC<SceneLayerProps> = ({
                 timing={scene.timing}
                 debug={debug}
               />
+              {scene.overlays && scene.overlays.length > 0 && (
+                <OverlayLayer
+                  overlays={scene.overlays}
+                  sceneId={scene.id}
+                  debug={debug}
+                />
+              )}
               {debug && <SyncProbe sceneIndex={idx} />}
             </div>
           </RemotionSceneClock>

@@ -16,7 +16,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT" || fail "Cannot cd to repo root"
 
 UPDATE_GOLDENS=false
-TEMPLATES="kinetic_quote,avatar_sheet,title_card,stat_callout,icon_list,reveal,cause_effect,comparison,character_intro,dialogue,text_thread,emotion_beat,relationship_map,location,set_piece,map_focus,timeline,captions"
+TEMPLATES="kinetic_quote,avatar_sheet,title_card,stat_callout,icon_list,reveal,cause_effect,comparison,character_intro,dialogue,text_thread,emotion_beat,relationship_map,location,set_piece,map_focus,timeline,captions,metaphor,callback,overlays"
 
 for arg in "$@"; do
   case "$arg" in
@@ -110,6 +110,19 @@ errors = []
 for tmpl in templates:
     if tmpl == 'captions':
         tmpl_variants = ['long_active']
+    elif tmpl == 'overlays':
+        tmpl_variants = [
+            'kinetic_quote',
+            'stat_callout',
+            'reveal',
+            'cause_effect',
+            'character_intro',
+            'emotion_beat',
+            'relationship_map',
+            'location',
+            'set_piece',
+            'metaphor',
+        ]
     else:
         tmpl_variants = list(variants)
         if tmpl == 'location':
@@ -149,10 +162,11 @@ GOLDEN_CODE=$?
 [ "$GOLDEN_CODE" -eq 0 ] || fail "Golden diff check failed"
 
 # (c) Hold motion check: frames 60 and 105 of typical fixture differ in > 0.1% of pixels
+MOTION_TEMPLATES=$(python3 -c "print(','.join([t.strip() for t in '$TEMPLATES'.split(',') if t.strip() not in ('captions', 'overlays')]))")
 log "Rendering frame 105 for hold motion check..."
 npx --prefix renderer tsx renderer/scripts/render.ts gallery \
   --out-dir "$MOTION_DIR" \
-  --template "$TEMPLATES" \
+  --template "$MOTION_TEMPLATES" \
   --variant typical \
   --frame 105
 MOTION_RENDER_CODE=$?
@@ -168,7 +182,7 @@ from PIL import Image
 f60_dir = Path('$OUT_DIR')
 f105_dir = Path('$MOTION_DIR')
 
-templates = [t.strip() for t in '$TEMPLATES'.split(',') if t.strip() and t.strip() != 'captions']
+templates = [t.strip() for t in '$MOTION_TEMPLATES'.split(',') if t.strip()]
 
 errors = []
 for tmpl in templates:

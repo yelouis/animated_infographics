@@ -1,5 +1,6 @@
 import React from "react";
 import type { TimelineSceneTiming } from "../generated/contracts";
+import { Callback } from "./callback";
 import { CauseEffect } from "./cause_effect";
 import { CharacterIntro } from "./character_intro";
 import { Comparison } from "./comparison";
@@ -9,6 +10,7 @@ import { IconList } from "./icon_list";
 import { KineticQuote } from "./kinetic_quote";
 import { Location } from "./location";
 import { MapFocus } from "./map_focus";
+import { Metaphor } from "./metaphor";
 import { RelationshipMap } from "./relationship_map";
 import { Reveal } from "./reveal";
 import { SetPiece } from "./set_piece";
@@ -43,6 +45,8 @@ export const TEMPLATES: Record<string, React.FC<TemplateComponentProps>> = {
   set_piece: SetPiece as unknown as React.FC<TemplateComponentProps>,
   map_focus: MapFocus as unknown as React.FC<TemplateComponentProps>,
   timeline: Timeline as unknown as React.FC<TemplateComponentProps>,
+  metaphor: Metaphor as unknown as React.FC<TemplateComponentProps>,
+  callback: Callback as unknown as React.FC<TemplateComponentProps>,
 };
 
 export const getTemplateComponent = (
@@ -55,6 +59,7 @@ export const getTemplateComponent = (
   return component;
 };
 
+export * from "./callback";
 export * from "./cause_effect";
 export * from "./character_intro";
 export * from "./comparison";
@@ -64,6 +69,7 @@ export * from "./icon_list";
 export * from "./kinetic_quote";
 export * from "./location";
 export * from "./map_focus";
+export * from "./metaphor";
 export * from "./relationship_map";
 export * from "./reveal";
 export * from "./set_piece";

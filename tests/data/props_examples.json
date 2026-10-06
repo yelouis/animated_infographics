@@ -208,5 +208,27 @@
       ],
       "highlight_index": 3
     }
+  },
+  "metaphor": {
+    "valid": {
+      "image_entity": "storm",
+      "label": "Brewing Storm",
+      "cast_ids": ["c1"]
+    },
+    "invalid": {
+      "image_entity": "storm",
+      "cast_ids": ["c1", "c2", "c3"]
+    }
+  },
+  "callback": {
+    "valid": {
+      "motif_id": "m1",
+      "label": "Old Key",
+      "icon": "Key"
+    },
+    "invalid": {
+      "motif_id": "m1",
+      "label": "This label is definitely longer than twenty-four characters"
+    }
   }
 }
