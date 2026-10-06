@@ -10,8 +10,8 @@ describe("Template containment in both directions", () => {
     (k) => !k.startsWith("$")
   );
 
-  it("has exactly 18 templates in templateRegistry.json", () => {
-    expect(registryTemplateNames.length).toBe(18);
+  it("has exactly 19 templates in templateRegistry.json", () => {
+    expect(registryTemplateNames.length).toBe(19);
   });
 
   it("every template name in templateRegistry.json has a corresponding component file", () => {
@@ -40,8 +40,8 @@ describe("Template containment in both directions", () => {
       return f.endsWith(".tsx") || f.endsWith(".ts");
     });
 
-    // Verify count of component files is 18
-    expect(componentFiles.length).toBe(18);
+    // Verify count of component files is 19
+    expect(componentFiles.length).toBe(19);
 
     for (const file of componentFiles) {
       const name = file.replace(/\.(tsx|ts)$/, "");
@@ -56,6 +56,6 @@ describe("Template containment in both directions", () => {
     for (const name of registryTemplateNames) {
       expect(TEMPLATES[name], `Template ${name} is missing in TEMPLATES map`).toBeDefined();
     }
-    expect(Object.keys(TEMPLATES).length).toBe(18);
+    expect(Object.keys(TEMPLATES).length).toBe(19);
   });
 });

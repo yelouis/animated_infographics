@@ -65,6 +65,7 @@ def build_critic_request(
     next_beat: Beat | None,
     bible: Bible,
     before_prev_beat: Beat | None = None,
+    passage: str | None = None,
 ) -> tuple[str, str, dict[str, Any]]:
     """Build blind critic system prompt, user prompt, and JSON schema.
 
@@ -76,12 +77,15 @@ def build_critic_request(
         cast_lines.append(f"- {c.id}: {c.name} ({c.role}){narrator_tag}")
     cast_block = "\n".join(cast_lines)
 
-    passage_beats = [
-        b.text.strip()
-        for b in [before_prev_beat, prev_beat, beat, next_beat]
-        if b is not None and b.text and b.text.strip()
-    ]
-    passage_text = " ".join(passage_beats)
+    if passage is not None:
+        passage_text = passage.strip()
+    else:
+        passage_beats = [
+            b.text.strip()
+            for b in [before_prev_beat, prev_beat, beat, next_beat]
+            if b is not None and b.text and b.text.strip()
+        ]
+        passage_text = " ".join(passage_beats)
 
     header = "Passage (read all of it; who speaks is often named in the sentence before a quote):"
 

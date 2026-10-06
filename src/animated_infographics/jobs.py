@@ -238,7 +238,10 @@ class Job:
 
     def _compute_stage_input_sha(self, stage: str) -> str:
         """Compute hash of input dependencies for stage skip logic."""
-        deps = STAGE_INPUT_DEPENDENCIES.get(stage, [])
+        if self.kind == "presentation" and stage == "assets":
+            deps = ["tree.json", "deck_bible.json"]
+        else:
+            deps = STAGE_INPUT_DEPENDENCIES.get(stage, [])
         hasher = hashlib.sha256()
         hasher.update(stage.encode("utf-8"))
 

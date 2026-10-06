@@ -58,6 +58,7 @@ export const FORBIDDEN_OVERLAY_TEMPLATES = [
   "text_thread",
   "dialogue",
   "map_focus",
+  "section_title",
 ] as const;
 
 /**

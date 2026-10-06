@@ -152,6 +152,46 @@ def fake_stages() -> dict[str, Any]:
         }
         (j.dir / "deck.json").write_text(json.dumps(data), encoding="utf-8")
 
+    def fake_deck_bible(j: Job, ctx: RunContext) -> None:
+        data = {
+            "schema_version": 1,
+            "title": "Test Title",
+            "logline": "Test logline",
+            "genre": "history",
+            "cast": [],
+            "places": [],
+            "set_pieces": [],
+        }
+        (j.dir / "deck_bible.json").write_text(json.dumps(data), encoding="utf-8")
+
+    def fake_tree(j: Job, ctx: RunContext) -> None:
+        data = {
+            "schema_version": 1,
+            "nodes": [],
+            "edges": [],
+        }
+        (j.dir / "tree.json").write_text(json.dumps(data), encoding="utf-8")
+        (j.dir / "timeline.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "duration_frames": 150,
+                    "fps": 30,
+                    "width": 1080,
+                    "height": 1920,
+                    "plan_sha256": "fake",
+                    "cast": {},
+                    "places": {},
+                    "set_pieces": {},
+                    "scenes": [],
+                    "captions": {"pages": []},
+                    "audio": {"narration": {"src": "points.wav"}, "music": None, "sfx": []},
+                    "debug": {"lead_ms": 0, "tail_ms": 0, "total_ms": 5000},
+                }
+            ),
+            encoding="utf-8",
+        )
+
     registry = {
         "ingest": fake_ingest,
         "voice": fake_voice,
@@ -164,6 +204,8 @@ def fake_stages() -> dict[str, Any]:
         "assets": fake_assets,
         "compile": fake_compile,
         "deck": fake_deck,
+        "deck_bible": fake_deck_bible,
+        "tree": fake_tree,
         "preview": fake_preview,
         "render": fake_render,
     }

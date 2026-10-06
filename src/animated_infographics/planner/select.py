@@ -76,6 +76,7 @@ def apply_rules(
     beats: Sequence[Beat] | None = None,
     bible: Bible | None = None,
     director_plan: DirectorPlan | None = None,
+    profile: str = "video",
 ) -> tuple[list[Choice], list[RuleRepair]]:
     """Apply deterministic rules R1, R8, R6, R2, R4, R5, R7 to template choices in order.
 
@@ -90,6 +91,8 @@ def apply_rules(
     R5: kinetic_quote > ceil(0.30 * n_scenes) times (LLM primaries) ->
         excess (latest first) -> alternate
     R7: Reaction-shot rhythm: two worded scenes, then replaceable scene -> picture
+
+    Presentation profile: R2, R6, and R7 are OFF. R1 is OFF (points never forced to title_card).
     """
     res = list(choices)
     repairs: list[RuleRepair] = []
@@ -97,20 +100,23 @@ def apply_rules(
     if not res:
         return (res, repairs)
 
-    # R1: Scene 0 is title_card; later scenes are not
-    if res[0].primary != "title_card":
-        repairs.append(
-            RuleRepair(rule="R1", scene="s000", to="title_card", **{"from": res[0].primary})
-        )
-        res[0] = Choice(beat_i=0, primary="title_card", alternate=res[0].alternate)
+    is_presentation = profile == "presentation"
 
-    for i in range(1, len(res)):
-        if res[i].primary == "title_card":
-            target = res[i].alternate if res[i].alternate != "title_card" else "kinetic_quote"
+    # R1: Scene 0 is title_card; later scenes are not (video profile only)
+    if not is_presentation:
+        if res[0].primary != "title_card":
             repairs.append(
-                RuleRepair(rule="R1", scene=f"s{i:03d}", to=target, **{"from": "title_card"})
+                RuleRepair(rule="R1", scene="s000", to="title_card", **{"from": res[0].primary})
             )
-            res[i] = Choice(beat_i=i, primary=target, alternate="kinetic_quote")
+            res[0] = Choice(beat_i=0, primary="title_card", alternate=res[0].alternate)
+
+        for i in range(1, len(res)):
+            if res[i].primary == "title_card":
+                target = res[i].alternate if res[i].alternate != "title_card" else "kinetic_quote"
+                repairs.append(
+                    RuleRepair(rule="R1", scene=f"s{i:03d}", to=target, **{"from": "title_card"})
+                )
+                res[i] = Choice(beat_i=i, primary=target, alternate="kinetic_quote")
 
     # R8: Director metaphors and motif payoffs (creative style)
     r8_scenes: set[int] = set()
@@ -156,49 +162,56 @@ def apply_rules(
                         )
                         r8_scenes.add(b_idx)
 
-    # R6: More than one timeline or comparison in video
-    for limit_tmpl in ("timeline", "comparison"):
-        indices = [i for i, c in enumerate(res) if c.primary == limit_tmpl]
-        if len(indices) > 1:
-            for idx in indices[1:]:
-                alt = res[idx].alternate
-                target = alt if alt not in (limit_tmpl, "title_card") else "kinetic_quote"
-                repairs.append(
-                    RuleRepair(rule="R6", scene=f"s{idx:03d}", to=target, **{"from": limit_tmpl})
-                )
-                res[idx] = Choice(beat_i=idx, primary=target, alternate=res[idx].alternate)
+    # R6: More than one timeline or comparison in video (video profile only)
+    if not is_presentation:
+        for limit_tmpl in ("timeline", "comparison"):
+            indices = [i for i, c in enumerate(res) if c.primary == limit_tmpl]
+            if len(indices) > 1:
+                for idx in indices[1:]:
+                    alt = res[idx].alternate
+                    target = alt if alt not in (limit_tmpl, "title_card") else "kinetic_quote"
+                    repairs.append(
+                        RuleRepair(
+                            rule="R6",
+                            scene=f"s{idx:03d}",
+                            to=target,
+                            **{"from": limit_tmpl},
+                        )
+                    )
+                    res[idx] = Choice(beat_i=idx, primary=target, alternate=res[idx].alternate)
 
-    # R2: Consecutive duplicates (except dialogue, text_thread)
+    # R2: Consecutive duplicates (except dialogue, text_thread) (video profile only)
     # R2 never rewrites an R8 scene: rewrite the other scene instead
-    for i in range(1, len(res)):
-        if res[i].primary == res[i - 1].primary and res[i].primary not in (
-            "dialogue",
-            "text_thread",
-        ):
-            rewrite_idx = (i - 1) if (i in r8_scenes and (i - 1) not in r8_scenes) else i
-            if rewrite_idx in r8_scenes:
-                continue
+    if not is_presentation:
+        for i in range(1, len(res)):
+            if res[i].primary == res[i - 1].primary and res[i].primary not in (
+                "dialogue",
+                "text_thread",
+            ):
+                rewrite_idx = (i - 1) if (i in r8_scenes and (i - 1) not in r8_scenes) else i
+                if rewrite_idx in r8_scenes:
+                    continue
 
-            prev = res[rewrite_idx - 1].primary if rewrite_idx > 0 else "title_card"
-            next_t = res[rewrite_idx + 1].primary if rewrite_idx + 1 < len(res) else None
-            alt = res[rewrite_idx].alternate
-            if alt != prev and alt != "title_card" and alt != next_t:
-                new_prim = alt
-            elif alt != prev and alt != "title_card":
-                new_prim = alt
-            else:
-                new_prim = "kinetic_quote"
-            repairs.append(
-                RuleRepair(
-                    rule="R2",
-                    scene=f"s{rewrite_idx:03d}",
-                    to=new_prim,
-                    **{"from": res[rewrite_idx].primary},
+                prev = res[rewrite_idx - 1].primary if rewrite_idx > 0 else "title_card"
+                next_t = res[rewrite_idx + 1].primary if rewrite_idx + 1 < len(res) else None
+                alt = res[rewrite_idx].alternate
+                if alt != prev and alt != "title_card" and alt != next_t:
+                    new_prim = alt
+                elif alt != prev and alt != "title_card":
+                    new_prim = alt
+                else:
+                    new_prim = "kinetic_quote"
+                repairs.append(
+                    RuleRepair(
+                        rule="R2",
+                        scene=f"s{rewrite_idx:03d}",
+                        to=new_prim,
+                        **{"from": res[rewrite_idx].primary},
+                    )
                 )
-            )
-            res[rewrite_idx] = Choice(
-                beat_i=rewrite_idx, primary=new_prim, alternate=res[rewrite_idx].alternate
-            )
+                res[rewrite_idx] = Choice(
+                    beat_i=rewrite_idx, primary=new_prim, alternate=res[rewrite_idx].alternate
+                )
 
     # R4: reveal at most 2 times
     reveal_indices = [i for i, c in enumerate(res) if c.primary == "reveal"]
@@ -227,8 +240,8 @@ def apply_rules(
                 res[idx] = Choice(beat_i=idx, primary=alt, alternate=res[idx].alternate)
                 excess -= 1
 
-    # R7: Rhythm rule (reaction-shot rhythm)
-    if beats is not None and bible is not None:
+    # R7: Rhythm rule (reaction-shot rhythm) (video profile only)
+    if not is_presentation and beats is not None and bible is not None:
         run = 1
         n = len(res)
         for i in range(1, n):
@@ -301,6 +314,7 @@ def plan_template_selection(
     bible: Bible,
     backend: LLMBackend,
     director_plan: DirectorPlan | None = None,
+    profile: str = "video",
 ) -> tuple[list[Choice], list[RuleRepair], int, int]:
     """Plan visual templates for all narration beats using LLM in 6-beat windows with rule repairs.
 
@@ -311,11 +325,17 @@ def plan_template_selection(
     if n_beats == 0:
         return ([], [], 0, 0)
 
-    # Beat 0 is always title_card
-    all_choices: list[Choice] = [Choice(beat_i=0, primary="title_card", alternate="title_card")]
+    is_presentation = profile == "presentation"
 
-    if n_beats == 1:
-        repaired, repairs = apply_rules(all_choices, 1, beats, bible, director_plan=director_plan)
+    # Beat 0 is title_card for video profile; presentation plans all beats from 0
+    all_choices: list[Choice] = (
+        [] if is_presentation else [Choice(beat_i=0, primary="title_card", alternate="title_card")]
+    )
+
+    if n_beats == 1 and not is_presentation:
+        repaired, repairs = apply_rules(
+            all_choices, 1, beats, bible, director_plan=director_plan, profile=profile
+        )
         return (repaired, repairs, 0, 0)
 
     allowed = allowed_templates(bible)
@@ -353,7 +373,8 @@ def plan_template_selection(
 
     # Process beats in windows of 6
     window_size = 6
-    for w_start in range(1, n_beats, window_size):
+    start_offset = 0 if is_presentation else 1
+    for w_start in range(start_offset, n_beats, window_size):
         w_end = min(w_start + window_size, n_beats)
         window_beats = beats[w_start:w_end]
 
@@ -408,6 +429,6 @@ def plan_template_selection(
         all_choices.extend(window_choices)
 
     repaired_choices, rule_repairs = apply_rules(
-        all_choices, n_beats, beats, bible, director_plan=director_plan
+        all_choices, n_beats, beats, bible, director_plan=director_plan, profile=profile
     )
     return (repaired_choices, rule_repairs, total_calls, total_cache_hits)

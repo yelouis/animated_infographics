@@ -14,9 +14,11 @@ def run_assets_stage(job: Job, ctx: RunContext) -> None:
     """Run assets stage, generating illustrations for places and set pieces."""
     t0 = time.perf_counter()
 
-    bible_path = job.dir / "bible.json"
+    bible_path = (
+        job.dir / "deck_bible.json" if job.kind == "presentation" else job.dir / "bible.json"
+    )
     if not bible_path.is_file():
-        raise FileNotFoundError(f"Missing bible.json in {job.dir}")
+        raise FileNotFoundError(f"Missing {bible_path.name} in {job.dir}")
     bible = Bible.model_validate_json(bible_path.read_text(encoding="utf-8"))
 
     backend = OllamaBackend(no_cache=ctx.no_llm_cache)

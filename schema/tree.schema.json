@@ -2572,103 +2572,168 @@
       ],
       "title": "TitleCardScene",
       "type": "object"
+    },
+    "TreeEdge": {
+      "additionalProperties": false,
+      "description": "A directed edge in the presentation animation tree with transition cost.",
+      "properties": {
+        "cost": {
+          "minimum": 0.0,
+          "title": "Cost",
+          "type": "number"
+        },
+        "from": {
+          "title": "From",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "next",
+            "skip",
+            "back"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "to": {
+          "title": "To",
+          "type": "string"
+        }
+      },
+      "required": [
+        "from",
+        "to",
+        "kind",
+        "cost"
+      ],
+      "title": "TreeEdge",
+      "type": "object"
+    },
+    "TreeNode": {
+      "additionalProperties": false,
+      "description": "A node in the presentation animation tree.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "section",
+            "point"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "point_i": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Point I"
+        },
+        "scene": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TitleCardScene"
+            },
+            {
+              "$ref": "#/$defs/KineticQuoteScene"
+            },
+            {
+              "$ref": "#/$defs/StatCalloutScene"
+            },
+            {
+              "$ref": "#/$defs/IconListScene"
+            },
+            {
+              "$ref": "#/$defs/RevealScene"
+            },
+            {
+              "$ref": "#/$defs/CauseEffectScene"
+            },
+            {
+              "$ref": "#/$defs/ComparisonScene"
+            },
+            {
+              "$ref": "#/$defs/CharacterIntroScene"
+            },
+            {
+              "$ref": "#/$defs/DialogueScene"
+            },
+            {
+              "$ref": "#/$defs/TextThreadScene"
+            },
+            {
+              "$ref": "#/$defs/EmotionBeatScene"
+            },
+            {
+              "$ref": "#/$defs/RelationshipMapScene"
+            },
+            {
+              "$ref": "#/$defs/LocationScene"
+            },
+            {
+              "$ref": "#/$defs/SetPieceScene"
+            },
+            {
+              "$ref": "#/$defs/MapFocusScene"
+            },
+            {
+              "$ref": "#/$defs/TimelineSceneModel"
+            },
+            {
+              "$ref": "#/$defs/MetaphorScene"
+            },
+            {
+              "$ref": "#/$defs/CallbackScene"
+            },
+            {
+              "$ref": "#/$defs/SectionTitleScene"
+            }
+          ],
+          "title": "Scene"
+        },
+        "slide": {
+          "title": "Slide",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "slide",
+        "kind",
+        "text",
+        "scene"
+      ],
+      "title": "TreeNode",
+      "type": "object"
     }
   },
   "additionalProperties": false,
+  "description": "Complete presentation animation tree with nodes and edges.",
   "properties": {
-    "aspect": {
-      "const": "9:16",
-      "default": "9:16",
-      "title": "Aspect",
-      "type": "string"
-    },
-    "scenes": {
+    "edges": {
       "items": {
-        "discriminator": {
-          "mapping": {
-            "callback": "#/$defs/CallbackScene",
-            "cause_effect": "#/$defs/CauseEffectScene",
-            "character_intro": "#/$defs/CharacterIntroScene",
-            "comparison": "#/$defs/ComparisonScene",
-            "dialogue": "#/$defs/DialogueScene",
-            "emotion_beat": "#/$defs/EmotionBeatScene",
-            "icon_list": "#/$defs/IconListScene",
-            "kinetic_quote": "#/$defs/KineticQuoteScene",
-            "location": "#/$defs/LocationScene",
-            "map_focus": "#/$defs/MapFocusScene",
-            "metaphor": "#/$defs/MetaphorScene",
-            "relationship_map": "#/$defs/RelationshipMapScene",
-            "reveal": "#/$defs/RevealScene",
-            "section_title": "#/$defs/SectionTitleScene",
-            "set_piece": "#/$defs/SetPieceScene",
-            "stat_callout": "#/$defs/StatCalloutScene",
-            "text_thread": "#/$defs/TextThreadScene",
-            "timeline": "#/$defs/TimelineSceneModel",
-            "title_card": "#/$defs/TitleCardScene"
-          },
-          "propertyName": "template"
-        },
-        "oneOf": [
-          {
-            "$ref": "#/$defs/TitleCardScene"
-          },
-          {
-            "$ref": "#/$defs/KineticQuoteScene"
-          },
-          {
-            "$ref": "#/$defs/StatCalloutScene"
-          },
-          {
-            "$ref": "#/$defs/IconListScene"
-          },
-          {
-            "$ref": "#/$defs/RevealScene"
-          },
-          {
-            "$ref": "#/$defs/CauseEffectScene"
-          },
-          {
-            "$ref": "#/$defs/ComparisonScene"
-          },
-          {
-            "$ref": "#/$defs/CharacterIntroScene"
-          },
-          {
-            "$ref": "#/$defs/DialogueScene"
-          },
-          {
-            "$ref": "#/$defs/TextThreadScene"
-          },
-          {
-            "$ref": "#/$defs/EmotionBeatScene"
-          },
-          {
-            "$ref": "#/$defs/RelationshipMapScene"
-          },
-          {
-            "$ref": "#/$defs/LocationScene"
-          },
-          {
-            "$ref": "#/$defs/SetPieceScene"
-          },
-          {
-            "$ref": "#/$defs/MapFocusScene"
-          },
-          {
-            "$ref": "#/$defs/TimelineSceneModel"
-          },
-          {
-            "$ref": "#/$defs/MetaphorScene"
-          },
-          {
-            "$ref": "#/$defs/CallbackScene"
-          },
-          {
-            "$ref": "#/$defs/SectionTitleScene"
-          }
-        ]
+        "$ref": "#/$defs/TreeEdge"
       },
-      "title": "Scenes",
+      "title": "Edges",
+      "type": "array"
+    },
+    "nodes": {
+      "items": {
+        "$ref": "#/$defs/TreeNode"
+      },
+      "title": "Nodes",
       "type": "array"
     },
     "schema_version": {
@@ -2679,8 +2744,9 @@
     }
   },
   "required": [
-    "scenes"
+    "nodes",
+    "edges"
   ],
-  "title": "Storyboard",
+  "title": "TreePlan",
   "type": "object"
 }

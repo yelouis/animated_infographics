@@ -294,7 +294,24 @@ class CallbackProps(BaseModel):
     icon: IconName | None = None
 
 
-# Union of all 18 template props models
+# 2.19 section_title (presentation profile only)
+class SectionTitleProps(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    title: str = Field(min_length=1, max_length=48)
+    index: int = Field(ge=0)
+    count: int = Field(ge=1, le=10)
+
+    @model_validator(mode="after")
+    def validate_invariants(self) -> "SectionTitleProps":
+        if self.index >= self.count:
+            raise ValueError(
+                f"index ({self.index}) must be strictly less than count ({self.count})"
+            )
+        return self
+
+
+# Union of all 19 template props models
 TemplateProps = (
     TitleCardProps
     | KineticQuoteProps
@@ -314,6 +331,7 @@ TemplateProps = (
     | TimelineProps
     | MetaphorProps
     | CallbackProps
+    | SectionTitleProps
 )
 
 
@@ -322,6 +340,25 @@ TemplateProps = (
 # ---------------------------------------------------------------------------
 
 REGISTRY: dict[str, TemplateSpec] = {
+    "section_title": TemplateSpec(
+        name="section_title",
+        category="fallback",
+        props_model=SectionTitleProps,
+        use_when="never selected by the LLM; section node of presentation tree.",
+        writing_rules=[
+            "title at most 48 chars, at most 6 words",
+            "0 <= index < count",
+            "count 1..10",
+        ],
+        slots={
+            "title": TextSlot(
+                font="display", weight=800, size_max=96, size_min=64, max_lines=3, box_width=900
+            ),
+        },
+        sfx_cues=[SfxCue(role="whoosh", at="start")],
+        spread=None,
+        requires={"cast": False, "places": False, "set_pieces": False, "geo": False},
+    ),
     "title_card": TemplateSpec(
         name="title_card",
         category="fallback",
@@ -706,6 +743,7 @@ WORD_CAPS: Final[dict[str, dict[str, int]]] = {
     "timeline": {"events[].date_label": 3, "events[].label": 3},
     "metaphor": {"label": 3},
     "callback": {"label": 3},
+    "section_title": {"title": 6},
 }
 
 PICTURE_TEMPLATES: Final[frozenset[str]] = frozenset(
@@ -715,7 +753,7 @@ REPLACEABLE_TEMPLATES: Final[frozenset[str]] = frozenset(
     {"kinetic_quote", "cause_effect", "icon_list", "comparison", "timeline", "relationship_map"}
 )
 KEPT_TEMPLATES: Final[frozenset[str]] = frozenset(
-    {"title_card", "character_intro", "dialogue", "text_thread", "reveal"}
+    {"title_card", "character_intro", "dialogue", "text_thread", "reveal", "section_title"}
 )
 
 ALLOWED_OVERLAY_TEMPLATES: Final[frozenset[str]] = frozenset(
@@ -736,6 +774,7 @@ ALLOWED_OVERLAY_TEMPLATES: Final[frozenset[str]] = frozenset(
 FORBIDDEN_OVERLAY_TEMPLATES: Final[frozenset[str]] = frozenset(
     {
         "title_card",
+        "section_title",
         "callback",
         "icon_list",
         "comparison",

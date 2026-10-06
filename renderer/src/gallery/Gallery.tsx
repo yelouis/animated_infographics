@@ -32,6 +32,7 @@ import { timelineFixtures } from "./fixtures/timeline";
 import { titleCardFixtures } from "./fixtures/title_card";
 import { metaphorFixtures } from "./fixtures/metaphor";
 import { callbackFixtures } from "./fixtures/callback";
+import { sectionTitleFixtures } from "./fixtures/section_title";
 import { overlaysFixtures } from "./fixtures/overlays";
 import type { AllowedOverlayTemplate } from "../theme/overlayLayout";
 import { OverlayLayer } from "../story/OverlayLayer";
@@ -210,6 +211,9 @@ export const Gallery: React.FC<GalleryProps> = ({ template, variant }) => {
     props = metaphorFixtures[standardVariant] || metaphorFixtures.typical;
   } else if (template === "callback") {
     props = callbackFixtures[standardVariant] || callbackFixtures.typical;
+  } else if (template === "section_title") {
+    props =
+      sectionTitleFixtures[standardVariant] || sectionTitleFixtures.typical;
   } else if (template === "overlays") {
     const overlayFixture =
       overlaysFixtures[variant as AllowedOverlayTemplate] ||

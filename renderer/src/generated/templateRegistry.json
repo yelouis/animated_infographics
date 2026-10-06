@@ -461,6 +461,39 @@
       "at most 2 per video (planner R4)"
     ]
   },
+  "section_title": {
+    "category": "fallback",
+    "name": "section_title",
+    "requires": {
+      "cast": false,
+      "geo": false,
+      "places": false,
+      "set_pieces": false
+    },
+    "sfx_cues": [
+      {
+        "at": "start",
+        "role": "whoosh"
+      }
+    ],
+    "slots": {
+      "title": {
+        "box_width": 900,
+        "font": "display",
+        "max_lines": 3,
+        "size_max": 96,
+        "size_min": 64,
+        "weight": 800
+      }
+    },
+    "spread": null,
+    "use_when": "never selected by the LLM; section node of presentation tree.",
+    "writing_rules": [
+      "title at most 48 chars, at most 6 words",
+      "0 <= index < count",
+      "count 1..10"
+    ]
+  },
   "set_piece": {
     "category": "place_time",
     "name": "set_piece",

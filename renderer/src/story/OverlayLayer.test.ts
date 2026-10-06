@@ -84,16 +84,16 @@ describe("Overlay clearance and slot disjointness", () => {
     const registryTemplates = Object.keys(registry).filter(
       (k) => !k.startsWith("$")
     );
-    expect(registryTemplates.length).toBe(18);
+    expect(registryTemplates.length).toBe(19);
 
     expect(ALLOWED_OVERLAY_TEMPLATES.length).toBe(10);
-    expect(FORBIDDEN_OVERLAY_TEMPLATES.length).toBe(8);
+    expect(FORBIDDEN_OVERLAY_TEMPLATES.length).toBe(9);
 
     const unionSet = new Set<string>([
       ...ALLOWED_OVERLAY_TEMPLATES,
       ...FORBIDDEN_OVERLAY_TEMPLATES,
     ]);
-    expect(unionSet.size).toBe(18);
+    expect(unionSet.size).toBe(19);
 
     for (const name of registryTemplates) {
       expect(

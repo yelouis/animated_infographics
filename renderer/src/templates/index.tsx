@@ -13,6 +13,7 @@ import { MapFocus } from "./map_focus";
 import { Metaphor } from "./metaphor";
 import { RelationshipMap } from "./relationship_map";
 import { Reveal } from "./reveal";
+import { SectionTitle } from "./section_title";
 import { SetPiece } from "./set_piece";
 import { StatCallout } from "./stat_callout";
 import { TextThread } from "./text_thread";
@@ -47,6 +48,7 @@ export const TEMPLATES: Record<string, React.FC<TemplateComponentProps>> = {
   timeline: Timeline as unknown as React.FC<TemplateComponentProps>,
   metaphor: Metaphor as unknown as React.FC<TemplateComponentProps>,
   callback: Callback as unknown as React.FC<TemplateComponentProps>,
+  section_title: SectionTitle as unknown as React.FC<TemplateComponentProps>,
 };
 
 export const getTemplateComponent = (
@@ -72,6 +74,7 @@ export * from "./map_focus";
 export * from "./metaphor";
 export * from "./relationship_map";
 export * from "./reveal";
+export * from "./section_title";
 export * from "./set_piece";
 export * from "./stat_callout";
 export * from "./text_thread";

@@ -1570,6 +1570,35 @@
       "title": "SceneOverlay",
       "type": "object"
     },
+    "SectionTitleProps": {
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "maximum": 10,
+          "minimum": 1,
+          "title": "Count",
+          "type": "integer"
+        },
+        "index": {
+          "minimum": 0,
+          "title": "Index",
+          "type": "integer"
+        },
+        "title": {
+          "maxLength": 48,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "index",
+        "count"
+      ],
+      "title": "SectionTitleProps",
+      "type": "object"
+    },
     "SetPieceProps": {
       "additionalProperties": false,
       "properties": {
@@ -2987,6 +3016,58 @@
       "title": "TimelineSceneTiming",
       "type": "object"
     },
+    "TimelineSectionTitleScene": {
+      "additionalProperties": false,
+      "properties": {
+        "end_frame": {
+          "minimum": 0,
+          "title": "End Frame",
+          "type": "integer"
+        },
+        "hide_captions": {
+          "default": false,
+          "title": "Hide Captions",
+          "type": "boolean"
+        },
+        "id": {
+          "pattern": "^s\\d{3}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "overlays": {
+          "items": {
+            "$ref": "#/$defs/SceneOverlay"
+          },
+          "title": "Overlays",
+          "type": "array"
+        },
+        "props": {
+          "$ref": "#/$defs/SectionTitleProps"
+        },
+        "start_frame": {
+          "minimum": 0,
+          "title": "Start Frame",
+          "type": "integer"
+        },
+        "template": {
+          "const": "section_title",
+          "default": "section_title",
+          "title": "Template",
+          "type": "string"
+        },
+        "timing": {
+          "$ref": "#/$defs/TimelineSceneTiming"
+        }
+      },
+      "required": [
+        "id",
+        "start_frame",
+        "end_frame",
+        "props"
+      ],
+      "title": "TimelineSectionTitleScene",
+      "type": "object"
+    },
     "TimelineSetPiece": {
       "additionalProperties": false,
       "properties": {
@@ -3731,6 +3812,7 @@
             "metaphor": "#/$defs/TimelineMetaphorScene",
             "relationship_map": "#/$defs/TimelineRelationshipMapScene",
             "reveal": "#/$defs/TimelineRevealScene",
+            "section_title": "#/$defs/TimelineSectionTitleScene",
             "set_piece": "#/$defs/TimelineSetPieceScene",
             "stat_callout": "#/$defs/TimelineStatCalloutScene",
             "text_thread": "#/$defs/TimelineTextThreadScene",
@@ -3793,6 +3875,9 @@
           },
           {
             "$ref": "#/$defs/TimelineCallbackScene"
+          },
+          {
+            "$ref": "#/$defs/TimelineSectionTitleScene"
           }
         ]
       },

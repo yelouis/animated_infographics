@@ -66,12 +66,12 @@
 
 | # | Gate | Result |
 |---|---|---|
-| G1–G3 | ruff / format / mypy | exit 0 (136 files formatted; 68 source files) |
-| G4 | `uv run pytest -q -m "not slow"` | exit 0 · **314 passed** |
+| G1–G3 | ruff / format / mypy | exit 0 (141 files formatted; 72 source files) |
+| G4 | `uv run pytest -q -m "not slow"` | exit 0 · **322 passed** |
 | G5–G7 | renderer typecheck / lint / vitest | exit 0 · 19 vitest |
 | G8 | schema sync | exit 0 |
 | G9 | renderer purity | exit 0 |
-| G10 | gallery | exit 0 · 53 goldens, 0 overflows |
+| G10 | gallery | exit 0 · 56 goldens, 0 overflows |
 | G11 | `uv run pytest -q -m slow` | exit 0 · **37 passed** |
 | G12 | `./scripts/e2e.sh` | exit 0 · 859 s · steps 1–10 |
 | G13 | offline | exit 0 · 235 s |

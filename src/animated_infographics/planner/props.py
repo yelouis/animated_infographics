@@ -471,6 +471,7 @@ def _evaluate_scene_critic(
     prompt_template: str,
     compact_bible: str,
     before_prev_beat: Beat | None = None,
+    passage: str | None = None,
 ) -> tuple[Scene, CriticReport, int]:
     """Run blind critic check on candidate scene if required per design_planner.md §11.
 
@@ -491,6 +492,7 @@ def _evaluate_scene_critic(
         next_beat,
         bible,
         before_prev_beat=before_prev_beat,
+        passage=passage,
     )
 
     def validate_critic(raw: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:

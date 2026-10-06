@@ -24,6 +24,7 @@ from animated_infographics.contracts.templates import (
     MetaphorProps,
     RelationshipMapProps,
     RevealProps,
+    SectionTitleProps,
     SetPieceProps,
     StatCalloutProps,
     TextThreadProps,
@@ -578,6 +579,16 @@ class CallbackScene(BaseModel):
     rationale: str = Field(default="", max_length=140)
 
 
+class SectionTitleScene(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    id: str = Field(pattern=r"^s\d{3}$")
+    beat_i: int
+    template: Literal["section_title"] = "section_title"
+    props: SectionTitleProps
+    mute_sfx: bool = False
+    rationale: str = Field(default="", max_length=140)
+
+
 SceneUnion = (
     TitleCardScene
     | KineticQuoteScene
@@ -597,6 +608,7 @@ SceneUnion = (
     | TimelineSceneModel
     | MetaphorScene
     | CallbackScene
+    | SectionTitleScene
 )
 Scene = Annotated[SceneUnion, Field(discriminator="template")]
 
@@ -990,6 +1002,18 @@ class TimelineCallbackScene(BaseModel):
     overlays: list[SceneOverlay] = Field(default_factory=list)
 
 
+class TimelineSectionTitleScene(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    id: str = Field(pattern=r"^s\d{3}$")
+    template: Literal["section_title"] = "section_title"
+    start_frame: int = Field(ge=0)
+    end_frame: int = Field(ge=0)
+    hide_captions: bool = False
+    timing: TimelineSceneTiming = Field(default_factory=TimelineSceneTiming)
+    props: SectionTitleProps
+    overlays: list[SceneOverlay] = Field(default_factory=list)
+
+
 TimelineSceneUnion = (
     TimelineTitleCardScene
     | TimelineKineticQuoteScene
@@ -1009,6 +1033,7 @@ TimelineSceneUnion = (
     | TimelineTimelineScene
     | TimelineMetaphorScene
     | TimelineCallbackScene
+    | TimelineSectionTitleScene
 )
 TimelineScene = Annotated[TimelineSceneUnion, Field(discriminator="template")]
 
