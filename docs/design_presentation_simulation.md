@@ -66,6 +66,23 @@ Every stage obeys the standing rules: job-local inputs, `run_with_retries`, stag
 - R2 (no consecutive repeats) does not apply either;
 - the word budget, every validator and the critic **do** apply;
 - the style (`literal` or `creative`) applies as in `design_styles.md`. Creative's director runs over the point list instead of beats.
+- **R1 is skipped too** (accepted October 6, 2026): `section_title` replaces the title card. Its second half still holds as an assertion: **no point node may use `title_card`**, and the tree stage replaces one with its alternate (`RuleRepair(rule="R1")`).
+
+**Creative in a presentation job (spelled out October 6, 2026; lesson 2.16).** Everything that travels with the director in a video job travels with it here:
+1. **The director** runs over the points in deck order: point k is beat k, the first point is beat 0 and carries nothing, and `n` is the number of points. It writes `director.json`, and its counts (`design_styles.md` §3.3) are computed from that `n`.
+2. **The license check** (`design_styles.md` §3.4) runs on every metaphor and aside, before selection. The passage is the point's slide (its title and all its points) in place of the four-beat passage, because the deck is the only text the tree may see. Failed and errored checks remove the item and are recorded in `director.json`'s `license_dropped` list, as in video jobs.
+3. **Overlays** are computed by the same `compute_scene_overlays` over the point scenes in deck order, then stored in each node's `overlays`. `compose` copies a node's `overlays` into every timeline scene it emits for that node. `section_title` is not an allowed overlay template.
+4. **The callback's dots** count the earlier point nodes, in deck order, that carry the motif's token.
+5. **`logs/tree.log`** ends with `director=<ok|degraded> license_calls=<m> license_dropped=<d> overlays=<o>`, where `m` equals the number of metaphors and asides the director returned.
+6. **Degradation is recorded, never silent.** If the director fails every attempt:
+   - `tree.json` gets `"style_degraded": true`;
+   - `logs/tree.log` prints `director: degraded to literal after <n> attempts: <last validator error>`;
+   - the presentation report shows it.
+
+   G16 treats a degraded creative run as a failure (`design_testing_and_validation.md` §4c), as G15 does through its creative bars.
+- **Measured (October 6, 2026):**
+  - `history_great_stink` creative/strong has 2 metaphor and 2 callback nodes, but its metaphors were never license-checked, and its timeline has 0 overlays.
+  - `story_overdue_book` creative/mild has no `director.json` at all, and its template counts are identical to the literal run's. **The cause:** all 3 director attempts on the deck keep "A massive mountain of sand slowly burying a single small book", which rule 6 rejects. `design_styles.md` §3.3's salvage keeps the rest of the plan.
 
 **The deck bible.** The tree needs a bible (cast, places and set pieces with avatars, geo and illustrations), but the script's bible would leak the transcript. So `tree` first runs the existing `bible` stage over the **deck text only**: slide titles and points joined as paragraphs. The result is `deck_bible.json`; geo, avatars and the illustration pipeline work on it unchanged.
 
@@ -87,7 +104,7 @@ Every stage obeys the standing rules: job-local inputs, `run_with_retries`, stag
 
 A node with no matching edge cannot be reached in one commit.
 
-**`tree.json`** has the shape `{"nodes": [{"id", "slide", "kind": "section" | "point", "point_i", "text", "scene": <Scene>}], "edges": [{"from", "to", "kind", "cost"}]}`. Its scenes go through `assets` (illustrations) once, at tree time.
+**`tree.json`** has the shape `{"nodes": [{"id", "slide", "kind": "section" | "point", "point_i", "text", "scene": <Scene>, "overlays": [<SceneOverlay>]}], "edges": [{"from", "to", "kind", "cost"}], "style_degraded": false}`. `overlays` and `style_degraded` were added October 6, 2026; `overlays` is `[]` for literal trees and section nodes. Its scenes go through `assets` (illustrations) once, at tree time.
 
 ---
 
@@ -136,7 +153,7 @@ A node with no matching edge cannot be reached in one commit.
 - at the end of any word followed by a gap ≥ 300 ms, and
 - otherwise at least every 1.5 s of audio.
 
-At a decision point it sees only the words ended so far. It looks at a **window** of the last 20 words (fewer at the start).
+At a decision point it sees only the words ended so far. It looks at a **window** of the last 20 words (fewer at the start). *Measured October 6, 2026: 20 words hold ≈ 8 s of speech, so a new point outweighs the old one only halfway through it. This window is one cause of Issue 8 (`ongoing_general_errors.md`), and the matcher's design awaits the user's selection there.*
 
 ### 6.2 Scoring
 
@@ -203,6 +220,10 @@ It passes the window and the two candidates' point texts, and adds the call's me
 - the sync probe is **not** applied (scenes are deliberately not word-synchronised).
 
 **Oracle baseline:** `score --oracle` composes the same tree from ground-truth timing (each point shown from its first spoken word). It reports the same metrics and renders `oracle.mp4`. The gap between oracle and `follow` isolates matcher error from tree quality.
+
+**First measurement (October 6, 2026).** The oracle meets every bar (slide and point accuracy 0.98–1.00), so the deck, the tree and the scorer are sound. The BM25 follower misses every accuracy, lag and false-switch bar on all four runs: slide 0.32–0.56 and point 0.20–0.36. The analysis and the options are in Issue 8.
+
+**G16's exit code states the bars** (`design_testing_and_validation.md` §4c): 0 when every bar is met, 3 when the run is mechanically sound but a follower bar is missed (filed), and 1 for anything else.
 
 **A bar that fails is filed with numbers, never tuned away.** These bars are initial decisions. If the first measured run misses one on any fixture, the agent files an issue with the measurement and options for the user (e.g. accept the number, enable the tie-break, change the commit rule), instead of changing the threshold.
 

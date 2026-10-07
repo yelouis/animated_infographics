@@ -203,7 +203,9 @@ The **only** file the renderer reads. It is fully resolved: frame numbers, asset
 - `timing.item_frames` (frames relative to scene start, one per list item/marker/line/message/event) and `timing.count_frames` (`stat_callout` only; otherwise null) are computed **in Python** by `compile.py`. The renderer uses them for entrances and `compile.py` uses them for SFX cues, so sound and picture share one number (`design_templates.md` §1 rule 5).
 - `props` are the storyboard props unchanged (ids, not inlined objects). Templates resolve ids through the `cast` / `places` / `set_pieces` dictionaries via a context hook.
 
-- **`overlays`** (added October 5, 2026, creative style only; `design_styles.md` §3.5–3.6) is an optional per-scene list, `[]` when absent: `[{"kind": "motif_token" | "thought" | "label" | "prop", "icon": IconName | null, "text": str | null, "anchor": "top_right" | "bottom_left", "motif_id": str | null}]`. There are at most 2 per scene (one `motif_token`, one aside), only on the templates `design_styles.md` §3.5 allows. A `literal` timeline has no `overlays` key: schema default `[]`, serialised only when non-empty, so literal output stays byte-identical.
+- **`overlays`** (added October 5, 2026, creative style only; `design_styles.md` §3.5–3.6) is an optional per-scene list, `[]` when absent: `[{"kind": "motif_token" | "thought" | "label" | "prop", "icon": IconName | null, "text": str | null, "anchor": "top_right" | "top_left" | "bottom_left", "motif_id": str | null}]`. There are at most 2 per scene (one `motif_token`, one aside), only on the templates `design_styles.md` §3.5 allows.
+  - **Anchor by kind (October 6, 2026):** a model validator on `SceneOverlay` requires `motif_token` → `top_right`, `thought` and `label` → `top_left`, and `prop` → `bottom_left`. It also requires a `thought` to have an `icon` or a `text`, a `prop` an `icon`, a `label` a `text`, and a `motif_token` an `icon` and a `motif_id`.
+  - **Counts are compile's rule, not the schema's,** so the gallery's layout probes (`design_styles.md` §3.6), which carry two asides, validate. A `literal` timeline has no `overlays` key: schema default `[]`, serialised only when non-empty, so literal output stays byte-identical.
 
 **Renderer-side validation:** the `Story` composition's `calculateMetadata` validates `inputProps` against `schema/timeline.schema.json` (Ajv) and **throws** on failure. A render never starts on an invalid timeline.
 
@@ -249,11 +251,11 @@ All are Pydantic contracts in `contracts/`, exported to `schema/*.schema.json` a
 | File | Written by | Read by | Shape |
 |---|---|---|---|
 | `ingest.json` → `style` | `ingest` | every stage that branches on style | `"literal"` \| `"creative"`, default `"literal"`. A pre-Wave-G `ingest.json` without the key loads as `"literal"` |
-| `director.json` | `director` (creative only) | `storyboard`, `assets`, `compile`, `preview`, eval | `design_styles.md` §3.3, plus `license_dropped: [{"item", "verdict"}]` and `overlay_dropped: [...]` |
+| `director.json` | `director` (creative only; also `tree` in creative presentation jobs) | `storyboard`, `assets`, `compile`, `preview`, eval | `design_styles.md` §3.3, plus `license_dropped: [{"item", "verdict"}]`, `overlay_dropped: [...]` and, from October 6, 2026, `director_dropped: [{"item", "error"}]` (salvage) |
 | `plan_report.json` → `style`, `style_degraded` | `storyboard` | eval, `status` | `style` as above; `style_degraded: bool`; `rule_repairs[].rule` adds `"R8"` |
 | `state.json` → `kind` | `new` / `present-sim` | `jobs.py`, CLI | `"video"` (default; a pre-Wave-H state without the key loads as `"video"`) \| `"presentation"` |
 | `deck.json` | `deck` | `tree`, `perform`, `score`, `preview` | `design_presentation_simulation.md` §2 |
-| `tree.json` | `tree` | `follow`, `compose` | §3 of the same document |
+| `tree.json` | `tree` | `follow`, `compose` | §3 of the same document; `style_degraded: bool = false` added October 6, 2026 |
 | `performance.json` | `perform` | `speak`, `score` **only** | §4: `{"seed", "level", "sentences": [{"text", "label", "op", "source_sentence_id"}], "op_counts"}` |
 | `speak_timing.json` | `speak` | `score` only | `[{"sentence_i", "start_ms", "end_ms"}]` |
 | `heard.json` | `hear` | `follow`, `compose` | the transcript contract of §2 (`source: "asr"`) |

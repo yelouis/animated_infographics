@@ -1,52 +1,56 @@
-# Agent Execution Guide — Waves A–H Delivered (Queue Complete) — October 6, 2026
+# Agent Execution Guide — Active Build: Wave I (verification fixes for Waves G and H, 9 items) — October 6, 2026
 
-**You are an engineering agent with no memory of this project.** Waves A–H are built, committed, pushed (head `main`), and independently verified across all 16 battery gates (§1).
+**You are an engineering agent with no memory of this project.** Waves A–H are built, committed and pushed (head `main`).
+- **The verification.** Waves G and H were independently verified on October 6, 2026. 11 of their 12 items are true to spec. Real-output review then found **nine defects the gates could not see** (`ongoing_general_errors.md` §1). Six of them come from the designer's specs, not from the code.
+- **Wave I (I1–I9) fixes eight of them**, all within approved behaviour.
+- **The ninth is the presentation follower's accuracy.** It is **Issue 8**, and it waits for the user's selection. **Do not touch the matcher** (§4).
 
 **The user's words (October 5, 2026):**
 - *"the generated animations are very literal to what is being said at any given moment. Lets set up something like a style library. We can keep this as one of the styles but lets have a style that is a bit more creative where the animation adds something to the story (also pick more interesting stories that maybe is longer)."*
 - *"…create a couple of slides from the transcript (key moments) and use that as the power point, then you can create the tree of animations that links each slide together. Then perform some flair on the original transcript … and see what video generates from it. Then we can still run similar analysis that analyzes if the final outputted video was done well."*
 
-**The user's selections:**
-- creative ingredients: **all four** (motifs & callbacks, visual metaphors, foreshadowing & reveals, visual gags & asides);
-- license: **"Small embellishments"**;
-- test stories: **4–6 minutes**;
-- slide import (.pptx / Google Slides): **not now**.
-
-**Status:** Wave G (G1–G6) and Wave H (H1–H6) are delivered and verified. **Queue Complete.**
+**Status:** **Active Build: Wave I** (I1–I9), in the §2 order. Issue 8 is open; its `Your selection:` line belongs to the user.
 
 **Every number and literal string in this guide and the design docs is a decision, not a suggestion.**
 
-**The product, in one paragraph.** A local-only CLI that turns a text story (narrated by local TTS) or an audio narration into a 1080×1920 animated explainer video, with karaoke captions, a persistent avatar cast, checked illustrations, a blind critic, and a mandatory review gate. Wave G adds a **creative** style beside today's **literal** one. Wave H adds an offline **presentation simulation**: a deck, an animation tree, a "performed" talk, a causal matcher and a score. It is the first step toward live presentations.
+**The product, in one paragraph.** A local-only CLI that turns a text story (narrated by local TTS) or an audio narration into a 1080×1920 animated explainer video. It has karaoke captions, a persistent avatar cast, checked illustrations, a blind critic, and a mandatory review gate. It has two styles:
+- **literal**: the pictures show what is said;
+- **creative**: a director adds motifs and callbacks, visual metaphors and small asides, under the user's "small embellishments" license.
 
-**The lessons that shape these waves:**
-- Red first on real inputs (2.6).
-- Enforce rules on the final result (2.10).
-- Measure the distribution of what the model picks (2.11).
-- Name the defect class (2.12).
-- And for Wave H above all: **the simulation must be honest.** The tree never sees the transcript; the matcher never sees the ground truth. Tests enforce both.
+An offline **presentation simulation** derives a deck from a script, builds an animation tree from the deck alone, perturbs the script into a "performed" talk, follows it with a causal matcher, and scores the result.
+
+**The lessons that shape this wave** (`ongoing_general_errors.md` §2):
+- **2.13: a pipeline that never crashes hides a machine that never ran.** Every image of the four presentation runs failed, and the gates stayed green.
+- **2.14: a gate's exit code must state its bars, and a gate builds fresh outputs.** G16 printed "FAIL (Filed)" and exited 0, its falsification could not fail, and it re-scored old jobs instead of running.
+- **2.15: a layout test against a hand-kept table tests the table.** Measure the rendered boxes.
+- **2.16: a stage reused in a second pipeline leaves its guards behind.**
+- **Still binding:** 2.8 (measure the rendered result), 2.10 (enforce rules on the final result) and 2.12 (name the defect class).
 
 ---
 
 ## 0. Standing constraints (apply to every item)
 
-1. **The battery is the regression bar.** After every item, run the full battery (G1–G14, plus G15/G16 once they exist) bare, and update §1.3. Read every exit code bare.
-2. **Fully local at runtime.** No cloud API, no network except loopback. Pull no new models: `gemma4:26b`, Kokoro, mlx-whisper and FLUX.2 klein 4B only.
-3. **Python (Pydantic) is the source of truth for every contract.** Generated files are never hand-edited, and G8 covers every new contract.
+1. **The battery is the regression bar.** After every item, run the full battery (G1–G16) bare and update §1.3. Read every exit code bare.
+   - **Until I8 lands,** G16 exits 0 even though its bars fail; §1.3 records that honestly.
+   - **After I8,** the expected G16 code is **3** (follower bars missed, Issue 8). A 1 is a regression. A 0 would mean the follower met the bars, which is impossible without touching the matcher, so investigate it.
+2. **Fully local at runtime.** No cloud API, and no network except loopback. **Pull no new models**: `gemma4:26b`, Kokoro, mlx-whisper and FLUX.2 klein 4B only.
+3. **Python (Pydantic) is the source of truth for every contract.** Generated files are never hand-edited, and G8 covers every contract change (I2, I3, I7).
 4. **Templates read time only through the clock.**
 5. **The review gate is mandatory** for video and presentation jobs alike. No auto-approve.
-6. **The planner never crashes the pipeline.** Every LLM call goes through `run_with_retries`. LLM-facing schemas carry no length constraints; validators enforce limits with retry messages. Every new on-screen string passes the word caps and the placeholder, id and completeness rules.
-7. **Red first, on real inputs.** Before building, run the item's falsifying check against the current code, using real fixture output, and record the failure.
-8. **One item = one Conventional Commit, scope = item id** (`feat(g1): …`, `feat(h1): …`). WHY plus red and green runs in the body. Push after every item. Never amend a pushed commit.
-9. **Record each resolution in the same commit,** as one line under "Wave G" or "Wave H" in `ongoing_general_errors.md` §3: `G<n> — <title> — git log --grep "(g<n>)" — <measured result>`.
+6. **The planner never crashes the pipeline.** Every LLM call goes through `run_with_retries`. LLM-facing schemas carry no length constraints; validators enforce limits through retry messages. Every new error string is copied **verbatim** from the design doc that defines it.
+7. **Red first, on real inputs.** Before building, run the item's falsifying check against the current code, using the recorded artefacts this guide names, and record the failure.
+8. **One item = one Conventional Commit, scope = item id** (`fix(i1): …`, `feat(i2): …`). Put the WHY and the red and green runs in the body. Push after every item. Never amend a pushed commit.
+9. **Record each resolution in the same commit** as one line under a new "**Wave I:**" heading in `ongoing_general_errors.md` §3: `I<n> — <title> — git log --grep "(i<n>)" — <measured result>`.
 10. **When this guide and a design doc disagree, stop and file it.**
 11. Every stage log ends in `llm_calls=<n> cache_hits=<m> elapsed_ms=<t>`.
-12. **Nothing in the package changes the environment at import.** Export `HF_HOME=$HOME/.cache/huggingface` in your shell if needed.
-13. **Ids:** waves A–H; deferred features DF1–DF9; live constraints LC1–LC6.
-14. **Eval reports are named by date.** If you run the E2E or the budget twice on one day, the second run overwrites the first; commit each report in the item that produced it.
+12. **Nothing in the package changes the environment at import.** Export `HF_HOME=$HOME/.cache/huggingface` in your shell if needed. Any run that generates images must show **0 asset execution errors** (I6) to count.
+13. **Ids:** waves A–I; deferred features DF1–DF9; live constraints LC1–LC6.
+14. **Eval reports are named by date.** A second E2E or budget run on the same day overwrites the first. Commit each report in the item that produced it.
+15. **Issue 8 owns the matcher.** Do not change `presentation/match.py`'s scoring, window, decision points, commit rule, hysteresis, dwell or tie-break, or the edge costs in `presentation/tree.py`, and do not change the §8 bars. I8 changes how G16 **reports** them, not what they are.
 
 ---
 
-## 1. Verified baseline (October 6, 2026, close-out of Waves G and H)
+## 1. Verified baseline (October 6, 2026; designer's re-run of Waves G and H)
 
 ### 1.1 Environment
 
@@ -57,11 +61,12 @@
 
 ### 1.2 Repository
 
-- Waves A–F: `4df212a` … `c88a69f`. Per-item verdicts: `ongoing_general_errors.md` §3.
-- Wave G: `afb1b5f` … `e5d590e`. Per-item verdicts: `ongoing_general_errors.md` §3.
-- Wave H: `0893fc1` … `main`. Per-item verdicts: `ongoing_general_errors.md` §3.
+- Waves A–F: `4df212a` … `c88a69f`.
+- Wave G: `afb1b5f` … `e5d590e`.
+- Wave H: `0893fc1` … `6150482`.
+- Per-item verdicts for all of them: `ongoing_general_errors.md` §3.
 
-### 1.3 Gates (run bare October 6, 2026; the regression bar)
+### 1.3 Gates (run bare October 6, 2026 by the designer; the regression bar)
 
 | # | Gate | Result |
 |---|---|---|
@@ -70,26 +75,31 @@
 | G5–G7 | renderer typecheck / lint / vitest | exit 0 · 19 vitest |
 | G8 | schema sync | exit 0 · in sync |
 | G9 | renderer purity | exit 0 · pure |
-| G10 | gallery | exit 0 · 59 goldens, 0 overflows |
-| G11 | `uv run pytest -q -m slow` | exit 0 · **43 passed** |
-| G12 | `./scripts/e2e.sh` | exit 0 · steps 1–10 passed |
-| G13 | offline | exit 0 · passed |
+| G10 | gallery | exit 0 · 59 goldens, 0 overflows. **It does not measure overlaps yet** (I2) |
+| G11 | `uv run pytest -q -m slow` | exit 0 · **43 passed** (238 s) |
+| G12 | `./scripts/e2e.sh` | exit 0 · steps 1–10 passed (870 s) · 0.52–0.83 graphic words/s. It reproduces the "Sofia" spoiler (I5) |
+| G13 | offline | exit 0 (236 s) |
 | G14 | doctor | exit 0 · 22 OK |
-| G15 | `./scripts/creative_e2e.sh` | exit 0 · steps 1–5 passed |
-| G16 | `./scripts/presentation_sim.sh` | exit 0 · 4 simulation runs, 4 oracle baselines, falsification passed |
-| Budget | `story_recipe_box`, cold | 205.8 s / 191.3 s / 397.1 s (≤ 390 / 210 / 600), 0 cache hits |
-| Budget (long) | `story_overdue_book`, literal cold | 56.87 s/min / 79.80 s/min / 136.67 s/min (≤ 90 / 80 / 170 s/min), 0 cache hits |
-| Budget (long creative) | `story_overdue_book`, creative cold | 59.62 s/min / 80.83 s/min / 140.45 s/min (≤ 110 / 85 / 195 s/min), 0 cache hits |
+| G15 | `./scripts/creative_e2e.sh` | exit 0 (1,211 s) · 0.74 / 0.84 graphic words/s. **Its fresh jobs reproduce I1–I5:** 2 dots for 4 tokens, the empty s001 thought, "Silver Pump Handle" and "Blue ink pen", and 6 spoilers |
+| G16 | `./scripts/presentation_sim.sh` | **exit 0, and it means nothing yet (I8).**<br>• **Battery run** (1,416 s): re-scored the agent's four jobs and built nothing.<br>• **Fresh jobs dir** (`PRESENTATION_JOBS_DIR=artifacts/presentation_sim/verify_20261006_224207/jobs`, 3,653 s, four new jobs): exit 0 with every follower bar missed — slide 0.558 / 0.493 / 0.365 / 0.316, point 0.352 / 0.309 / 0.205 / 0.196, lag median 7.4–10.0 s, 3.2–4.7 false switches/min. The oracle scores 1.00 / 0.98 / 0.98 / 1.00.<br>• **Images:** present (cache hits, 0 failures).<br>• **Overdue creative:** again no `director.json`.<br>• **History creative:** 0 overlays |
+| Budget | `story_recipe_box`, cold | 209.13 s / 195.74 s / 404.86 s (≤ 390 / 210 / 600), 0 cache hits, 5 images |
+| Budget (long) | `story_overdue_book`, literal cold | 60.47 / **79.23** / 139.71 s/min (≤ 90 / 80 / 170). Render is 0.8 s/min under its bar; watch it |
+| Budget (long creative) | `story_overdue_book`, creative cold | exit 0, 59.37 / 78.46 / 137.83 s/min (≤ 110 / 85 / 195). **Not a creative measurement:** 5 images, 3 text checks and 114 LLM calls are the literal signature; a creative run gives 9, 7 and 117. Replayed under the same conditions (`ollama stop`, cold cache), the director failed 3 attempts and degraded (I4). The agent's committed report has the identical signature. **No valid creative budget exists yet** (I9) |
 
-### 1.4 Measurements that shaped Waves G and H (October 5, 2026)
+### 1.4 Measurements that shaped Wave I (October 6, 2026)
 
 | What | Result |
 |---|---|
-| `story_overdue_book` (first version), `new` cold, literal | **349 s** to `awaiting_review`; narration **329.7 s** (5.5 min), 755 words, **64 beats**. Stage timings: voice 31.9 s, narrate 26.2 s, bible 10.3 s, segment 3.6 s, storyboard 140.6 s, assets 114.1 s, preview 19.2 s. That is 63 s per narration minute, against `story_recipe_box`'s 79 s/min. |
-| `history_great_stink`, `new` cold, literal | **331 s** to `awaiting_review` (65 s per narration minute); narration **303.6 s** (5.1 min), **60 beats**; voice `am_michael` / `third_person`; cast John Snow, Joseph Bazalgette, Members of Parliament, Londoners; places London (gazetteer), River Thames (llm), Soho (gazetteer). Its expected facts hold so far |
-| Voice stage on that first version | `am_michael` / `no_evidence`: "As the only librarian in Alder Creek, Oregon, and a grandmother of three, I" fails Form B, an accepted false negative (`design_planner.md` §10). The opening was rewritten to "As a grandmother of three, I…". **G1 confirms `af_heart` / `llm`.** |
-| Bible of that run | cast: Me (narrator), June Lind, Robert Okafor, Marisol. Places: Alder Creek (llm geo), Portland (gazetteer). Set pieces: The Long Way Home, The Late Fee Stack, The Reading Nook. |
-| Everything else in these waves | **Not measured by the designer** (no code was written, per the user). Each item states the measurement you run first, and the bar it must meet. |
+| Callback dots | Both creative E2E callbacks (`history-great-stink-20261006-164729` s056, `story-overdue-book-20261006-164040` s051) had **4** earlier motif tokens on screen, `timing.item_frames == []`, and drew **2** dots |
+| Overlay geometry | Token [840, 180, 960, 300], thought [720, 175, 960, 345] and label [680, 200, 1000, 260] all overlap one another. Thought and label overlap `character_intro`'s avatar [320, 180, 760, 620] by 40–80 px. The vitest passed, because its table omits the avatar and it never compares two overlays |
+| Empty thought | `story-overdue-book-20261006-164040` s001 (`character_intro`): `{"kind": "thought", "icon": null, "text": null}`, drawn as a generic "…" bubble over the avatar |
+| Motif names and spacing | "Silver Pump Handle" ("silver" is never said); "Blue ink pen" ("pen" is never said). The ink motif's appearances fall at beats 12, 15, 18, 19 and then 51 |
+| Names before the narration | **7 of 32** named displays in the 7 most recent storyboards; all `llm planned` (list in I5) |
+| Presentation images | 0 generated in all four of the agent's runs; failures 5, 7, 5, 5. Every one is `mflux exited with code 1` inside `snapshot_download`, ≈ 970 ms, `attempts: []`. A real lettering failure looks different: `lettering detected in 3 attempts`, with 3 attempts recorded |
+| Creative presentation | `history-great-stink-20261006-132526` has 2 metaphor nodes that were never license-checked and 0 overlays. `story-overdue-book-20261006-124735` (creative) has **no `director.json`**, and its template counts are identical to the literal run's |
+| G16 | `presentation_sim.sh:336` prints "FAIL (Filed)" and `:424` exits 0. The falsification at `:226–268` asserts that shuffled speech scores below the mild bars, and so do the real runs (slide 0.32–0.56). **And `:52–80` re-scores any matching job in `jobs/` instead of running the pipeline.** The designer's battery run re-scored the agent's four jobs and built nothing |
+| Director all-or-nothing | After `ollama stop` with a cold cache, all 3 attempts on `story_overdue_book` kept the beat-24 metaphor "A paper book … mailbox flag", which breaks rule 6 ("book"), so the job degraded to literal. The overdue **deck** fails the same way ("…burying a single small book") on every run, so every creative presentation of it has been literal. Warm-loaded, the same story plans 1 motif, 4 metaphors and 5 asides. The attempts are in `docs/evals/assets/2026-10-06/wave_i_director_attempts.json` |
+| Matcher (Issue 8, not Wave I) | Oracle 0.98–1.00. Follower: slide 0.32–0.56, point 0.20–0.36, lag median 7.4–10 s. The best edge-cost variant (back 4.0) reaches slide 0.55–0.59 |
 
 ---
 
@@ -97,350 +107,422 @@
 
 | # | Item | Why this position |
 |---|---|---|
-| G1 | New fixtures wired in; literal measured on long stories | Every later item measures on these stories. The literal numbers are the "before" for creative |
-| G2 | Style contract; `--style`; literal byte-identity | Every creative change branches on it. The identity baseline must be frozen **before** anything changes |
-| G3 | Director + license stages | They produce the plan that G4 and G5 render |
-| G4 | Renderer: `metaphor`, `callback`, `OverlayLayer`, gallery | G5 needs the templates and the overlay contract |
-| G5 | Integration: R8, deterministic scenes, metaphor images, overlays in compile, report | Joins G3's plan and G4's renderer |
-| G6 | Creative E2E (G15), creative long budget, Wave G close-out | Measures the finished Wave G before Wave H depends on it |
-| H1 | `present-sim` job kind + `deck` stage | The deck is the only input of everything after it |
-| H2 | `deck_bible` + `tree` + `section_title` + presentation profile + isolation | Needs H1's deck; G2's styles |
-| H3 | `perform` + `speak` + `hear` | Needs the deck's ground truth; independent of H2's tree |
-| H4 | `follow` + `compose` | Needs H2's tree and H3's heard words |
-| H5 | `score` + oracle + `presentation_sim.sh` (G16) + report | Needs H4's playback and the render |
-| H6 | Re-measure everything; close-out | Measures the finished system |
+| I1 | Callback dots count real appearances | Self-contained (compile + one template). Its golden changes are independent of I2's |
+| I2 | Asides move top-left; overlap measured on the rendered frame | Changes `SceneOverlay` (anchor enum), `OverlayLayer` and the gallery. I3 extends the same validator and component |
+| I3 | A thought aside always says something | Extends I2's `SceneOverlay` validator and `OverlayLayer` |
+| I4 | Motifs named and spaced; salvage instead of all-or-nothing | Director validators and salvage. I7 reruns the director on decks, and I9's creative budget needs a director that does not degrade |
+| I5 | No name on screen before the narration says it | A planner validator, plus the step-10 column that I6 and I8 reuse |
+| I6 | An execution failure fails the gate | Adds the asset column to step 10. I8's mechanics need it, and I9's budgets must count it |
+| I7 | Creative presentations get the license check, overlays and honest degradation | Needs I2/I3's overlay contract, I1's dot count and I4's director rules |
+| I8 | G16 states its bars in its exit code | Its mechanics assert I5, I6 and I7's outputs |
+| I9 | Re-measure; close-out | Measures the finished system |
 
 ---
 
 ## 3. The items
 
-### G1 — New fixtures wired in; literal measured on long stories
+### I1 — Callback "seen before" dots count the motif's real appearances
 
-**What this means for the user:** two longer, more interesting stories become part of every evaluation, and we know what today's literal style does with them.
+**What this means for the user:** the dots are what make a callback read as a callback ("you've seen this 4 times"). Today every callback shows two, whatever the viewer saw.
 
 **The gap:**
-- The two new scripts exist, but nothing knows them:
-  - no `fixtures/CHECKSUMS` lines;
-  - no `fixtures/expected/*.json`;
-  - not in the planner eval (`evals/planner.py`, four fixtures);
-  - no long-story budget mode.
+- **Compile:** `src/animated_infographics/compile.py:62–79` (`_get_item_count`) has no `callback` branch, so it returns 0, and `compile.py:246–251` writes `item_frames = []`.
+- **Renderer:** `renderer/src/templates/callback.tsx:75–77` falls back to `[15, 27]`, and `:78` sets `dotCount = itemFrames.length`, so there are always 2 dots.
+- **SFX:** the registry's `ding` cue fires `at="item"` (`contracts/templates.py:724`), so it has no frames to fire on.
+- **Contract:** `design_templates.md` §2.18 and `design_styles.md` §3.6: one dot per earlier **rendered** appearance, at `item_frames` (`spread 0.4`), with **no renderer default**.
 
 **Implementation:**
-1. Add both scripts to `fixtures/CHECKSUMS`. Verify that the SHA-256s equal `design_testing_and_validation.md` §1.
-2. Write `fixtures/expected/story_overdue_book.json` and `history_great_stink.json` with the expected facts of §1 there.
-3. Add both fixtures to `evals/planner.py`, with the same bars as the stories (distinct templates ≥ 7).
-4. `scripts/measure_budget.sh --long`: the same procedure on `story_overdue_book`, reporting each span as seconds **per narration minute** (narration duration from `transcript.json`) against the literal row of the long-story budget.
+1. **Count in `compile`.** In `compile.py`, the item count of a `callback` scene at index `idx` is the number of scenes with index < `idx` whose overlays, in the **same** `scene_overlays` mapping `compile` writes into the timeline (`compile.py:267`), contain a `motif_token` whose `motif_id` equals the callback's `props.motif_id`. Write it as a helper `callback_item_count(idx, scenes, scene_overlays) -> int`. I7 reuses it in `compose`. Then `item_frames(n, scene_frames, 0.4)` applies as for every other item template.
+2. **No renderer default.** In `callback.tsx`, use `const itemFrames = timing?.item_frames ?? [];` and draw `itemFrames.length` dots. With 0 dots there is no row and no empty container.
+3. **SFX.** Confirm that the existing item-cue path emits one `ding` per item frame for `callback`. If it skips templates outside a hard-coded list, add `callback` there.
+4. **Gallery.** The `callback__min`, `__typical` and `__max` fixtures set `timing.item_frames` explicitly: 1, 2 and 5 dots. Re-cut those three goldens, open each one, and name them in the commit body.
 
-**Validate:**
-- **Red first:** the planner eval runs only 4 fixtures; `CHECKSUMS` verification ignores the new scripts.
-- **Voice:** the eval's voice check on `story_overdue_book` must give `af_heart` / `llm`, evidence containing "grandmother". If it does not, **file it; do not edit the story.**
-- **Cold planner eval** on all 6 fixtures (`docs/evals/planner_<date>.md`): every §9 bar on the new fixtures too. Record each new fixture's light share, graphic words per narration word, R6/R7 counts, and critic outcomes.
-- **Long budget, literal,** cold → `docs/evals/budget_<date>.md`: ≤ 90 / 80 / 170 s per narration minute.
-- **Open and describe:** `story_overdue_book`'s literal contact sheet. Name three beats where the literal style restates the narration; these are the "before" for G6.
+**Validation:**
+- **Red first:** the new unit test (`design_testing_and_validation.md` §2, row "callback dots") against the current `compile` gives `len(item_frames) == 0`, not 3. Record it.
+- **Green:**
+  - the unit row;
+  - the renderer test: `item_frames: []` draws 0 dots;
+  - **recompile** the two creative E2E jobs (`artifacts/creative_e2e/20261006_094037/jobs/history-great-stink-20261006-164729` and `story-overdue-book-20261006-164040`, with `uv run infographics rerun <job> --from compile --jobs-dir <its jobs dir>` on a copy), and each callback's `len(item_frames)` must be **4**;
+  - render the callback scene still and count 4 dots.
+- **Add to G15** (`evals/verify_creative.py`): for each `callback` scene, `len(timing.item_frames)` equals the earlier token count and is ≥ 1.
+- **Falsify:** restore the `[15, 27]` default → the renderer test goes red. Make `callback_item_count` return 0 → the G15 assertion goes red.
 
-**Blast radius:** `fixtures/CHECKSUMS`, `fixtures/expected/`, `evals/planner.py`, `scripts/measure_budget.sh`, `design_testing_and_validation.md` (only if a measured number must be recorded there).
+**Blast radius:** `compile.py`, `renderer/src/templates/callback.tsx`, the callback gallery fixtures and 3 goldens, `evals/verify_creative.py`, and tests. The design docs are already updated.
 
 ---
 
-### G2 — Style contract; `--style`; literal byte-identity
+### I2 — Asides move top-left; overlap is measured on the rendered frame
 
-**What this means for the user:** they can choose a style per video, and choosing `literal` gives exactly the videos they have today.
+**What this means for the user:** today a thought bubble or label is drawn on top of the motif token, and on an intro, over the character's face. The two creative devices hide each other on the scenes they are meant to enrich.
 
-**The gap:** there is no style concept. `new` has no `--style`; `ingest.json` has no `style`.
+**The gap:**
+- **Renderer:** `renderer/src/story/OverlayLayer.tsx` draws:
+  - the token at [840, 180, 960, 300] (`:86–95`);
+  - the thought at [720, 175, 960, 345] (`:119–128`);
+  - the label at [680, 200, 1000, 260] (`:168–177`).
+  
+  Every pair overlaps; the coordinates came from the designer's spec.
+- **The test:** `renderer/src/theme/overlayLayout.ts:68–104` (`TEMPLATE_SLOT_BOUNDS`) omits `character_intro`'s avatar [320, 180, 760, 620], even though the falsification case at `OverlayLayer.test.ts:40–81` cites it. The test never compares one overlay with another.
+- **Contract:** `design_styles.md` §3.5–3.6 (revised), `design_data_contracts.md` §7 and `design_testing_and_validation.md` G10.
 
 **Implementation:**
-1. **Before any other change,** freeze the literal baseline. Run `new fixtures/scripts/molasses_flood.txt` with a warm cache and record the SHA-256 of `bible.json`, `beats.json`, `storyboard.json`, `plan_report.json` and `timeline.json` in `tests/data/literal_baseline/molasses_flood.sha256`. Commit it in this item.
-2. Add `contracts/styles.py`: `StyleSpec` and `STYLES = {literal, creative}` exactly as in `design_styles.md` §1–3. Export them (G8).
-3. Add `--style` to `new` and `rerun`. Record `style` in `ingest.json`, where a missing key loads as `literal`. Record `style` and `style_degraded` in `plan_report.json`.
-4. Insert the `director` stage into the stage list. For `literal` it is recorded as skipped and writes nothing. `rerun --from director` is valid.
+1. **Contract.** `SceneOverlay.anchor` (`contracts/models.py:784`) gains `"top_left"`. A model validator requires `motif_token`→`top_right`, `thought`/`label`→`top_left` and `prop`→`bottom_left`. Regenerate the schema and TypeScript (G8). `compute_scene_overlays` (`compile.py:82`) writes the anchor from the kind.
+2. **Geometry** (`design_styles.md` §3.6):
+   - **thought:** a cloud 240×170 centred at (180, 250), i.e. the box [60, 165, 300, 335];
+   - **label:** a chip with left edge x 60 and top y 200, text body 700 34→26 · **2 lines · 240 px**, within [60, 200, 300, 302];
+   - **token and prop:** unchanged.
+   
+   Update `OVERLAY_BOUNDS` to exactly [840,180,960,300], [60,165,300,335], [60,200,300,302] and [100,1020,240,1160].
+3. **Markers:**
+   - each overlay root: `data-overlay="<kind>"`;
+   - `FitText`'s root (`renderer/src/components/FitText.tsx`): `data-slot="<slotName>"`;
+   - `Avatar`'s root (`renderer/src/components/Avatar.tsx`): `data-occupies="avatar_<cast_id>"`;
+   - every template icon or node that is part of the layout: `data-occupies="<name>"`. At minimum, everything `TEMPLATE_SLOT_BOUNDS` lists today: `stat_callout`'s icon, `relationship_map`'s nodes and `cause_effect`'s cards.
+   - **Illustrations are not marked.**
+4. **The probe.** In the gallery composition only (`renderer/src/gallery/Gallery.tsx`), measure after layout on the golden's frame, using the same hook and timing that `FitText` uses to emit `OVERFLOW`:
+   - read `getBoundingClientRect()` of every marked element of the scene;
+   - for every overlay × overlay pair and every overlay × (`data-slot` or `data-occupies`) pair with an intersection area > 0, log exactly `OVERLAP fixture=<id> overlay=<kind> other=<name> px=<area>`, with the area rounded to an integer;
+   - elements inside an overlay root (its own `FitText` and icon) belong to that overlay and are never compared with it.
+5. **Collection.**
+   - `renderer/scripts/render.ts` parses `OVERLAP` lines next to `OVERFLOW` (`:98–114`) into `logs/overlap.json`, and copies it beside `overflow.json` (`:370–378`).
+   - Gallery mode exits 1 on any entry.
+   - `scripts/check_gallery.sh` treats a missing or unparseable `overlap.json` as a failure, exactly as `:54–78` does for `overflow.json`.
+6. **Fixtures.** For each of the 10 allowed templates:
+   - `overlays__<template>` carries a token, a thought and a prop (two asides at once: a probe-only combination);
+   - a new `overlays_label__<template>` carries a token and a label.
+   
+   Use the widest 3-word strings the fixtures use today. Thought and label share the top-left aside slot and are never drawn together. Re-cut the 10 goldens, cut the 10 new ones, open each one, and name them in the commit body.
+7. **Vitest** (`OverlayLayer.test.ts`):
+   - delete `TEMPLATE_SLOT_BOUNDS` and its two slot cases;
+   - keep the allowed/forbidden partition case;
+   - add: the four `OVERLAY_BOUNDS` boxes equal the values in step 2, and every pair drawn together is disjoint: token × thought, token × label, token × prop and thought × prop.
 
-**Validate:**
-- The "styles" row in `design_testing_and_validation.md` §2.
-- **The falsifying assertion:** literal byte-identity against `tests/data/literal_baseline/`.
-- **Falsify:** let `literal` write an empty `director.json` → `plan_report.json` or the stage list changes → red.
+**Validation:**
+- **Red first:** build steps 3–6 **before** moving anything. G10 with the **old** coordinates must print `OVERLAP` lines:
+  - thought × motif_token on every `overlays__*` fixture;
+  - label × motif_token on every `overlays_label__*` fixture;
+  - thought × avatar and label × avatar on the two `character_intro` fixtures.
+  
+  It must exit 1. Record the lines.
+- **Green:** 0 `OVERLAP` lines and 0 overflows on all 20 overlay fixtures; the goldens cut; G8 in sync.
+- **Falsify:**
+  - move the thought back to centre (840, 260) → G10 exits 1 naming `motif_token`;
+  - delete `overlap.json` after the render → G10 fails closed.
+- **Look:** open `overlays__character_intro` and `overlays__relationship_map` and describe where each overlay sits relative to the faces.
 
-**Blast radius:** `contracts/styles.py` (new), `contracts/export.py` outputs, `cli.py`, `ingest.py`, `jobs.py`, the stage runner, `planner/props.py` (`plan_report` fields), tests, `tests/data/literal_baseline/`.
+**Blast radius:**
+- contracts and generated schema/TS;
+- `compile.py`;
+- `OverlayLayer.tsx`, `overlayLayout.ts`, `OverlayLayer.test.ts`;
+- `FitText.tsx`, `Avatar.tsx`, and the marked templates;
+- `Gallery.tsx`, `render.ts`, `check_gallery.sh`;
+- 20 fixtures and 20 goldens (10 changed, 10 new).
 
 ---
 
-### G3 — Director + license stages
+### I3 — A thought aside always says something
 
-**What this means for the user:** a creative video starts from a plan for the whole story: what recurs, what gets a metaphor, what is planted early and what pays off, where a small gag goes. Nothing in the plan invents events, dialogue or facts.
+**What this means for the user:** the overdue story's very first scene carries an empty "…" bubble. An aside with nothing to show should not be drawn.
 
-**The gap:** nothing plans across a whole story. Every scene is chosen beat by beat (`planner/select.py`, `planner/props.py`).
+**The gap:**
+- **Director:** the validator in `planner/director.py:429–433` requires only a `cast_id` for a thought.
+- **Renderer:** `OverlayLayer.tsx` substitutes `ChatCircleDots` (`:157–158`), `Sparkle` (`:110`) and `Package` (`:228`).
+- **Real case:** `artifacts/creative_e2e/20261006_094037/jobs/story-overdue-book-20261006-164040/timeline.json` s001.
+- **Contract:** `design_styles.md` §3.3 rule 7 and §3.6 ("No fallback icons"); `design_data_contracts.md` §7.
 
 **Implementation:**
-1. **`planner/director.py`** and **`prompts/director.md`**, per `design_styles.md` §3.3. The prompt must contain:
-   - the four ingredients with the one-line definitions of §3.1;
-   - the counts formula, with the computed numbers filled in;
-   - the license table of §3.2 **verbatim**;
-   - the rule that plants show only the object, never its meaning;
-   - the beat list as `[i] text`, the compact bible and the icon block;
-   - "JSON only".
-2. **Validators 1–7 of §3.3,** with retry messages in the style of `design_planner.md` §6. For example: `motifs[0].appearances: the payoff (beat 12) must come at least 3 beats after every plant (beat 10)`.
-3. **The license check of §3.4,** with the question text verbatim. Removals go into `license_dropped`, and a failed call removes the item.
-4. **Degradation:** if the director fails every attempt, the job runs as literal with `style_degraded: true` and a `report.json` warning.
-5. **Review:** `director.json` is human-editable and re-validated by `preview`, like `storyboard.json`. `preview/storyboard.md` lists the plan at the top: motifs with their appearances, metaphors, asides.
+1. **Director rule 7:** a thought needs a `cast_id` **and** an `icon` or a `text`. Error, verbatim: `asides[<k>]: a thought needs an icon or text`.
+2. **`SceneOverlay`'s validator** (from I2) also requires:
+   - `thought`: an icon or a text;
+   - `prop`: an icon;
+   - `label`: a text;
+   - `motif_token`: an icon and a `motif_id`.
+3. **`compute_scene_overlays`** drops an aside lacking its data into `overlay_dropped` with reason `incomplete`. This guards against a hand-edited `director.json` at review.
+4. **Renderer:** remove the three fallback icons. An overlay without its data is not drawn.
 
-**Validate:**
-- The "director" and "license check" rows of `design_testing_and_validation.md` §2 (stub backend).
-- **Red first:** none of these modules exist; record that the tests fail on import.
-- **Live measurement** (`tests/slow/test_director_live.py` plus a report section in `docs/evals/planner_<date>.md`): run the director cold on **all six** fixtures, then the license check. Report per fixture:
-  - attempts used;
-  - each item;
-  - each license verdict;
-  - and, for every metaphor and aside, one sentence of your own judgement: does it add something, and does it respect the license?
-- **Bars:**
-  - a valid plan within 3 attempts on **6 of 6** fixtures;
-  - ≥ 1 motif with a plant and a payoff on each of `story_overdue_book`, `history_great_stink`, `story_recipe_box` and `story_room_12`;
-  - license drops are reported, with no bar.
-- If any bar fails, file it with the outputs.
-- **Falsify:** remove validator 3 (plant before payoff) → the stub case with a payoff before its plant passes → red.
+**Validation:**
+- **Red first:**
+  - the director unit case `{"kind": "thought", "icon": null, "text": null, "cast_id": "c1"}` passes today's validators;
+  - recompiling a copy of `story-overdue-book-20261006-164040` (`rerun --from compile`) keeps s001's empty thought.
+- **Green:**
+  - the exact error;
+  - the recompile records s001's thought under `overlay_dropped` (`incomplete`);
+  - the contract cases in the "overlay anchors and completeness" row.
+- **Add to G15:** no `thought` overlay lacks both `icon` and `text`.
+- **Falsify:** remove the new clause from rule 7 → the unit case goes red.
 
-**Blast radius:** `planner/director.py` (new), `planner/license.py` (new), `prompts/director.md` (new), `contracts/` (director models), `preview.py`, tests.
+**Blast radius:** `planner/director.py`, contracts, `compile.py`, `OverlayLayer.tsx`, `evals/verify_creative.py`, and tests.
 
 ---
 
-### G4 — Renderer: `metaphor`, `callback`, `OverlayLayer`, gallery
+### I4 — Motifs named in the story's words and spaced; one stuck item no longer sinks the plan
 
-**What this means for the user:** the creative style has pictures to draw with: a metaphor scene, a payoff scene that visibly calls back, and small tokens and gags on top of ordinary scenes.
+**What this means for the user:**
+- A callback labelled "Silver Pump Handle" names something the story never mentions.
+- The overdue story's callback arrives 2.5 minutes after the viewer last saw the ink, by which time it is forgotten.
+- **Most seriously,** one metaphor the model keeps repeating ("a paper book…") silently turns a whole creative video, or a whole creative presentation, into a literal one.
 
-**The gap:** the renderer has 16 templates and no overlay layer.
+**The gap:**
+- **Director:** `planner/director.py:235–246` checks a motif name's word count only. `:298–327` checks plant-before-payoff, but not spacing.
+- **Frozen evidence:** `director.json` in `history-great-stink-20261006-164729` (name "Silver Pump Handle") and in `story-overdue-book-20261006-164040` (name "Blue ink pen"; appearances 12, 15, 18, 19, 51).
+- **All-or-nothing:** `plan_director` (`director.py:474–481`) returns `None` when the third attempt fails, however small its errors. The recorded attempts are in `docs/evals/assets/2026-10-06/wave_i_director_attempts.json`.
+- **The hidden list:** the prompt never shows the model rule 6's word list.
+- **Contract:** `design_styles.md` §3.3 rules 3 and 5 (revised), "Show the model rule 6's words" and "Salvage after the last attempt".
 
 **Implementation:**
-1. **Contracts:**
-   - add `metaphor` and `callback` to the registry and props models exactly as in `design_templates.md` §2.17–2.18, including WORD_CAPS (`label` 3) and the template classes (picture);
-   - add `overlays` to the timeline scene contract (`design_data_contracts.md` §7), defaulting to `[]` and **serialised only when non-empty**, so literal timelines stay byte-identical.
-2. **Templates:** `renderer/src/templates/metaphor.tsx` and `callback.tsx`.
-3. **Overlays:** `renderer/src/story/OverlayLayer.tsx`, per `design_styles.md` §3.6.
-4. **Gallery:**
-   - `min`/`typical`/`max` fixtures for both templates;
-   - `overlays__<template>` fixtures for each of the 10 allowed templates;
-   - goldens re-cut for new fixtures only.
-5. **Overlap test:** a vitest case asserts that every overlay rectangle is disjoint from every text-slot rectangle of that template at its `max` layout. Use the layout constants; do not hard-code numbers twice.
+1. **Rule 5, story words.**
+   - Take the words of `name` as `re.findall(r"[A-Za-z']+", name)`, minus `a`, `an`, `the`, `of` and `and`.
+   - Each word must occur as a whole word, casefolded, in the narration: the beat texts joined. A trailing `s` may be added or removed.
+   - Error, verbatim: `motifs[<k>].name: "<word>" is not in the narration — name the motif with the story's own words`.
+2. **Rule 3, spacing.** Sort the appearances by `beat_i`. Consecutive appearances must be ≥ 3 apart, and the payoff ≤ 20 after the previous appearance. Errors, verbatim (§3.3):
+   - `motifs[<k>].appearances: beats <a> and <b> are too close — keep appearances at least 3 beats apart`
+   - `motifs[<k>].appearances: the payoff at beat <p> is <d> beats after the last appearance at <a> — add an echo or move the payoff within 20 beats`
+3. **The prompt** (`planner/prompts/director.md`) gains one sentence, verbatim: `Name each motif with words the narration uses, and spread its appearances: at least 3 beats apart, with the payoff within 20 beats of the appearance before it.` Re-read the whole prompt after the edit (lesson 2.12).
+4. **Rule 6's words in the prompt.** The prompt line is verbatim from §3.3, with the list generated from `TEXT_EXPECTED_WORDS` and `TEXT_EXPECTED_PHRASES` (`assets/illustrate.py:44`, `:134`), never copied.
+5. **Salvage** (§3.3, verbatim):
+   - after the third attempt, if every error is item-local or a count error, remove the erring items into `director_dropped`, waive the counts, and accept the plan if anything remains;
+   - otherwise degrade as today.
+   
+   Add `director_dropped` to `DirectorPlan` (G8). `report.json` and the contact sheet list the dropped items, like `license_dropped`.
+6. **Frozen data:** the two `director.json` files above, with their transcripts, and the two cases in `wave_i_director_attempts.json` go into `tests/data/wave_i_director_cases.json`.
 
-**Validate:**
-- G5, G8 and G10 green, with 0 overflows.
-- The overlap test passes.
-- Literal byte-identity (G2) still holds.
-- **Falsify:** move the motif token to (540, 240) → the overlap test fails against `kinetic_quote`'s or `character_intro`'s slots.
-- Open and describe `metaphor__typical`, `callback__typical` (the "seen before" dots) and `overlays__location`.
+**Validation:**
+- **Red first:** today's validators pass both frozen plans. Record it.
+- **Green:**
+  - the history plan fails rule 5 on "silver";
+  - the overdue plan fails rule 5 on "pen" and rule 3 twice (18/19 too close; 51 is 32 after 19);
+  - the passing cases from the testing row pass ("the pump handle", "pumps"; 19, 35, 42, 48, 56).
+- **Salvage:** both recorded cases end in a salvaged plan (testing row "director salvage and prompt"). The cold story keeps 3 metaphors; the deck keeps 1.
+- **Live, under the conditions that broke it:** for each of the 6 fixtures, run `ollama stop gemma4:26b`, then the director with a fresh cache.
+  - It must end in a plan, valid or salvaged, on **6/6**, never degraded.
+  - Record per fixture: the attempts, the `director_dropped` items and every motif name.
+  - **If any fixture degrades, or salvage drops a motif on more than 2 fixtures, STOP and file it** with the errors and options. Do not loosen 3 or 20.
+- **Add to G15:** every rendered motif name passes rule 5.
+- **Falsify:**
+  - drop the trailing-`s` allowance → the "pumps" case goes red;
+  - set 20 → 40 → the overdue spacing case passes, so the test goes red.
 
-**Blast radius:** `contracts/templates.py`, `contracts/models.py`, generated schema/TS, `renderer/src/templates/`, `renderer/src/story/`, gallery fixtures and goldens, vitest.
+**Blast radius:** `planner/director.py`, `planner/prompts/director.md`, `contracts/director.py` and generated files (G8), `preview.py` (contact sheet and report), `evals/verify_creative.py`, tests and frozen data.
 
 ---
 
-### G5 — Integration: R8, deterministic scenes, metaphor images, overlays
+### I5 — No name on screen before the narration says it
 
-**What this means for the user:** the plan actually reaches the screen. A metaphor beat shows the metaphor, a payoff shows a callback, and the plants and gags appear where they were planned.
+**What this means for the user:** the video reveals that the anonymous note came from "Robert Okafor" minutes before the story does, and introduces "Sofia" while the narrator still says "a woman walked in". This is in every style.
 
-**The gap:** nothing consumes `director.json`.
+**The gap:**
+- **Code:** `planner/validate.py` has no such rule. The meaning rules sit in `validate_scene` (`:438` onwards, e.g. the "ago" rule at `:664–667`, which already reads `full_transcript`).
+- **The contract** is `design_planner.md` §6 item 6, "A name is not shown before the narration says it", which defines the fields, the name tokens and four error strings.
+- **Measured:** 7 of 32 named displays.
 
 **Implementation:**
-1. **`select.py`:** rule R8 per `design_planner.md` §4 (order R1, R8, R6, R2, R4, R5, R7). R2 never rewrites an R8 scene.
-2. **`props.py`:** build `metaphor` and `callback` scenes deterministically with `rationale: "director"`, no LLM and no critic. A failing scene falls back through the ladder to its alternate.
-3. **`assets.py`:** generate metaphor illustrations like set pieces. The cache key includes the metaphor id and image text; the text check runs with its retries. A failed image leaves the template's no-image fallback in place, and is recorded.
-4. **`compile.py`:**
-   - write overlays per `design_styles.md` §3.5, including the moves and drops, recorded under `overlay_dropped`;
-   - overlay text counts toward graphic words (`planner/words.py`; update `graphic_words` and E2E step 9 accordingly).
-5. **`preview`:** contact-sheet tiles show their overlays. Tiles of metaphor and callback scenes carry a small "M" / "C" badge.
-6. **`report.json`:** every director item with its fate (rendered, moved, `license_dropped`, `overlay_dropped`).
+1. **The rule.** Add it to `validate_scene` exactly as specified:
+   - **fields:** `kinetic_quote.attribution_cast_id`, `character_intro.cast_id`, each `relationship_map.cast_ids` entry and `text_thread.contact_cast_id`;
+   - **exempt:** cast members with `is_narrator`;
+   - **narration prefix:** transcript words `0 … beat.word_end`;
+   - **match:** the full name, or a name token (letters and apostrophes, ≥ 3 characters, not `the`/`of`/`and`/`mr`/`mrs`/`ms`/`dr`), as a whole word, casefolded;
+   - **errors:** the four strings, verbatim.
+   - Wire the beat's `word_end` in the same way the existing beat-text rules get `beat_text`.
+2. **Frozen data:** `tests/data/spoiler_cases.json`, holding the 7 measured scenes with their props, the bible cast entry, and the transcript up to the beat end:
+   - `artifacts/creative_e2e/20261006_094037/jobs/history-great-stink-20261006-164729`: s004 (`relationship_map`, John Snow) and s015 (`character_intro`, John Snow);
+   - `…/story-overdue-book-20261006-164040` and `…/story-overdue-book-20261006-165345`: s012 (`kinetic_quote`, Robert Okafor) and s017 (`relationship_map`, June Lind);
+   - `artifacts/e2e/20261006_092212/jobs/room12_run/story-room-12-20261006-162927`: s019 (`character_intro`, Sofia).
+3. **The step-10 column.** `evals/verify_e2e_scenes.py` gains a `names_before_narration` column over the final storyboard, using the same function, imported rather than copied. Its count must be 0. The planner eval (`evals/planner.py`) reports it with a bar of 0.
 
-**Validate:**
-- The "R8 and overlays" row of `design_testing_and_validation.md` §2.
-- **Red first:** a creative job today renders no metaphor.
-- An end-to-end creative run on `story_overdue_book` reaches `awaiting_review`. Open its contact sheet and describe every metaphor, callback, token and aside, and whether each respects the license.
-- **Falsify:** skip R8 → 0 metaphor scenes → the G6 bar would fail; record the count.
+**Validation:**
+- **Red first:** the new column on the four job directories above reports 2, 2, 2 and 1, and exits 1 (`design_testing_and_validation.md` §4 step 10).
+- **Green:**
+  - each frozen case gives its exact error;
+  - the same scene moved after the name passes;
+  - a narrator `character_intro` passes;
+  - a `dialogue` with an unnamed speaker passes.
+- **Live:** re-plan `story_overdue_book` (creative), `history_great_stink` (creative) and `story_room_12` (literal) cold. The column must be 0. For each of the 7 former scenes, write in the commit body what the final scene shows now. The planner eval's fallback bars must still hold.
+- **Falsify:** delete the rule → every frozen case goes red.
 
-**Blast radius:** `planner/select.py`, `planner/props.py`, `assets/`, `compile.py`, `planner/words.py`, `evals/word_density.py`, `preview.py`, `report.json` writer, tests.
+**Blast radius:** `planner/validate.py`, `evals/verify_e2e_scenes.py`, `evals/planner.py`, tests, frozen data, and the E2E report columns.
 
 ---
 
-### G6 — Creative E2E (G15), creative long budget, Wave G close-out
+### I6 — An execution failure fails the gate
 
-**What this means for the user:** measured proof that the creative videos add something, stay within the license, keep the word budget, and finish in reasonable time.
+**What this means for the user:** today every illustration in a run can fail to generate, the video quietly ships with icon fallbacks, and every gate says green.
+
+**The gap:**
+- **Evidence:** `jobs/history-great-stink-20261006-124512`, `-132526`, `jobs/story-overdue-book-20261006-134157` and `-124735` have `assets/manifest.json` entries with `status: "failed"`: 5, 7, 5 and 5 of them. Each has the error `mflux exited with code 1: … huggingface_hub/_snapshot_download.py …` and `attempts: []`.
+- **Logs:** each `logs/assets.log` holds only the summary line written by `stages/assets.py:37`.
+- **No gate counts them:** neither step 10 nor G15, G16 nor `measure_budget.sh`.
+- **Contract:** `design_testing_and_validation.md` §4 step 10 (the asset execution column) and §5 (a budget run counts only with 0 of them).
 
 **Implementation:**
-1. Write `scripts/creative_e2e.sh` per `design_testing_and_validation.md` §4b, and add it to the battery as G15.
-2. Run `scripts/measure_budget.sh --long --style creative`, cold.
-3. Write `docs/evals/creative_<date>.md`, containing:
-   - the per-item fates;
-   - the stills, side by side with the literal control at the same beat;
-   - for each story, a short paragraph: what the creative version adds that the literal one does not, and anything that misfires.
+1. **The health function.** Add `evals/asset_health.py` with `execution_errors(job_dir) -> list[dict]`. It returns the manifest entries with `status == "failed"` whose `error` does not start with `lettering detected`. A job that ran the assets stage but has no `assets/manifest.json` is itself an error (fail closed).
+2. **Step 10.** `verify_e2e_scenes.py` gains an `asset_execution_errors` column, which must be 0, so G12, G15 and G16 inherit it.
+3. **The budget** (`design_testing_and_validation.md` §5, revised):
+   - `scripts/measure_budget.sh` exits 1 when the measured job has any execution error, and writes the count into the budget report.
+   - **For `--style creative`,** it also exits 1 unless `plan_report.style_degraded` is false and ≥ 2 metaphor images are in `assets/images/`.
+   - Before its cleanup trap deletes the temp dirs, it copies the job's `logs/`, `plan_report.json`, `director.json` and `assets/manifest.json` to `artifacts/budget/<timestamp>/<span>/`.
+4. **The assets log.** `stages/assets.py` adds `execution_errors=<n>` to its summary line, and logs one line per failure before it: `asset <id> failed: <first line of the error>`.
+5. **Diagnose the agent's environment.** In your normal shell, re-run a copy of `jobs/history-great-stink-20261006-124512` with `rerun --from tree`. Presentation jobs allow only `deck`, `tree`, `perform`, `follow` and `compose` (`cli.py:655`). The assets stage runs after the tree, and a warm LLM cache keeps the tree identical.
+   - Record `env | grep -E '^HF_'` and whether images generate.
+   - If the cause is in the repository (e.g. a stage that sets `HF_HUB_OFFLINE` without `HF_HOME`), fix it in this item.
+   - Otherwise, write the cause in the commit body.
 
-**Validate:**
-- **G15 green,** meaning all of these hold on both creative jobs:
-  - every motif planted before its rendered payoff;
-  - ≥ 2 metaphors and ≥ 2 asides;
-  - 0 license failures left and 0 overlay overlaps;
-  - step 9 density and step 10 criteria.
-- **Long creative budget:** ≤ 110 / 85 / 195 s per narration minute.
-- **Falsify:** stub the director to return no motifs → G15 red.
+**Validation:**
+- **Red first:** the new column on the four jobs above gives 5, 7, 5 and 5, and exits 1.
+- **Green:**
+  - a unit case: a manifest with one `lettering detected in 3 attempts` entry → 0;
+  - one with `mflux exited with code 1` → 1;
+  - a missing manifest → an error;
+  - the current G12 jobs, which have one lettering failure, → 0.
+- **Falsify:** count lettering failures as execution errors → the lettering unit case goes red.
 
-**Close-out of Wave G (not of this guide):**
-1. Full battery, bare; update §1.3.
-2. Move Wave G to §5.1.
-3. Update `ongoing_general_errors.md` §1.
-4. **Continue with H1.**
-
-**Blast radius:** `scripts/creative_e2e.sh` (new), `scripts/battery.sh`, `scripts/measure_budget.sh`, `docs/evals/`.
+**Blast radius:** `evals/asset_health.py`, `evals/verify_e2e_scenes.py`, `scripts/measure_budget.sh`, `stages/assets.py`, and tests.
 
 ---
 
-### H1 — `present-sim` job kind + `deck` stage
+### I7 — Creative presentations get the license check, overlays, and honest degradation
 
-**What this means for the user:** a story becomes a "PowerPoint" of key moments: the input every live presentation will start from.
+**What this means for the user:**
+- in a creative presentation, metaphors reach the screen without the check that keeps them truthful;
+- motif tokens and asides never appear;
+- one "creative" run was silently literal.
 
-**The gap:** there is no presentation job kind, no `present-sim` command and no deck.
+**The gap:**
+- **No license check:** `presentation/tree.py:153–159` calls `plan_director` and writes `director.json`, but never runs the license check (`planner/license.py`).
+- **No overlays:** `tree.py:494` and `compose.py:219` hard-code `"overlays": []`.
+- **Silent degradation:** when the director returns `None`, nothing is logged or recorded.
+- **Evidence:** `jobs/story-overdue-book-20261006-124735` (`style: creative` in `ingest.json`) has no `director.json`, and its template counts are identical to the literal run's.
+- **Contract:** `design_presentation_simulation.md` §3, "Creative in a presentation job" (items 1–6), and the R1 assertion above it.
 
 **Implementation:**
-1. Add `state.json.kind` (`"video"` | `"presentation"`, default `"video"`) and the presentation stage list (`design_system_architecture.md` §4).
-2. Add the `present-sim` CLI per §6 there, recording `perturb`, `seed` and `tiebreak` in `ingest.json`.
-3. Add the `deck` stage per `design_presentation_simulation.md` §2: prompt `prompts/deck.md`, validators 1–6, and `deck.json`.
-4. **Review:** the contact sheet's first page lists the slides and points. `deck.json` is human-editable and re-validated by `preview`.
+1. **The overdue failure is diagnosed.** Case `story_overdue_book_deck` in `docs/evals/assets/2026-10-06/wave_i_director_attempts.json`: all 3 attempts kept a "book" metaphor (rule 6). I4's salvage turns it into a plan with 1 metaphor; this item makes that plan reach the screen. Confirm it by re-running `present-sim` and checking that `director.json` exists with a `director_dropped` entry.
+2. **The license check.**
+   - After the director, run the license check on every metaphor and aside.
+   - `planner/license.py`'s `_build_passage` (`:45`) builds a four-beat passage. Add a parameter, or a presentation adapter, so that the passage is **the point's slide**: its title and all its points.
+   - Removed items go into `director.json`'s `license_dropped`.
+3. **Overlays.**
+   - Run `compute_scene_overlays` over the point scenes in deck order, and store the result in a new node field `overlays: list[SceneOverlay] = []` (G8).
+   - `compose` copies a node's `overlays` into every timeline scene it emits for that node.
+   - `compose` computes a `callback`'s `item_frames` with I1's `callback_item_count`, applied to the deck-order nodes.
+4. **Records.**
+   - `TreePlan` gains `style_degraded: bool = False`.
+   - `logs/tree.log` ends with `director=<ok|degraded> license_calls=<m> license_dropped=<d> overlays=<o>`.
+   - On degradation, also log `director: degraded to literal after <n> attempts: <last validator error>`.
+5. **R1's second half.** A point node selected as `title_card` is replaced with its alternate and logged `RuleRepair(rule="R1")`.
 
-**Validate:**
-- The "deck" row in `design_testing_and_validation.md` §2.
-- **Red first:** `present-sim` does not exist.
-- **Live:** decks for `history_great_stink` and `story_overdue_book`. The slide counts must be `round(words / 100)`, clamped: 7 and 8. Open and describe both decks. Are the slides the story's key moments? Would a presenter recognise them as a deck?
-- **Falsify:** let the partition skip one sentence → validator 4 rejects it.
+**Validation:**
+- **Unit:** the "creative presentation" row in `design_testing_and_validation.md` §2.
+- **Live:** run `present-sim` on `history_great_stink` (creative, strong) and `story_overdue_book` (creative, mild). Each must have:
+  - a `director.json`;
+  - `license_calls` equal to its metaphors plus asides;
+  - ≥ 1 `metaphor` node;
+  - ≥ 1 non-empty `overlays` in `timeline.json`;
+  - `style_degraded: false`, or the failure filed per step 1.
+  
+  Open a metaphor node's still and an overlay node's still, and describe each.
+- **Isolation:** the existing isolation test extends to the license call. It may read only the deck.
+- **Falsify:**
+  - skip the license call → the backend-counter unit case goes red;
+  - hard-code `overlays: []` again → the overlay unit case goes red.
 
-**Blast radius:** `cli.py`, `jobs.py`, `contracts/` (deck models), `presentation/deck.py` (new), `prompts/deck.md` (new), `preview.py`, tests.
+**Blast radius:**
+- `presentation/tree.py`, `presentation/compose.py`;
+- `planner/license.py`;
+- `contracts/tree.py` and generated files (G8);
+- tests.
 
 ---
 
-### H2 — `deck_bible` + `tree` + `section_title` + presentation profile + isolation
+### I8 — G16 states its bars in its exit code
 
-**What this means for the user:** every slide gets its animations planned before the talk, with a repeated section graphic, and links between them for going forward, skipping and going back.
+**What this means for the user:** today the presentation gate says "green" while the follower shows the wrong slide half the time. After this item, the battery says so plainly, and a real regression can no longer hide behind a known miss.
 
-**The gap:** nothing plans from a deck.
+**The gap:**
+- **Fail-open exit:** `scripts/presentation_sim.sh:336` labels a missed bar "FAIL (Filed)" and the script ends `exit 0` (`:424`).
+- **A falsification that cannot fail:** `:226–268` asserts that shuffled speech scores below the mild bars. The real runs score below them too.
+- **It does not run the pipeline when old jobs exist:** `:52–80` scans `jobs/` (git-ignored) for a job with the same fixture, style, level and seed, and re-scores it. The designer's battery run (1,416 s, exit 0) only re-scored the agent's four jobs from October 6, 12:45–13:41; so did H6. The script defines `ARTIFACTS_DIR` (`:26`) but never puts jobs in it.
+- **Contract:** `design_testing_and_validation.md` §4c (revised) and the G16 row in §3. The designer's earlier wording, "met or filed", caused this.
 
-**Implementation:**
-1. **`deck_bible`:** run the existing bible stage on the deck text only (titles and points as paragraphs), writing `deck_bible.json`.
-2. **Template:** `section_title` per `design_templates.md` §2.19 (contract, renderer, gallery fixtures).
-3. **Presentation profile:** R2, R6 and R7 off; everything else on. The style applies; creative runs the director over the point list.
-4. **`tree`** per `design_presentation_simulation.md` §3:
-   - section nodes are deterministic;
-   - point nodes are planned with each point as a beat, using a synthetic one-beat-per-point transcript built from the deck for grounding;
-   - edges use the costs of the table there;
-   - `tree.json` is written, and `assets` runs over its scenes.
-5. **Isolation** per `design_data_contracts.md` §10: patch file access during `tree` and fail on any read outside `deck.json`, `deck_bible.json` and the style.
+**Implementation** (`design_testing_and_validation.md` §4c, verbatim rules):
+0. **Fresh jobs, always.**
+   - Delete the reuse scan (`:52–80`).
+   - Every run creates its jobs in `artifacts/presentation_sim/<timestamp>/jobs/`, and `PRESENTATION_JOBS_DIR` defaults there.
+   - Find each new job by the job id that `present-sim` prints, not by sorting directory names (`:101`).
+1. **Mechanics, each failing with exit 1:**
+   - every artefact exists;
+   - step 10 is all 0, including I5's and I6's columns, and the density bar holds;
+   - **the oracle meets every §8 bar**, judged by **the same bars function** the follower is judged by;
+   - no point node uses `title_card`;
+   - each creative run has `style_degraded: false`, ≥ 1 `metaphor` node, a `tree.log` whose `license_calls` equals the metaphors plus asides plus `license_dropped`, and ≥ 1 non-empty `overlays`.
+2. **Bars.** Print one `BAR <run> <metric> <value> <bar> PASS|MISS` line per run and metric. If the mechanics pass and any follower bar misses, exit **3**.
+3. **Falsification, every invocation:**
+   - (a) the bars function on the **oracle** playback must PASS everything (this is the oracle mechanics check, run through the same function);
+   - (b) on a **shuffled** `heard.json`, it must MISS the accuracy bars;
+   - (c) the mechanics check on a temporary copy of one job with `out/oracle.mp4` deleted must fail.
+   
+   If any of these behaves otherwise, exit 1.
+4. **Reuse for iteration only.** When `PRESENTATION_REUSE_JOBS="<four job dirs>"` is set, the script skips creating jobs and runs everything else on those jobs. The report is then headed `NOT A GATE RUN: re-scored existing jobs`. `battery.sh` refuses to run G16 while the variable is set.
+5. **The battery.** `scripts/battery.sh` (`:50`, `:112`, `:142`) reports G16's code as it is. The battery's own exit is non-zero while G16 is non-zero.
+6. **The report.** `docs/evals/presentation_<date>.md` shows the BAR table and the line `exit 3: follower bars missed (Issue 8)`.
 
-**Validate:**
-- The "tree isolation" row.
-- **Red first:** no `tree` stage.
-- **Live:** trees for both fixtures. Open the contact sheet of each tree's node scenes and describe them. Count templates per node kind, and confirm the section graphic appears once per slide.
-- **Falsify:** let `tree` read the script → the isolation test fails.
+**Validation:**
+- **Red first:**
+  - the **current** script, run as the battery runs it, prints `Reusing existing verified job` four times and exits 0 without running `present-sim`;
+  - with the agent's four jobs, it exits 0 despite the misses.
+  
+  Record both.
+- **Green:**
+  - a battery run creates four new jobs under `artifacts/presentation_sim/<timestamp>/jobs/` (list them in the commit body) and exits **3**;
+  - with `PRESENTATION_REUSE_JOBS` set to the agent's four jobs, the MISS lines match Issue 8's table;
+  - the oracle lines are all PASS.
+- **Falsify each direction:**
+  - make the bars function always return MISS → (a) fails → exit 1;
+  - make it always return PASS → (b) fails → exit 1;
+  - make the mechanics check ignore `oracle.mp4` → (c) fails → exit 1.
+- **Also falsify the creative check:** hard-code a creative run's `style_degraded: true` in a copy → exit 1.
 
-**Blast radius:** `presentation/tree.py` (new), `planner/select.py` (profile switch), `contracts/` (tree, `section_title`), renderer template and gallery, tests.
-
----
-
-### H3 — `perform` + `speak` + `hear`
-
-**What this means for the user:** a realistic "presenter" who paraphrases, says "um", skips things, goes off on tangents and refers back, plus the exact ground truth of what they meant at every moment.
-
-**The gap:** nothing perturbs a script, and nothing simulates live ASR.
-
-**Implementation:**
-1. **`perform`** per `design_presentation_simulation.md` §4:
-   - the operation table with its rates;
-   - seeded RNG (`random.Random(seed)`, one stream per operation, so adding an operation does not shift the others);
-   - paraphrase, ad-lib and back-reference prompts (`prompts/perform_*.md`): paraphrase keeps numbers, names and quotes;
-   - labels and validators;
-   - `performance.json` and the `op_counts`.
-2. **`speak`:** Kokoro with the job's voice → narration plus `speak_timing.json`, from sentence offsets.
-3. **`hear`:** mlx-whisper on that audio → `heard.json` (the transcript contract, `source: "asr"`).
-
-**Validate:**
-- The "perform" row (stub backend).
-- **Red first:** no module.
-- **Live, on `history_great_stink` with `--perturb strong --seed 7`:** list every operation applied. Read the performed text aloud in your head; does it sound like a person presenting? Quote three examples. Report the ASR word error rate against the performed text (normalised as in the Whisper WER test); no bar, recorded.
-- **Determinism:** the same seed reproduces a byte-identical `performance.json`, with the LLM cache warm.
-- **Falsify:** let the paraphrase drop a number → the validator falls back to verbatim. Test it.
-
-**Blast radius:** `presentation/perform.py` (new), prompts, `audio/` reuse, `contracts/`, tests.
+**Blast radius:** `scripts/presentation_sim.sh`, the bars function (in `presentation/score.py` if it lives there), `scripts/battery.sh`, the report template, and §1.3 of this guide.
 
 ---
 
-### H4 — `follow` + `compose`
+### I9 — Re-measure; close-out
 
-**What this means for the user:** the animation follows the talk as it is heard, the way it would live: forward, skipping and returning, holding through tangents.
+**What this means for the user:** the fixes are proven on fresh output, and the remaining open question (Issue 8) is stated with fresh numbers.
 
-**The gap:** nothing follows speech through a tree.
-
-**Implementation:**
-1. **`presentation/match.py`** per `design_presentation_simulation.md` §6:
-   - streaming decision points (gap ≥ 300 ms, or 1.5 s), a 20-word window;
-   - normalisation with the committed stopword list and stemming;
-   - BM25 (k1 1.2, b 0.75) with document frequencies over the tree's node texts, plus edge costs;
-   - commit rules: 2 consecutive tops, margin ≥ 1.0, dwell ≥ 2.0 s;
-   - the first section node is shown from 0;
-   - latency = decision time + measured compute time;
-   - optional `--tiebreak llm`, off by default.
-2. **`compose`** per §7:
-   - timeline from playback, no `LEAD_MS`;
-   - narration audio;
-   - captions from ASR words with a 300 ms lag;
-   - short scenes merged.
-
-**Validate:**
-- The "follow" row (causality, hysteresis, dwell, edges, IDF source, latency).
-- **Red first:** no module.
-- **Live:** run `follow` on H3's strong `history_great_stink` performance. Print the commit list beside the ground-truth points; describe every wrong commit and its cause.
-- **Falsify:** remove the hysteresis → one strong window commits → red.
-
-**Blast radius:** `presentation/match.py` (new), `presentation/compose.py` (new), `contracts/` (playback), tests.
-
----
-
-### H5 — `score` + oracle + `presentation_sim.sh` (G16) + report
-
-**What this means for the user:** a number, and a picture, for how well the video followed the talk, compared with a perfect follower.
-
-**The gap:** nothing scores a presentation video.
-
-**Implementation:**
-1. **`presentation/score.py`** per `design_presentation_simulation.md` §8:
-   - every metric, exactly as defined;
-   - the strip chart PNG, drawn with Pillow (already a dependency; add no new library);
-   - `--oracle` composes from ground truth and renders `oracle.mp4`.
-2. **`scripts/presentation_sim.sh`** per `design_testing_and_validation.md` §4c, added to the battery as G16. It covers the four runs of §9 and writes `docs/evals/presentation_<date>.md`.
-3. **The tie-break measurement** (§6.4): run all four with `--tiebreak llm` too, and apply the stated rule for making it default. Record the numbers and the decision.
-
-**Validate:**
-- The "score" row (synthetic playbacks).
-- **G16:** every §8 bar on every run. **A failing bar is filed with the measurement and options; it is never tuned.**
-- Open and describe each strip chart and the two `present-sim` videos with the worst score.
-- **Falsify:** a shuffled `heard.json` → the accuracy bars fail → G16 red.
-
-**Blast radius:** `presentation/score.py` (new), `scripts/presentation_sim.sh` (new), `scripts/battery.sh`, `docs/evals/`.
-
----
-
-### H6 — Re-measure; close-out — COMPLETED
-
-**Delivered and verified October 6, 2026:**
-1. Full battery G1–G16 passed bare (all 16 gates exit 0; 350 fast tests, 43 slow tests, 19 vitest, 59 goldens with 0 overflows, G12 E2E, G13 offline, G14 doctor, G15 creative E2E, G16 presentation simulation).
-2. Cold planner eval on 6 fixtures recorded in `docs/evals/planner_2026-10-06.md`.
-3. Performance budgets measured and verified cold: `story_recipe_box` (primary, 397.1s <= 600s), long literal (`story_overdue_book`, 136.67 s/min <= 170 s/min), and long creative (`story_overdue_book`, 140.45 s/min <= 195 s/min).
-4. G15 (`docs/evals/creative_2026-10-06.md`) and G16 (`docs/evals/presentation_2026-10-06.md`) reports generated and verified.
-5. README updated with `--style`, `present-sim`, and `score` documentation and scope boundaries.
-6. Execution guide updated to Queue Complete; §1.3 baseline updated; §5.1 includes Waves G and H.
+1. **The full battery G1–G16, bare.** Expected: everything 0 except **G16 = 3**. Record the BAR table.
+2. **The three cold budgets** (`measure_budget.sh`, `--long`, `--long --style creative`), each with 0 cache hits **and 0 asset execution errors**. **The creative one must be creative:** not degraded, with ≥ 2 metaphor images. It is the first valid creative budget, so record its spans against 110 / 85 / 195 s/min, and file any miss.
+3. **The cold planner eval** on all 6 fixtures. `names_before_narration` must be 0, and the director must be valid on 6/6.
+4. **Regenerate the G15 and G16 reports, and open and describe:**
+   - each callback's dots;
+   - an overlay scene carrying a token and an aside;
+   - the overdue s001 scene;
+   - the 7 former spoiler scenes;
+   - a creative presentation metaphor node;
+   - one illustrated presentation scene (images must now generate).
+   
+   Give your judgement on each, and say plainly when a creative item misfires.
+5. **Update the docs:**
+   - `ongoing_general_errors.md`: the Wave I lines, and §1 for Wave I;
+   - `master_implementation_plan.md`: the Wave I paragraph already exists; mark it delivered;
+   - the README, if commands changed.
+6. **Rewrite this guide** to **Queue Complete — waiting on Issue 8**, with §1.3 re-measured. **Then stop. Do not invent work.**
 
 ---
 
 ## 4. Deferred — do NOT start
 
-- **DF1–DF9** (`ongoing_general_errors.md` §4). DF4 (live mode) is the destination of Wave H, but its real-time parts are **not** in these waves:
+- **Issue 8 (the follower's matching)** waits for the user's selection. Until then, nothing in standing constraint 15 changes. Do not prototype a matcher, tune costs, or enable the tie-break.
+- **DF1–DF9** (`ongoing_general_errors.md` §4). The real-time parts of DF4 (live mode) stay deferred:
   - slide import (.pptx / PDF / Google Slides), per the user's "We do not need to build this out now";
   - a browser player on a requestAnimationFrame clock;
   - the microphone, streaming ASR and the webcam.
 - **Known limitations, unscheduled:**
   - a quotation spanning two sentences can be split between beats;
   - the critic's `emotion_beat` *who* reading is noisy;
-  - R7 treats reported speech without quotation marks as narration.
-- **Not in Wave G:** new art styles (`design_visual_direction.md` §7's `STYLE` string is unchanged), new cast-drawing methods, music changes.
+  - R7 treats reported speech without quotation marks as narration;
+  - the spoiler rule treats a name token that is also a common word ("June") as naming.
+- **Not in Wave I:**
+  - motif *choice* quality (e.g. "the blue ink" drawn with a `Book` icon), which is judged in I9's report, not legislated;
+  - new art styles, new cast-drawing methods, music changes.
 
 ---
 
@@ -448,8 +530,8 @@
 
 ### 5.1 Already delivered
 
-- Waves **A** (verified September 25), **B** (September 26), **C/D** (October 3), **E** and **F** (October 4, 2026), and **G** and **H** (October 6, 2026), all independently verified.
-- One line per item, with verdicts: `ongoing_general_errors.md` §3. Nothing marked "✓" is reworked.
+- Waves **A** (verified September 25), **B** (September 26), **C/D** (October 3), **E** and **F** (October 4), and **G** and **H** (October 6, 2026), all independently verified.
+- One line per item, with verdicts: `ongoing_general_errors.md` §3. Nothing marked "✓" is reworked beyond what a Wave I item names.
 
 ### 5.2 Accepted equivalents (checked; do not "fix" these back)
 
@@ -469,7 +551,10 @@
 - E4's icon block follows any disagreement message.
 - R6 keeps the original alternate even when it equals the new primary.
 - F3's era normalisation runs before the length check.
-- `num_predict=2048` in deck stage (`design_presentation_simulation.md` §2 suggested 1536, but 8–10 slides with indentation and sentence lists require ~1520–1600 tokens).
+- **New, October 6, 2026:**
+  - **`num_predict=2048` in the deck stage.** `design_presentation_simulation.md` §2 suggested 1536; 8–10 slides need ≈ 1,520–1,600 tokens.
+  - **The presentation profile also skips R1.** `section_title` replaces the title card. There were 0 `title_card` nodes in 4 trees, and I7 makes R1's second half an assertion.
+  - **Motif ids are free strings** (e.g. `motif_blue_ink`). The spec's `m1` was an example, and ids never reach the screen.
 
 ### 5.3 User decisions
 
@@ -477,7 +562,7 @@
 - Offline first; a template library.
 - History + Reddit-style stories; text + audio inputs.
 - Mixed imagery; Python + TypeScript/Remotion; fully local.
-- 9:16; karaoke captions; flat editorial vector; 1–3 min videos in about 10 min. *For the long fixtures, the budget is restated per minute, as the user's 4–6-minute choice stated.*
+- 9:16; karaoke captions; flat editorial vector; 1–3 min videos in about 10 min. *For the long fixtures, the budget is restated per minute, as the user's 4–6-minute choice implied.*
 - Scenes + a persistent cast; single narrator; a mandatory review gate; music + SFX.
 - Live mode later, with the webcam in a corner.
 
@@ -497,9 +582,19 @@
 - **Slide import:** not now.
 - **"Make sure to not actually perform any coding and just update the docs + execution guide for another agent to implement".** This applies to the designer; you implement.
 
+**Open:** Issue 8 (the follower's matching). Not yours to decide.
+
 ### 5.4 Invariants and intentional design decisions
 
-**New (October 5, 2026):**
+**New (October 6, 2026):**
+- **An overlay's anchor follows from its kind:** token top-right, thought and label top-left, prop bottom-left. Overlap is measured on the rendered gallery, never in a hand-kept table.
+- **The renderer has no data defaults for creative devices:** no fallback icons, and no fallback dots.
+- **A name reaches the screen only after the narration has said it.** Avatars may come earlier.
+- **Fallbacks never hide execution errors.** A gate fails when a generator never ran.
+- **A gate's exit code states its bars.** A known, filed miss is exit 3, never 0.
+- **A stage reused in another pipeline brings all of its checks.**
+
+**From October 5, 2026:**
 - **A style changes how, never what is true.** Grounding, the critic, word caps, validators and the review gate apply in every style.
 - **`literal` is byte-identical to the pre-Wave-G pipeline.**
 - **Creative items only ever add interpretation or small embellishments.** The license check removes anything else, and a failed check removes the item.
@@ -532,14 +627,19 @@
 ### 5.5 Assessed and rejected — do NOT re-propose
 
 - **Every item listed in the Wave F guide's §5.5**, which is preserved in git at `69c0378`.
-- **New, October 5, 2026:**
+- **From October 5, 2026:**
   - **Slide import in these waves**, per the user.
   - **A real-time player in these waves.**
   - **Letting the tree or the matcher see the script, the performance or the ground truth.** It makes the simulation meaningless.
-  - **Embeddings or a new model for matching.** No new models; BM25 plus edge costs first; the LLM tie-break only by its measured rule.
   - **Creative embellishments beyond the license:** new events, dialogue, facts, contradictions, or plants that reveal the twist.
   - **Raising word caps for creative scenes.**
   - **A creative style that changes the cast's look or the illustration `STYLE`.**
+- **New, October 6, 2026:**
+  - **Making G16 green by tuning edge costs, loosening the §8 bars or enabling the tie-break.** Issue 8 decides.
+  - **Raising the back-edge cost as the fix for Issue 8.** It was measured: at best slide 0.55–0.59.
+  - **Re-introducing renderer defaults** for dots or overlay icons.
+  - **Loosening the motif spacing (3 / 20) or the spoiler rule** to keep a fixture from degrading. File it instead.
+  - **Removing "book" (or any word) from `TEXT_EXPECTED_WORDS`, or skipping rule 6 for metaphors,** to stop a degradation. A book in a FLUX image grows lettering that the skipped text check would never catch; salvage is the fix.
 
 ---
 
@@ -547,29 +647,27 @@
 
 | What | Where |
 |---|---|
-| Styles, the director, the license, overlays, creative bars | `design_styles.md` |
-| The presentation simulation: deck, tree, perform/speak/hear, follow, compose, score, fixtures | `design_presentation_simulation.md` |
-| Pipeline stages (incl. `director`, presentation jobs), CLI (`--style`, `present-sim`, `score`) | `design_system_architecture.md` |
-| New job files (`director.json`, `deck.json`, `tree.json`, `performance.json`, `speak_timing.json`, `heard.json`, `playback.json`, `presentation_score.json`), `overlays`, `kind`, `style` | `design_data_contracts.md` §7, §10 |
-| R8 and the rule order; the presentation profile; style-dependent stages | `design_planner.md` §4, §8b |
-| Templates incl. `metaphor`, `callback`, `section_title`; word caps and classes | `design_templates.md` §2.17–2.19, §5 |
-| Fixtures incl. the two new stories; test rows; G15/G16; the long-story budget | `design_testing_and_validation.md` |
-| The live-mode path (prepared mode) and what stays deferred | `design_future_live_and_video.md` §4 |
-| Decisions, lessons, the resolved index, the deferred list | `ongoing_general_errors.md` |
+| Styles, the director (rules 3, 5 and 7 revised), the license, overlays (anchors and geometry revised), creative bars | `design_styles.md` §3.3–3.7 |
+| The presentation simulation, incl. creative in presentation jobs, `tree.json`'s `overlays` and `style_degraded`, and the R1 assertion | `design_presentation_simulation.md` §3, §6, §8 |
+| `SceneOverlay` (anchor enum, kind rules), the job files | `design_data_contracts.md` §7, §10 |
+| The name rule (item 6), R8 and the rule order | `design_planner.md` §4, §6 |
+| `callback`'s dot count; templates; word caps | `design_templates.md` §2.18, §5 |
+| Test rows (Wave I), G10 overlaps, step 10's new columns, G15 additions, G16's exit codes, the budget's asset rule | `design_testing_and_validation.md` §2–§5 |
+| Issue 8, the lessons (2.13–2.16), verdicts, deferred list | `ongoing_general_errors.md` |
 
 ---
 
 ## 7. Validation standard
 
-- **Red first, on real inputs** (lesson 2.6).
+- **Red first, on real inputs** (lesson 2.6). Every item names its recorded artefacts.
 - **Measure outcomes before and after** (2.7).
-- **Measure the rendered result** (2.8).
+- **Measure the rendered result** (2.8, 2.15).
 - **Enforce rules on the final result** (2.10).
 - **Measure distributions, not just validity** (2.11).
 - **Name the defect class** (2.12).
+- **A gate must be able to fail, must fail closed, and its exit code must state its bars** (2.13, 2.14). A falsification that passes on the real input proves nothing.
 - **For creative output, judgement is part of validation:** open the stills, describe what each creative item adds, and say plainly when it misfires.
 - **For the simulation, honesty is part of validation:** isolation and causality tests are gates, not niceties.
-- A gate must be able to fail, and must fail closed. Read exit codes bare. Open every artefact.
 - **Never loosen a bar to pass it.** File it with the measurement and options.
 
 ---
@@ -577,44 +675,36 @@
 ## 8. THE LOOP
 
 ```
-(1) Is there an approved item? Wave G (G1–G6), then Wave H (H1–H6), in §2
-    order. If all are done, STOP. Never start DF1–DF9 or anything not in §3.
+(1) Is there an approved item? Wave I (I1–I9), in §2 order. If all are done,
+    STOP. Never start Issue 8's work, DF1–DF9, or anything not in §3.
     Never fill in a `Your selection:` line.
-(2) Read the item and EVERY design section it names. Copy prompts, rules,
-    thresholds and error strings VERBATIM.
-(3) RED FIRST on real fixture output; record the failure.
+(2) Read the item and EVERY design section it names. Copy rules, thresholds
+    and error strings VERBATIM.
+(3) RED FIRST on the recorded artefacts the item names; record the failure.
 (4) Build only what the item says. Nothing from §5.5.
 (5) GREEN; then falsify (break, see red, restore, see green).
 (6) Open every artefact and describe it, with your judgement for creative
     output.
 (7) Full battery, bare. Update §1.3.
-(8) ONE commit, scope = item id (`feat(g1): …`). WHY + red/green in the
-    body. ONE line under "Wave G"/"Wave H" in ongoing_general_errors.md §3.
+(8) ONE commit, scope = item id (`fix(i1): …`). WHY + red/green in the
+    body. ONE line under "Wave I" in ongoing_general_errors.md §3.
     Never amend after pushing.
 (9) git push origin main.
-(10) Next item. A failed bar → file it and stop at that item until the user
-    selects.
+(10) Next item. A failed bar or an impossible rule → file it and stop at
+    that item until the user selects.
 ```
 
 ---
 
-## 9. Definition of Done: Waves G and H
+## 9. Definition of Done: Wave I
 
-**Wave G**
-- [x] G1–G6 each landed as one pushed commit scoped to its id, with red and green runs recorded.
-- [x] Six fixtures in the planner eval, all bars met; `story_overdue_book` voice = `af_heart` / `llm` (or filed).
-- [x] Literal byte-identity holds against `tests/data/literal_baseline/`.
-- [x] The director gives a valid plan on 6/6 fixtures; the license check is in place; degradation is tested.
-- [x] `metaphor`, `callback` and the overlay layer are in the gallery with 0 overlaps.
-- [x] G15 green on both long stories; the long budgets (literal and creative) are met or filed.
-- [x] `docs/evals/creative_<date>.md` with stills and judgement.
-
-**Wave H**
-- [ ] H1–H6 each landed as one pushed commit scoped to its id.
-- [ ] The deck, tree, perform, follow and score tests green, including **isolation** and **causality**.
-- [ ] G16: all four runs scored, every §8 bar met or filed; the oracle compared; the tie-break measured and decided by its rule.
-- [ ] `docs/evals/presentation_<date>.md` with strip charts and descriptions.
-
-**Both**
-- [ ] §1.3 re-measured bare (G1–G16, three budgets).
-- [ ] This guide rewritten to **Queue Complete**. **Then stop. Do not invent work.**
+- [ ] I1–I9 each landed as one pushed commit scoped to its id, with red and green runs recorded.
+- [ ] Callbacks show one dot per earlier rendered token (4 on both creative E2E stories); no renderer default remains.
+- [ ] G10 measures overlaps on the rendered gallery: 0 `OVERLAP` lines, fail-closed, falsified with the old coordinates.
+- [ ] No empty thought; motif names pass the story-words rule; motif spacing holds. The director ends in a valid or salvaged plan on 6/6 fixtures after `ollama stop`.
+- [ ] 0 names before the narration in every final storyboard; the 7 former cases are described.
+- [ ] 0 asset execution errors in every gate and budget run; presentation runs generate images.
+- [ ] Creative presentation runs: license-checked, with overlays, not degraded (or filed).
+- [ ] G16 builds four fresh jobs on every run and exits 3, with a BAR table. Falsifications (a)–(c) are each shown to bite.
+- [ ] §1.3 re-measured bare (G1–G16, three budgets), with the creative budget a real creative run.
+- [ ] This guide rewritten to **Queue Complete — waiting on Issue 8**. **Then stop. Do not invent work.**

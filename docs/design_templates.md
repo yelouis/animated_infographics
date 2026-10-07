@@ -184,6 +184,9 @@ Notation: `str≤N` = 1..N characters; `?` = nullable; `[a..b]` = list length bo
   - **Otherwise:** the motif's icon, 360 px, in a 560 px `highlight` circle centred at (540, 560), drawn navy.
   - **Label:** in the name slot.
   - **"Seen before" row:** 24 px dots, one per earlier rendered appearance of the motif, centred at y 1140 with 16 px gaps. They fill in to `highlight` at `item_frames` (`spread 0.4`).
+    - **The count comes from `compile`** (made explicit October 6, 2026): a `callback` scene's item count is the number of earlier timeline scenes whose `overlays` hold a `motif_token` with its `motif_id`.
+    - The renderer draws `item_frames.length` dots and has **no default**; 0 items means no row. Each dot's `ding` SFX cue fires at its item frame.
+    - *Measured:* `compile._get_item_count` returned 0 for `callback`, and the renderer's `[15, 27]` default drew two dots on every callback; both creative E2E callbacks had 4 earlier tokens.
 - **Slots:** label display 800 72→48 · 2 · 880
 - **Motion:** zoom 1.00→1.12 over the scene. The dots fill at their item frames.
 - **SFX:** `ding` at the last `item`.

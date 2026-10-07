@@ -1,0 +1,1281 @@
+{
+ "note": "Recorded October 6, 2026 by the designer. Each case: the beats and bible the director saw, and its 3 attempts with the validator errors. Used by Wave I item I4 (salvage).",
+ "cases": {
+  "story_overdue_book_cold": {
+   "beats": [
+    {
+     "i": 0,
+     "word_start": 0,
+     "word_end": 5,
+     "start_ms": 0,
+     "end_ms": 2800,
+     "text": "The book that came back"
+    },
+    {
+     "i": 1,
+     "word_start": 5,
+     "word_end": 21,
+     "start_ms": 2800,
+     "end_ms": 7675,
+     "text": "As a grandmother of three, I thought I had seen every excuse for a late book."
+    },
+    {
+     "i": 2,
+     "word_start": 21,
+     "word_end": 35,
+     "start_ms": 7675,
+     "end_ms": 13488,
+     "text": "I'm also the only librarian in Alder Creek, Oregon, a town of 2,300 people,"
+    },
+    {
+     "i": 3,
+     "word_start": 35,
+     "word_end": 46,
+     "start_ms": 13488,
+     "end_ms": 18575,
+     "text": "one stoplight, and a library the size of a two-car garage."
+    },
+    {
+     "i": 4,
+     "word_start": 46,
+     "word_end": 56,
+     "start_ms": 18575,
+     "end_ms": 23500,
+     "text": "Last October, a padded envelope arrived with no return address."
+    },
+    {
+     "i": 5,
+     "word_start": 56,
+     "word_end": 68,
+     "start_ms": 23500,
+     "end_ms": 27975,
+     "text": "The postmark said Portland, which meant nothing to me at the time."
+    },
+    {
+     "i": 6,
+     "word_start": 68,
+     "word_end": 78,
+     "start_ms": 27975,
+     "end_ms": 31238,
+     "text": "Inside was a hardcover novel called The Long Way Home,"
+    },
+    {
+     "i": 7,
+     "word_start": 78,
+     "word_end": 92,
+     "start_ms": 31238,
+     "end_ms": 36850,
+     "text": "wrapped in a grocery bag. The checkout card was still in its paper pocket."
+    },
+    {
+     "i": 8,
+     "word_start": 92,
+     "word_end": 109,
+     "start_ms": 36850,
+     "end_ms": 44550,
+     "text": "It had been borrowed on March 9, 1983, and it was due back on March 23, 1983."
+    },
+    {
+     "i": 9,
+     "word_start": 109,
+     "word_end": 118,
+     "start_ms": 44550,
+     "end_ms": 50800,
+     "text": "Under the book was a stack of cash: $1,554.60."
+    },
+    {
+     "i": 10,
+     "word_start": 118,
+     "word_end": 122,
+     "start_ms": 50800,
+     "end_ms": 52825,
+     "text": "I counted it twice."
+    },
+    {
+     "i": 11,
+     "word_start": 122,
+     "word_end": 149,
+     "start_ms": 52825,
+     "end_ms": 60800,
+     "text": "Our late fee is ten cents a day, and when I did the math on a calculator, the fine came out to exactly that, to the penny."
+    },
+    {
+     "i": 12,
+     "word_start": 149,
+     "word_end": 171,
+     "start_ms": 60800,
+     "end_ms": 67925,
+     "text": "There was a note in shaky blue ink: \"Sorry it took so long. Please give the money to whoever needs it most.\""
+    },
+    {
+     "i": 13,
+     "word_start": 171,
+     "word_end": 187,
+     "start_ms": 67925,
+     "end_ms": 74200,
+     "text": "My coworker Marisol looked at the cash and said, \"Either that's a confession or a ransom.\""
+    },
+    {
+     "i": 14,
+     "word_start": 187,
+     "word_end": 197,
+     "start_ms": 74200,
+     "end_ms": 78000,
+     "text": "The checkout card had one name on it: R. Okafor."
+    },
+    {
+     "i": 15,
+     "word_start": 197,
+     "word_end": 214,
+     "start_ms": 78000,
+     "end_ms": 83975,
+     "text": "But when I opened the book, the margins were full of pencil notes in two different handwritings."
+    },
+    {
+     "i": 16,
+     "word_start": 214,
+     "word_end": 225,
+     "start_ms": 83975,
+     "end_ms": 88575,
+     "text": "One was small and neat. The other was big and messy."
+    },
+    {
+     "i": 17,
+     "word_start": 225,
+     "word_end": 234,
+     "start_ms": 88575,
+     "end_ms": 92300,
+     "text": "They were arguing about the story, chapter by chapter."
+    },
+    {
+     "i": 18,
+     "word_start": 234,
+     "word_end": 248,
+     "start_ms": 92300,
+     "end_ms": 98550,
+     "text": "The messy writer signed every note \"R.\" The neat writer signed every note \"J.\""
+    },
+    {
+     "i": 19,
+     "word_start": 248,
+     "word_end": 267,
+     "start_ms": 98550,
+     "end_ms": 106100,
+     "text": "\"The ending is too sad, \"R. wrote on page 40. \"The ending is the point, \"J. wrote back underneath."
+    },
+    {
+     "i": 20,
+     "word_start": 267,
+     "word_end": 280,
+     "start_ms": 106100,
+     "end_ms": 110975,
+     "text": "I spent a weekend in our basement with the old card catalog boxes."
+    },
+    {
+     "i": 21,
+     "word_start": 280,
+     "word_end": 293,
+     "start_ms": 110975,
+     "end_ms": 116750,
+     "text": "The library kept every checkout card from before we went digital in 1998."
+    },
+    {
+     "i": 22,
+     "word_start": 293,
+     "word_end": 308,
+     "start_ms": 116750,
+     "end_ms": 121688,
+     "text": "I found that The Long Way Home had been checked out 26 times in 1982,"
+    },
+    {
+     "i": 23,
+     "word_start": 308,
+     "word_end": 318,
+     "start_ms": 121688,
+     "end_ms": 126825,
+     "text": "every two weeks, alternating between R. Okafor and J. Lind."
+    },
+    {
+     "i": 24,
+     "word_start": 318,
+     "word_end": 337,
+     "start_ms": 126825,
+     "end_ms": 134125,
+     "text": "They had never written a word to each other anywhere but in that book. The library was their mailbox."
+    },
+    {
+     "i": 25,
+     "word_start": 337,
+     "word_end": 355,
+     "start_ms": 134125,
+     "end_ms": 140350,
+     "text": "The last note in the book was from J., inside the back cover: \"Same time next week? J.\""
+    },
+    {
+     "i": 26,
+     "word_start": 355,
+     "word_end": 359,
+     "start_ms": 140350,
+     "end_ms": 142375,
+     "text": "There was no reply."
+    },
+    {
+     "i": 27,
+     "word_start": 359,
+     "word_end": 369,
+     "start_ms": 142375,
+     "end_ms": 147975,
+     "text": "After March 1983, R. Okafor never checked out another book."
+    },
+    {
+     "i": 28,
+     "word_start": 369,
+     "word_end": 382,
+     "start_ms": 147975,
+     "end_ms": 152938,
+     "text": "J. Lind was easy to find. June Lind still lives on Cedar Street,"
+    },
+    {
+     "i": 29,
+     "word_start": 382,
+     "word_end": 394,
+     "start_ms": 152938,
+     "end_ms": 157500,
+     "text": "four blocks from the library, and she still comes in every Tuesday."
+    },
+    {
+     "i": 30,
+     "word_start": 394,
+     "word_end": 414,
+     "start_ms": 157500,
+     "end_ms": 164250,
+     "text": "When I showed her the book, she sat down very slowly. She told me she never learned who R. was."
+    },
+    {
+     "i": 31,
+     "word_start": 414,
+     "word_end": 434,
+     "start_ms": 164250,
+     "end_ms": 171813,
+     "text": "She waited at the return desk every Tuesday for a month in 1983, and then she stopped waiting. She married,"
+    },
+    {
+     "i": 32,
+     "word_start": 434,
+     "word_end": 443,
+     "start_ms": 171813,
+     "end_ms": 176375,
+     "text": "raised two sons, and lost her husband in 2015."
+    },
+    {
+     "i": 33,
+     "word_start": 443,
+     "word_end": 454,
+     "start_ms": 176375,
+     "end_ms": 180475,
+     "text": "\"I always assumed R. just got bored of me, \"she said."
+    },
+    {
+     "i": 34,
+     "word_start": 454,
+     "word_end": 468,
+     "start_ms": 180475,
+     "end_ms": 186350,
+     "text": "I posted on the town's Facebook page asking if anyone remembered an R. Okafor."
+    },
+    {
+     "i": 35,
+     "word_start": 468,
+     "word_end": 482,
+     "start_ms": 186350,
+     "end_ms": 191800,
+     "text": "Three days later, a man named Robert Okafor sent me a message from Portland."
+    },
+    {
+     "i": 36,
+     "word_start": 482,
+     "word_end": 487,
+     "start_ms": 191800,
+     "end_ms": 194875,
+     "text": "He was 19 in 1983."
+    },
+    {
+     "i": 37,
+     "word_start": 487,
+     "word_end": 494,
+     "start_ms": 194875,
+     "end_ms": 197150,
+     "text": "His father lost his job that March,"
+    },
+    {
+     "i": 38,
+     "word_start": 494,
+     "word_end": 515,
+     "start_ms": 197150,
+     "end_ms": 204225,
+     "text": "and the family moved to Portland in one weekend. He took the book by accident in a box of his things."
+    },
+    {
+     "i": 39,
+     "word_start": 515,
+     "word_end": 541,
+     "start_ms": 204225,
+     "end_ms": 211825,
+     "text": "By the time he found it, he was too embarrassed to send it back, and too shy to write to someone he only knew as J."
+    },
+    {
+     "i": 40,
+     "word_start": 541,
+     "word_end": 560,
+     "start_ms": 211825,
+     "end_ms": 217300,
+     "text": "He said he kept the book for 42 years because it was the only thing he had of her."
+    },
+    {
+     "i": 41,
+     "word_start": 560,
+     "word_end": 575,
+     "start_ms": 217300,
+     "end_ms": 222475,
+     "text": "He finally mailed it when his doctor told him to put his affairs in order."
+    },
+    {
+     "i": 42,
+     "word_start": 575,
+     "word_end": 586,
+     "start_ms": 222475,
+     "end_ms": 226575,
+     "text": "He sent the money so the library would not be cheated."
+    },
+    {
+     "i": 43,
+     "word_start": 586,
+     "word_end": 596,
+     "start_ms": 226575,
+     "end_ms": 230375,
+     "text": "I asked him if he wanted to return it himself."
+    },
+    {
+     "i": 44,
+     "word_start": 596,
+     "word_end": 599,
+     "start_ms": 230375,
+     "end_ms": 231938,
+     "text": "The following Tuesday,"
+    },
+    {
+     "i": 45,
+     "word_start": 599,
+     "word_end": 618,
+     "start_ms": 231938,
+     "end_ms": 238550,
+     "text": "a man in a gray coat walked into the library holding a canvas bag that had seen better decades."
+    },
+    {
+     "i": 46,
+     "word_start": 618,
+     "word_end": 633,
+     "start_ms": 238550,
+     "end_ms": 244400,
+     "text": "June was at the return desk. Neither of them said anything for a long time."
+    },
+    {
+     "i": 47,
+     "word_start": 633,
+     "word_end": 648,
+     "start_ms": 244400,
+     "end_ms": 249775,
+     "text": "Then Robert put the book on the counter and said, \"Sorry. It's a little overdue.\""
+    },
+    {
+     "i": 48,
+     "word_start": 648,
+     "word_end": 666,
+     "start_ms": 249775,
+     "end_ms": 257325,
+     "text": "I stamped it RETURNED with that day's date. It was the first stamp on that card since 1983."
+    },
+    {
+     "i": 49,
+     "word_start": 666,
+     "word_end": 675,
+     "start_ms": 257325,
+     "end_ms": 260650,
+     "text": "They had coffee across the street for three hours."
+    },
+    {
+     "i": 50,
+     "word_start": 675,
+     "word_end": 688,
+     "start_ms": 260650,
+     "end_ms": 264525,
+     "text": "Now they read the same book every month, each with their own copy,"
+    },
+    {
+     "i": 51,
+     "word_start": 688,
+     "word_end": 708,
+     "start_ms": 264525,
+     "end_ms": 272025,
+     "text": "and they still write in the margins before they trade. June says R. still thinks every ending is too sad."
+    },
+    {
+     "i": 52,
+     "word_start": 708,
+     "word_end": 721,
+     "start_ms": 272025,
+     "end_ms": 278600,
+     "text": "We used the $1,554.60 to build a reading nook by the front window,"
+    },
+    {
+     "i": 53,
+     "word_start": 721,
+     "word_end": 727,
+     "start_ms": 278600,
+     "end_ms": 281400,
+     "text": "with two chairs facing each other."
+    },
+    {
+     "i": 54,
+     "word_start": 727,
+     "word_end": 737,
+     "start_ms": 281400,
+     "end_ms": 286325,
+     "text": "Marisol made the sign. It says \"The Long Way Home.\""
+    },
+    {
+     "i": 55,
+     "word_start": 737,
+     "word_end": 756,
+     "start_ms": 286325,
+     "end_ms": 291500,
+     "text": "The fine was ten cents a day. It turned out to be the cheapest thing in the whole story."
+    }
+   ],
+   "bible": {
+    "schema_version": 1,
+    "title": "The Book That Came Back",
+    "logline": "A decades-overdue library book returns with a massive pile of late fees, uncovering a lost connection between two strangers.",
+    "genre": "personal_story",
+    "cast": [
+     {
+      "id": "c1",
+      "name": "Me",
+      "role": "The Librarian",
+      "is_narrator": true,
+      "color_slot": 0,
+      "avatar": {
+       "skin": 2,
+       "hair_style": "bun",
+       "hair_color": "brown",
+       "facial_hair": "none",
+       "headwear": "none",
+       "glasses": true,
+       "age": "adult"
+      }
+     },
+     {
+      "id": "c2",
+      "name": "June Lind",
+      "role": "The female reader",
+      "is_narrator": false,
+      "color_slot": 1,
+      "avatar": {
+       "skin": 2,
+       "hair_style": "long",
+       "hair_color": "blonde",
+       "facial_hair": "none",
+       "headwear": "none",
+       "glasses": false,
+       "age": "elder"
+      }
+     },
+     {
+      "id": "c3",
+      "name": "Robert Okafor",
+      "role": "The male reader",
+      "is_narrator": false,
+      "color_slot": 2,
+      "avatar": {
+       "skin": 3,
+       "hair_style": "short",
+       "hair_color": "black",
+       "facial_hair": "none",
+       "headwear": "none",
+       "glasses": false,
+       "age": "elder"
+      }
+     },
+     {
+      "id": "c4",
+      "name": "Marisol",
+      "role": "The coworker",
+      "is_narrator": false,
+      "color_slot": 3,
+      "avatar": {
+       "skin": 4,
+       "hair_style": "curly",
+       "hair_color": "black",
+       "facial_hair": "none",
+       "headwear": "none",
+       "glasses": false,
+       "age": "adult"
+      }
+     }
+    ],
+    "places": [
+     {
+      "id": "p1",
+      "name": "Alder Creek",
+      "kind": "real",
+      "country_iso3": "USA",
+      "lat": 44.0,
+      "lon": -123.0,
+      "geo_source": "llm",
+      "visual_description": "A small, quiet Oregon town with a single stoplight and a tiny, cozy library building.",
+      "icon": "MapPin"
+     },
+     {
+      "id": "p2",
+      "name": "Portland",
+      "kind": "real",
+      "country_iso3": "USA",
+      "lat": 45.52345,
+      "lon": -122.67621,
+      "geo_source": "gazetteer",
+      "visual_description": "A larger, bustling city environment with many post offices and urban streets.",
+      "icon": "Building"
+     }
+    ],
+    "set_pieces": [
+     {
+      "id": "v1",
+      "name": "The Long Way Home",
+      "visual_description": "A worn hardcover novel with handwritten pencil notes in the margins and an old paper checkout card inside.",
+      "icon": "Book"
+     },
+     {
+      "id": "v2",
+      "name": "The Padded Envelope",
+      "visual_description": "A padded mailing envelope containing a grocery bag, a book, and a large stack of cash.",
+      "icon": "Envelope"
+     },
+     {
+      "id": "v3",
+      "name": "The Reading Nook",
+      "visual_description": "A cozy corner by a library window with two comfortable chairs facing each other and a sign.",
+      "icon": "Armchair"
+     }
+    ]
+   },
+   "attempts": [
+    {
+     "output": {
+      "asides": [
+       {
+        "beat_i": 1,
+        "cast_id": "c1",
+        "kind": "thought"
+       },
+       {
+        "beat_i": 9,
+        "icon": "CurrencyDollar",
+        "kind": "prop"
+       },
+       {
+        "beat_i": 13,
+        "kind": "label",
+        "text": "Not ransom"
+       },
+       {
+        "beat_i": 34,
+        "icon": "Phone",
+        "kind": "prop"
+       },
+       {
+        "beat_i": 45,
+        "kind": "label",
+        "text": "Old bag"
+       }
+      ],
+      "metaphors": [
+       {
+        "beat_i": 3,
+        "image": "A tiny toy garage sitting in the middle of a vast empty field"
+       },
+       {
+        "beat_i": 24,
+        "image": "A paper book with a small metal mailbox flag protruding from the side"
+       },
+       {
+        "beat_i": 38,
+        "image": "A moving truck driving through a heavy storm"
+       },
+       {
+        "beat_i": 41,
+        "image": "An hourglass with sand running out very quickly"
+       }
+      ],
+      "motifs": [
+       {
+        "appearances": [
+         {
+          "beat_i": 12,
+          "role": "plant"
+         },
+         {
+          "beat_i": 15,
+          "role": "echo"
+         },
+         {
+          "beat_i": 18,
+          "role": "echo"
+         },
+         {
+          "beat_i": 25,
+          "role": "echo"
+         },
+         {
+          "beat_i": 51,
+          "role": "payoff"
+         }
+        ],
+        "id": "motif_blue_ink",
+        "name": "Blue Ink",
+        "set_piece_id": "v1"
+       }
+      ]
+     },
+     "errors": [
+      "metaphors[1].image: asks for writing / lettering (\"A paper book with a small metal mailbox flag protruding from the side\") — images must not contain text"
+     ]
+    },
+    {
+     "output": {
+      "asides": [
+       {
+        "beat_i": 1,
+        "cast_id": "c1",
+        "kind": "thought"
+       },
+       {
+        "beat_i": 9,
+        "icon": "CurrencyDollar",
+        "kind": "prop"
+       },
+       {
+        "beat_i": 13,
+        "kind": "label",
+        "text": "Not ransom"
+       },
+       {
+        "beat_i": 34,
+        "icon": "Phone",
+        "kind": "prop"
+       },
+       {
+        "beat_i": 45,
+        "kind": "label",
+        "text": "Old bag"
+       }
+      ],
+      "metaphors": [
+       {
+        "beat_i": 3,
+        "image": "A tiny toy garage sitting in the middle of a vast empty field"
+       },
+       {
+        "beat_i": 24,
+        "image": "A paper book with a small metal mailbox flag attached to the spine"
+       },
+       {
+        "beat_i": 38,
+        "image": "A moving truck driving through a heavy storm"
+       },
+       {
+        "beat_i": 41,
+        "image": "An hourglass with sand running out very quickly"
+       }
+      ],
+      "motifs": [
+       {
+        "appearances": [
+         {
+          "beat_i": 12,
+          "role": "plant"
+         },
+         {
+          "beat_i": 15,
+          "role": "echo"
+         },
+         {
+          "beat_i": 18,
+          "role": "echo"
+         },
+         {
+          "beat_i": 25,
+          "role": "echo"
+         },
+         {
+          "beat_i": 51,
+          "role": "payoff"
+         }
+        ],
+        "id": "motif_blue_ink",
+        "name": "Blue Ink",
+        "set_piece_id": "v1"
+       }
+      ]
+     },
+     "errors": [
+      "metaphors[1].image: asks for writing / lettering (\"A paper book with a small metal mailbox flag attached to the spine\") — images must not contain text"
+     ]
+    },
+    {
+     "output": {
+      "asides": [
+       {
+        "beat_i": 1,
+        "cast_id": "c1",
+        "kind": "thought"
+       },
+       {
+        "beat_i": 9,
+        "icon": "CurrencyDollar",
+        "kind": "prop"
+       },
+       {
+        "beat_i": 13,
+        "cast_id": "c4",
+        "kind": "label",
+        "text": "Not ransom"
+       },
+       {
+        "beat_i": 34,
+        "icon": "Phone",
+        "kind": "prop"
+       },
+       {
+        "beat_i": 45,
+        "kind": "label",
+        "text": "Old bag"
+       }
+      ],
+      "metaphors": [
+       {
+        "beat_i": 3,
+        "image": "A tiny toy garage sitting in the middle of a vast empty field"
+       },
+       {
+        "beat_i": 24,
+        "image": "A paper book transforming into a mailbox with a flag"
+       },
+       {
+        "beat_i": 38,
+        "image": "A moving truck driving through a heavy storm"
+       },
+       {
+        "beat_i": 41,
+        "image": "An hourglass with sand running out very quickly"
+       }
+      ],
+      "motifs": [
+       {
+        "appearances": [
+         {
+          "beat_i": 12,
+          "role": "plant"
+         },
+         {
+          "beat_i": 15,
+          "role": "echo"
+         },
+         {
+          "beat_i": 18,
+          "role": "echo"
+         },
+         {
+          "beat_i": 25,
+          "role": "echo"
+         },
+         {
+          "beat_i": 51,
+          "role": "payoff"
+         }
+        ],
+        "id": "motif_blue_ink",
+        "name": "Blue Ink"
+       }
+      ]
+     },
+     "errors": [
+      "motifs[0]: motif requires an icon or a set_piece_id",
+      "metaphors[1].image: asks for writing / lettering (\"A paper book transforming into a mailbox with a flag\") — images must not contain text"
+     ]
+    }
+   ]
+  },
+  "story_overdue_book_deck": {
+   "beats": [
+    {
+     "i": 0,
+     "word_start": 0,
+     "word_end": 6,
+     "start_ms": 0,
+     "end_ms": 1800,
+     "text": "The librarian lives in Alder Creek"
+    },
+    {
+     "i": 1,
+     "word_start": 6,
+     "word_end": 12,
+     "start_ms": 1800,
+     "end_ms": 3600,
+     "text": "A padded envelope arrived from Portland"
+    },
+    {
+     "i": 2,
+     "word_start": 12,
+     "word_end": 17,
+     "start_ms": 3600,
+     "end_ms": 5100,
+     "text": "Inside was a hardcover novel"
+    },
+    {
+     "i": 3,
+     "word_start": 17,
+     "word_end": 24,
+     "start_ms": 5100,
+     "end_ms": 7200,
+     "text": "The book was due in March 1983"
+    },
+    {
+     "i": 4,
+     "word_start": 24,
+     "word_end": 30,
+     "start_ms": 7200,
+     "end_ms": 9000,
+     "text": "A stack of cash was included"
+    },
+    {
+     "i": 5,
+     "word_start": 30,
+     "word_end": 36,
+     "start_ms": 9000,
+     "end_ms": 10800,
+     "text": "The fine was ten cents daily"
+    },
+    {
+     "i": 6,
+     "word_start": 36,
+     "word_end": 42,
+     "start_ms": 10800,
+     "end_ms": 12600,
+     "text": "A note asked to help others"
+    },
+    {
+     "i": 7,
+     "word_start": 42,
+     "word_end": 49,
+     "start_ms": 12600,
+     "end_ms": 14700,
+     "text": "The cash was a confession or ransom"
+    },
+    {
+     "i": 8,
+     "word_start": 49,
+     "word_end": 55,
+     "start_ms": 14700,
+     "end_ms": 16500,
+     "text": "The name R. Okafor was listed"
+    },
+    {
+     "i": 9,
+     "word_start": 55,
+     "word_end": 61,
+     "start_ms": 16500,
+     "end_ms": 18300,
+     "text": "Two different handwritings filled the margins"
+    },
+    {
+     "i": 10,
+     "word_start": 61,
+     "word_end": 68,
+     "start_ms": 18300,
+     "end_ms": 20400,
+     "text": "R and J argued about the story"
+    },
+    {
+     "i": 11,
+     "word_start": 68,
+     "word_end": 75,
+     "start_ms": 20400,
+     "end_ms": 22500,
+     "text": "They used the library as a mailbox"
+    },
+    {
+     "i": 12,
+     "word_start": 75,
+     "word_end": 80,
+     "start_ms": 22500,
+     "end_ms": 24000,
+     "text": "J left a final question"
+    },
+    {
+     "i": 13,
+     "word_start": 80,
+     "word_end": 87,
+     "start_ms": 24000,
+     "end_ms": 26100,
+     "text": "R. Okafor never checked out books again"
+    },
+    {
+     "i": 14,
+     "word_start": 87,
+     "word_end": 93,
+     "start_ms": 26100,
+     "end_ms": 27900,
+     "text": "June Lind still visits the library"
+    },
+    {
+     "i": 15,
+     "word_start": 93,
+     "word_end": 99,
+     "start_ms": 27900,
+     "end_ms": 29700,
+     "text": "She lost her husband in 2015"
+    },
+    {
+     "i": 16,
+     "word_start": 99,
+     "word_end": 105,
+     "start_ms": 29700,
+     "end_ms": 31500,
+     "text": "Robert sent a message from Portland"
+    },
+    {
+     "i": 17,
+     "word_start": 105,
+     "word_end": 110,
+     "start_ms": 31500,
+     "end_ms": 33000,
+     "text": "His family moved in 1983"
+    },
+    {
+     "i": 18,
+     "word_start": 110,
+     "word_end": 116,
+     "start_ms": 33000,
+     "end_ms": 34800,
+     "text": "He kept the book 42 years"
+    },
+    {
+     "i": 19,
+     "word_start": 116,
+     "word_end": 123,
+     "start_ms": 34800,
+     "end_ms": 36900,
+     "text": "Robert and June met at the library"
+    },
+    {
+     "i": 20,
+     "word_start": 123,
+     "word_end": 128,
+     "start_ms": 36900,
+     "end_ms": 38400,
+     "text": "They now read books together"
+    },
+    {
+     "i": 21,
+     "word_start": 128,
+     "word_end": 134,
+     "start_ms": 38400,
+     "end_ms": 40200,
+     "text": "The money built a reading nook"
+    }
+   ],
+   "bible": {
+    "schema_version": 1,
+    "title": "The Librarian and the Package",
+    "logline": "A mysterious package containing a decades-old book and a stack of cash reveals a long-lost love story between two library patrons.",
+    "genre": "personal_story",
+    "cast": [
+     {
+      "id": "c1",
+      "name": "Me",
+      "role": "The Librarian",
+      "is_narrator": true,
+      "color_slot": 0,
+      "avatar": {
+       "skin": 2,
+       "hair_style": "bun",
+       "hair_color": "brown",
+       "facial_hair": "none",
+       "headwear": "none",
+       "glasses": true,
+       "age": "adult"
+      }
+     },
+     {
+      "id": "c2",
+      "name": "Robert Okafor",
+      "role": "The sender of the package",
+      "is_narrator": false,
+      "color_slot": 1,
+      "avatar": {
+       "skin": 3,
+       "hair_style": "short",
+       "hair_color": "black",
+       "facial_hair": "none",
+       "headwear": "none",
+       "glasses": false,
+       "age": "elder"
+      }
+     },
+     {
+      "id": "c3",
+      "name": "June Lind",
+      "role": "The woman who met Robert",
+      "is_narrator": false,
+      "color_slot": 2,
+      "avatar": {
+       "skin": 2,
+       "hair_style": "long",
+       "hair_color": "gray",
+       "facial_hair": "none",
+       "headwear": "none",
+       "glasses": true,
+       "age": "elder"
+      }
+     }
+    ],
+    "places": [
+     {
+      "id": "p1",
+      "name": "Alder Creek",
+      "kind": "fictional",
+      "country_iso3": null,
+      "lat": null,
+      "lon": null,
+      "geo_source": "none",
+      "visual_description": "A quiet, peaceful small town with cozy buildings and lush greenery.",
+      "icon": "MapPin"
+     },
+     {
+      "id": "p2",
+      "name": "Portland",
+      "kind": "real",
+      "country_iso3": null,
+      "lat": 45.52345,
+      "lon": -122.67621,
+      "geo_source": "gazetteer",
+      "visual_description": "A bustling urban city with many streets and tall buildings.",
+      "icon": "Building"
+     }
+    ],
+    "set_pieces": [
+     {
+      "id": "v1",
+      "name": "The Overdue Book",
+      "visual_description": "A worn hardcover novel with handwritten notes and arguments scribbled in the margins.",
+      "icon": "Book"
+     },
+     {
+      "id": "v2",
+      "name": "The Padded Envelope",
+      "visual_description": "A thick, padded mailing envelope containing a book and a stack of old cash.",
+      "icon": "Package"
+     },
+     {
+      "id": "v3",
+      "name": "The Reading Nook",
+      "visual_description": "A cozy, comfortable corner in a library filled with soft chairs and warm lighting.",
+      "icon": "Armchair"
+     }
+    ]
+   },
+   "attempts": [
+    {
+     "output": {
+      "asides": [
+       {
+        "beat_i": 4,
+        "cast_id": null,
+        "kind": "label",
+        "text": "Old money"
+       },
+       {
+        "beat_i": 15,
+        "cast_id": "c3",
+        "kind": "thought",
+        "text": "So much time"
+       }
+      ],
+      "metaphors": [
+       {
+        "beat_i": 7,
+        "image": "A heavy iron weight pulling a small paper boat underwater"
+       },
+       {
+        "beat_i": 18,
+        "image": "A massive mountain of sand slowly burying a single small book"
+       }
+      ],
+      "motifs": [
+       {
+        "appearances": [
+         {
+          "beat_i": 2,
+          "role": "plant"
+         },
+         {
+          "beat_i": 5,
+          "role": "echo"
+         },
+         {
+          "beat_i": 9,
+          "role": "echo"
+         },
+         {
+          "beat_i": 14,
+          "role": "echo"
+         },
+         {
+          "beat_i": 21,
+          "role": "payoff"
+         }
+        ],
+        "id": "m1",
+        "name": "Golden Bookmark"
+       }
+      ]
+     },
+     "errors": [
+      "motifs[0]: motif requires an icon or a set_piece_id",
+      "metaphors[1].image: asks for writing / lettering (\"A massive mountain of sand slowly burying a single small book\") — images must not contain text"
+     ]
+    },
+    {
+     "output": {
+      "asides": [
+       {
+        "beat_i": 4,
+        "cast_id": null,
+        "kind": "label",
+        "text": "Old money"
+       },
+       {
+        "beat_i": 15,
+        "cast_id": "c3",
+        "kind": "thought",
+        "text": "So much time"
+       }
+      ],
+      "metaphors": [
+       {
+        "beat_i": 7,
+        "image": "A heavy iron weight pulling a small paper boat underwater"
+       },
+       {
+        "beat_i": 18,
+        "image": "A massive mountain of sand slowly burying a single small book"
+       }
+      ],
+      "motifs": [
+       {
+        "appearances": [
+         {
+          "beat_i": 2,
+          "role": "plant"
+         },
+         {
+          "beat_i": 5,
+          "role": "echo"
+         },
+         {
+          "beat_i": 9,
+          "role": "echo"
+         },
+         {
+          "beat_i": 14,
+          "role": "echo"
+         },
+         {
+          "beat_i": 21,
+          "role": "payoff"
+         }
+        ],
+        "icon": "Bookmark",
+        "id": "m1",
+        "name": "Golden Bookmark"
+       }
+      ]
+     },
+     "errors": [
+      "metaphors[1].image: asks for writing / lettering (\"A massive mountain of sand slowly burying a single small book\") — images must not contain text"
+     ]
+    },
+    {
+     "output": {
+      "asides": [
+       {
+        "beat_i": 4,
+        "cast_id": null,
+        "kind": "label",
+        "text": "Old money"
+       },
+       {
+        "beat_i": 15,
+        "cast_id": "c3",
+        "kind": "thought",
+        "text": "So much time"
+       }
+      ],
+      "metaphors": [
+       {
+        "beat_i": 7,
+        "image": "A heavy iron weight pulling a small paper boat underwater"
+       },
+       {
+        "beat_i": 18,
+        "image": "A massive mountain of sand slowly burying a single small book"
+       }
+      ],
+      "motifs": [
+       {
+        "appearances": [
+         {
+          "beat_i": 2,
+          "role": "plant"
+         },
+         {
+          "beat_i": 5,
+          "role": "echo"
+         },
+         {
+          "beat_i": 9,
+          "role": "echo"
+         },
+         {
+          "beat_i": 14,
+          "role": "echo"
+         },
+         {
+          "beat_i": 21,
+          "role": "payoff"
+         }
+        ],
+        "icon": "Bookmark",
+        "id": "m1",
+        "name": "Golden Bookmark"
+       }
+      ]
+     },
+     "errors": [
+      "metaphors[1].image: asks for writing / lettering (\"A massive mountain of sand slowly burying a single small book\") — images must not contain text"
+     ]
+    }
+   ]
+  }
+ }
+}

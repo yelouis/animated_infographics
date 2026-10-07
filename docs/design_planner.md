@@ -272,6 +272,21 @@ The **same functions** run on LLM output (inside the ladder) and on human edits 
      Error: `props.value: <v> is a day of a date in this beat; a date belongs in a timeline or an era label, not a stat`.
      - **Measured:** after the year rule blocked "2016", the model drew "She had died in 2016, and March 3rd was her birthday." as a big **3** with the unit "March" (Wave E's final run). "March 3rd" had already been drawn as "3" + "rd" in Wave A and Wave B.
      - With the rule, that scene failed all 3 attempts and fell to the deterministic quote of the sentence.
+   - **A name is not shown before the narration says it (added October 6, 2026).**
+     - **Fields:** `kinetic_quote.attribution_cast_id`, `character_intro.cast_id`, every entry of `relationship_map.cast_ids`, and `text_thread.contact_cast_id`. Each puts a cast member's **name** on screen.
+     - **The rule:** for a cast member who is not `is_narrator`, the transcript from word 0 to the **last word of this scene's beat** must contain, as a whole word (casefolded), either the member's full `name` or one of its **name tokens**. A name token is a run of letters and apostrophes of ≥ 3 characters, other than `the`, `of`, `and`, `mr`, `mrs`, `ms` and `dr`.
+     - **Errors:**
+       - `props.attribution_cast_id: "Robert Okafor" is not named in the narration yet — leave the attribution empty`
+       - `props.cast_id: "Sofia" is not named in the narration yet — choose a scene that does not show a name`
+       - `props.cast_ids: "June Lind" is not named in the narration yet — leave them out`
+       - `props.contact_cast_id: "<name>" is not named in the narration yet — leave the contact empty`
+     - **Avatars without names stay allowed** (`dialogue`, `emotion_beat`, a metaphor's cast): a face can foreshadow; a name gives the reveal away.
+     - **Measured:** 7 of 32 named displays in the 7 most recent storyboards (literal and creative) broke this rule. All 7 were `llm planned`; the deterministic paths already leave attributions empty.
+       - "Robert Okafor" attributed to the anonymous note, in two runs;
+       - "June Lind" in a relationship map while the narration still says "J.", in two runs;
+       - "Sofia" introduced on "a woman walked in";
+       - "John Snow" introduced on "One man disagreed." and placed in a map at s004.
+     - **Accepted false negatives:** a token that is also a common word (a month, as in "June") counts as naming. Later references by token alone ("Okafor" for "Robert Okafor") count as naming.
    - `timeline.events[].date_label`: see §8 (Issue 4).
 7. **Text completeness (added September 25, 2026)**, for every free-text string field (not ids, enums, `prefix`, or `date_label`/`era_label`):
    - **Repair (not an error):** runs of whitespace, including `\n`, collapse to one space; strip the ends.

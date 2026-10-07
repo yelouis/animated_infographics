@@ -31,42 +31,131 @@
 - **The new E2E step 10 is a real gate.** It reports 0 in every column on both Wave F runs. Run on the pre-Wave-F jobs, it caught 3 date stats and 1–3 invented stamps per job, and exited 1.
 - **Real-output review found no new defect that needs work.** The remaining observations are watch items or deliberately unscheduled behaviour, listed in `agent_execution_guide.md` §2. **The queue is complete.**
 
-**Wave G (G1–G6) was delivered as 6 commits on October 6, 2026.**
-- Every gate G1–G15 was run bare (302 fast tests, 19 vitest, G12 E2E, G15 creative E2E, offline gate, doctor). All green; numbers in `agent_execution_guide.md` §1.
-- Each item was verified against its spec: **all 6 do what their specs say** (verdicts in §3).
-- The creative bars hold on real renders: every motif planted before payoff, >= 2 metaphors and >= 2 asides rendered, 0 license failures left, 0 overlay/slot overlaps, word density <= 1.0 graphic word/s, and light share >= 1/3.
-- Long creative budget met: 59.62 s/min new / 80.83 s/min render / 140.45 s/min total (<= 110 / 85 / 195 s/min).
+**Waves G (G1–G6) and H (H1–H6) were delivered as 12 commits (`afb1b5f`…`6150482`) and independently verified on October 6, 2026, in a separate session.**
+- **Gates:** every gate G1–G16 was re-run bare, along with the three cold budgets: 350 fast tests, 43 slow tests, 19 vitest, the gallery (59 goldens, 0 overflows), the E2E, the offline gate, doctor, the creative E2E and the presentation simulation. Numbers are in `agent_execution_guide.md` §1.3. **A green G16 means less than it says** (below).
+- **Source:** each item was read against its spec. **11 of the 12 do what their specs say.** G4's callback "seen before" dots do not. `compile._get_item_count` (`compile.py:62–79`) returns 0 for `callback`, so `item_frames` is empty. `callback.tsx:75–77` then falls back to `[15, 27]`, so every callback shows exactly two dots, whatever the motif's history: both creative E2E callbacks had 4 earlier tokens on screen. Its `ding` cues, one per item frame, have no frames to fire on.
+- **What works on screen:**
+  - "thick soup" for the Thames;
+  - "invisible poison" for miasma;
+  - the "smell blocker" label over Parliament and the "so gross" thought;
+  - the pump callback at "Snow got a pub…".
+  
+  Creative word density is 0.74 and 0.84 graphic words/s.
+- **Real-output review found nine defects that the gates could not see. Six of them trace to the designer's specs, not to the code.**
+  1. **Asides sit on the motif token and on the avatar.** Thought and label asides are anchored top-right, where the motif token is (`design_styles.md` §3.6), and over `character_intro`'s 440 px avatar. The overlay test checks a hand-written slot table (`renderer/src/theme/overlayLayout.ts:68–104`). That table omits the avatar, and the test never checks one overlay against another. Spec gap.
+  2. **A thought aside may carry neither icon nor text.** Validator 7 does not forbid it, and the renderer draws a generic `ChatCircleDots` "…" bubble. Seen on `story_overdue_book` s001 (a `character_intro`). Spec gap.
+  3. **Motif names are never license-checked, and nothing spaces a motif's appearances.**
+     - "Silver Pump Handle": the narration never says "silver".
+     - "Blue ink pen": the narration never says "pen".
+     - The ink motif's echoes cluster at beats 15, 18 and 19, and its payoff comes at 51, 32 beats (≈ 2.5 min) after the last echo.
+     
+     Spec gap.
+  4. **G16 is green while every follower bar fails.** `presentation_sim.sh:336` prints "FAIL (Filed)", and the script ends `exit 0` (`:424`). Its falsification (`:226–268`) asserts that shuffled speech scores below the mild bars. The real, unshuffled runs score below them too (slide 0.32–0.56), so the check cannot fail. The designer's guide said both "every §8 bar on every run" and "met or filed". Spec gap.
+     - **Worse, G16 does not run the simulation when it finds an old job.** `presentation_sim.sh:52–80` scans the git-ignored `jobs/` directory for any job with the same fixture, style, level and seed, and re-scores it. On this machine that means it never builds anything.
+     - **The evidence:** the designer's battery run (1,416 s, exit 0) only re-scored the agent's four jobs from 12:45–13:41 on October 6, and H6's "re-measure" did the same.
+     - **Unspecified, not a code defect:** the designer's §4c never said "fresh jobs dir", although §4 and §4b do.
+  5. **Creative presentation jobs skip the license check and the overlays, and lose the director silently.**
+     - `presentation/tree.py:155` calls the director but never the license check, so unchecked metaphors reached the screen.
+     - `tree.py:494` and `compose.py:219` hard-code `overlays: []`.
+     - When the director fails, the job silently runs literal. `story_overdue_book` creative/mild has no `director.json`, and its tree's template counts are identical to the literal run's. The cause is defect 9: every attempt keeps a "book" metaphor.
+     
+     The designer's spec said only "the style applies as in `design_styles.md`". Spec gap.
+  6. **Names appear on screen before the narration says them.** This affects every style, and the defect predates Wave G: **7 of 32** named displays in the 7 most recent storyboards. Examples:
+     - "Robert Okafor" attributed to the anonymous note, in two runs;
+     - "June Lind" in a relationship map while the narration still says "J.", in two runs;
+     - "Sofia" introduced on "a woman walked in";
+     - "John Snow" introduced on "One man disagreed." and shown in a map at s004.
+     
+     All 7 are `llm planned`.
+  7. **No image was generated in any of the agent's four presentation runs,** with 5–7 failures each. Every entry failed in ≈ 970 ms with `mflux exited with code 1`, inside `huggingface_hub.snapshot_download`, with `attempts: []`. That is an environment failure, not lettering. The videos rendered with fallbacks, and every gate stayed green.
+  8. **The presentation matcher misses every accuracy bar on every run.** The tree is not at fault: the oracle scores 0.98–1.00. This is **Issue 8**, rewritten below with new measurements and options.
+  9. **One stuck metaphor silently turns a creative video literal, and the creative budget never noticed.**
+     - **The cause:** the director is all-or-nothing. With a cold cache after `ollama stop` (the budget's conditions), all 3 attempts on `story_overdue_book` kept "A paper book … mailbox flag" for beat 24. Rule 6 rejects "book", so the job degraded to literal.
+     - **What the budget reported:** 5 images, 3 text checks and 114 LLM calls, the literal signature (a creative run gives 9, 7 and 117), and "PASS" for a creative budget. The agent's committed creative budget has the identical signature. So no creative budget has yet measured a creative video.
+     - **The same failure in the presentation path:** the overdue deck fails identically ("…burying a single small book"; defect 5).
+     - **Not reproducible warm:** with the model already loaded, the same story planned 1 motif, 4 metaphors and 5 asides.
+     - **Evidence:** the attempts are recorded in `docs/evals/assets/2026-10-06/wave_i_director_attempts.json`.
+     - **The spec gaps:** the designer's spec never showed the model rule 6's word list (lesson 2.11), and specified degradation without salvage.
+- **Defects 1–7 and 9 are Wave I** (I1–I9 in the guide), within approved behaviour. **Defect 8 needs the user's selection.**
 
-**Wave H (H1–H6) was delivered as 6 commits on October 6, 2026.**
-- Every gate G1–G16 was run bare: 350 fast tests, 43 slow tests, 19 vitest, G12 E2E, G13 offline gate, G14 doctor, G15 creative E2E, and G16 presentation simulation. All green; numbers in `agent_execution_guide.md` §1.
-- Each item was verified against its spec: **all 6 do what their specs say** (verdicts in §3).
-- Presentation simulation pipeline operational: `present-sim` generates 7–10 slide decks with talking points, builds navigation trees with section nodes and transition edges, simulates speech delivery with Kokoro TTS and mlx-whisper ASR, performs causal streaming matching, and composes/renders presentation animations.
-- Presentation score stage evaluates slide/point accuracy, onset lag, false switches, ad-lib stability, and skip recovery, outputting Pillow strip charts and oracle baselines (100% accuracy and 0.0s lag).
-- Gate G16 verified across 4 simulation runs, inherited scene criteria (Wave E/F F4 = 0 clean), word density (<= 1.0 graphic words/s), and falsified on shuffled speech (failing red bare).
-- Issue 8 documented regarding lexical back-edge graph trapping vs initial accuracy bars with options, keeping user selection blank.
-- The guide is now **Queue Complete**.
-
-**Open decision for the user:** Issue 8 (Presentation simulation streaming matcher back-edge graph trapping).
+**Open decision for the user:** Issue 8 (how the presentation follower should match speech to the deck).
 
 ## ⚠️ Unresolved Issues & Suggestions
 
-### Issue 8: Presentation simulation streaming matcher misses accuracy bars due to back-edge graph trapping
+### Issue 8: The presentation follower cannot track paraphrased speech with lexical matching
 
-**Status**: ⚠️ Confirmed Unresolved — `jobs/history-great-stink-20261006-124512/presentation_score.json`: slide accuracy 0.5609 (bar ≥ 0.90), point accuracy 0.3573 (bar ≥ 0.75), false switches 3.35/min (bar ≤ 1.0); `jobs/history-great-stink-20261006-132526/presentation_score.json`: slide accuracy 0.4927 (bar ≥ 0.80), point accuracy 0.3086 (bar ≥ 0.60), false switches 3.26/min (bar ≤ 2.0); `jobs/story-overdue-book-20261006-124735/presentation_score.json`: slide accuracy 0.3157 (bar ≥ 0.90), point accuracy 0.1960 (bar ≥ 0.75), false switches 5.00/min (bar ≤ 1.0). In contrast, all oracle baselines achieved 1.0000 (100%) slide and point accuracy with 0.0s lag and 0.0 false switches.
+**Status**: ⚠️ Confirmed Unresolved. Filed by the implementing agent on October 6, 2026; **re-measured and rewritten by the designer the same day.** Every run misses every accuracy bar. The tree is not the cause: the oracle (each point shown from its first spoken word) scores 1.00, 0.98, 0.98 and 1.00. The follower is.
 
-In `presentation/match.py` and `presentation/tree.py`, back-edges cost 0.5 BM25 units and allow jumping to ANY earlier point in the deck, whereas forward skip edges are capped at 2 slides ahead (`s_from <= s_to <= s_from + 2`). When a speaker uses general narrative or historical vocabulary that also appeared in early slides (e.g. "London", "sewer", "Parliament" in `history_great_stink`; "Robert", "June", "book", "library", "card" in `story_overdue_book`), early points remain lexically competitive. Minus a modest 0.5 penalty, the matcher commits backward. Once trapped on early slides, the forward skip cap prevents jumping directly forward to later slides, creating prolonged desynchronisation until intermediate slides are visited.
+| Run (`jobs/…`) | Slide (bar) | Point (bar) | Lag median / p90 (bar) | False switches (bar) |
+|---|---|---|---|---|
+| `history-great-stink-20261006-124512`, literal/mild | 0.56 (≥ 0.90) | 0.36 (≥ 0.75) | 7.4 s / 12.8 s (≤ 3 / 6 s) | 3.35/min (≤ 1.0) |
+| `history-great-stink-20261006-132526`, creative/strong | 0.49 (≥ 0.80) | 0.31 (≥ 0.60) | 10.0 s / 21.4 s (≤ 4 / 8 s) | 3.26/min (≤ 2.0) |
+| `story-overdue-book-20261006-134157`, literal/strong | 0.36 (≥ 0.80) | 0.20 (≥ 0.60) | 9.5 s / 10.0 s (≤ 4 / 8 s) | 4.08/min (≤ 2.0) |
+| `story-overdue-book-20261006-124735`, creative/mild | 0.32 (≥ 0.90) | 0.20 (≥ 0.75) | 9.6 s / 11.5 s (≤ 3 / 6 s) | 5.01/min (≤ 1.0) |
 
-**Option A (recommended)**: **Directional forward bias and back-edge threshold penalty** — increase the `back` transition edge penalty from 0.5 to 1.5–2.0 BM25 units (or require back-edges to only be eligible if an explicit back-reference cue is present in speech), and allow wider skip edges forward when the matcher is behind.
-  - *Pros*: Directly prevents false backward commits while preserving legitimate back-references; maintains high synchronisation accuracy.
-  - *Cons*: Changes `tree.py` / `match.py` transition edge scoring contracts.
+**Reproduced at HEAD.** The designer re-ran G16 into a fresh jobs dir (`artifacts/presentation_sim/verify_20261006_224207/jobs`), building four new jobs. Every number above reproduced within 0.05:
+- slide 0.558, 0.493, 0.365 and 0.316;
+- point 0.352, 0.309, 0.205 and 0.196;
+- oracle 1.00, 0.98, 0.98 and 1.00.
 
-**Option B**: **Calibrate simulation accuracy bars to reflect unguided streaming BM25 reality** — update §8 bars for unguided lexical streaming ASR (e.g. slide accuracy ≥ 0.50 / point accuracy ≥ 0.35 on vocabulary-heavy fixtures).
-  - *Pros*: Leaves algorithm and graph topology unchanged.
-  - *Cons*: Lowers accuracy expectations; tolerates visible slide desynchronisation on real presentations.
+The LLM tie-break changed point accuracy by +1.4, −2.6, +0.8 and 0.0 points.
 
-**Option C**: **Enforce monotonically progressing forward window with back-edge hysteresis exception** — only allow back-edges to be considered if the speaker explicitly stays on the earlier topic for ≥ 3 consecutive decision points with score gap ≥ 2.0.
-  - *Pros*: Eliminates single-sentence back-edge traps while still allowing genuine extended historical tangents.
-  - *Cons*: Adds another stateful parameter to `LiveMatcher`.
+**What the designer measured** by replaying the agent's own `LiveMatcher` on the recorded `heard.json` files:
+- **Wrong backward commits are about half of all commits:** 17, 18, 17 and 24 per run.
+- **Correct switches arrive 2.9–8.5 s after the point's first word.** Several points are never shown.
+- **The cause is the 20-word window, which holds ≈ 8 s of speech.** A new point's words outnumber the old point's only halfway through it. **The 20-word window is the designer's spec value** (`design_presentation_simulation.md` §6.1).
+- **The agent's original Option A (raise the back cost) was tested and cannot reach the bars.** The edge-cost variants on the same four runs:
+
+| Variant | Slide | Point | Lag median | False/min |
+|---|---|---|---|---|
+| Delivered (back 0.5) | 0.32–0.56 | 0.20–0.36 | 7.4–10.0 s | 3.3–5.0 |
+| Back 1.0 | 0.30–0.57 | 0.20–0.36 | 7.4–10.0 s | 3.4–4.7 |
+| Back 2.0 | 0.39–0.54 | 0.23–0.34 | 7.4–10.0 s | 2.8–4.5 |
+| **Back 4.0 (best)** | **0.55–0.59** | **0.31–0.39** | 6.6–10.0 s | 2.0–2.7 |
+| No back edges at all | 0.45–0.55 | 0.26–0.30 | 9.6–10.0 s | 1.0–1.25 |
+| Back 2.0 + skip anywhere ahead | 0.49–0.61 | 0.32–0.39 | 6.6–10.8 s | 2.5–4.3 |
+
+- **Even with no back edges at all, slide accuracy is 0.45–0.55.** So back-edge trapping is a symptom. The disease is that a 12-word deck point and a paraphrase of it share too few words for BM25 to tell, quickly, which point is being spoken.
+- **The LLM tie-break** (`--tiebreak llm`, measured by the agent) adds 1–8 points of point accuracy. By its §6.4 rule it stays off.
+
+**Option A (recommended)**: **Bake-off of two deck-only matchers, using the existing models; adopt by rule.** Build A1, replay it on the four recorded `heard.json` files, and run G16. If it meets every §8 bar on all four runs, adopt it and stop. Otherwise build A2 and do the same. If neither meets the bars, file both sets of numbers with the best per-metric results and stop.
+  - **A1, anticipated speech + forward tracker (no LLM in the live loop).**
+    - **At tree time, from the deck only:** one LLM call per point writes 4 short sentences a presenter might say while covering it. They are stored on the node, and the node's BM25 document becomes the point text plus those 4 sentences.
+    - **Live:** the window shrinks to the last **10** heard words.
+    - Only the current node and its next 3 nodes are scored at each decision point.
+    - **Moving forward to the next node** needs one decision point with a margin ≥ 0.5.
+    - **Skips and backs** keep the 2-consecutive-tops rule, with a margin ≥ 1.5.
+    - Dwell stays at 2 s.
+    - The isolation test extends to the new call: it may see only the deck.
+  - **A2, LLM point classifier.**
+    - At each decision point, one `gemma4:26b` call receives the current slide's points, the next 3 points, the titles of earlier slides, and the last 25 heard words. It answers with one node id, from an enum.
+    - A move to the next node commits on one answer; any other move needs the same answer twice in a row.
+    - The call's measured compute time is already counted in the simulated latency (§6.3).
+  - *Pros*: Both attack the real cause (vocabulary overlap and window lag), not the symptom. Both keep the isolation invariant and add no model. A1 is deterministic and cheap live; A2 understands paraphrase best. The rule decides between them on numbers, not on taste.
+  - *Cons*:
+    - A1 adds ~22 LLM calls per tree (≈ 20–30 s).
+    - A2 adds ~200–300 LLM calls per 5-minute talk (≈ 2–4 min offline), and live it is viable only if each call finishes well under the 1.5 s decision cadence.
+    - A lag median ≤ 3 s may be out of reach for any causal matcher, since a point must be heard before it can be recognised. The bake-off measures this, and Option E stays available afterwards.
+
+**Option B**: **A1 only.** Build only the anticipated-speech tracker, and file its numbers if it misses.
+  - *Pros*: The smallest change, with no LLM in the live loop: the live path stays a few milliseconds per decision.
+  - *Cons*: If paraphrase still defeats BM25 (likely on the `strong` level, where 30–50% of sentences are reworded), a second round is needed for A2 anyway.
+
+**Option C**: **A2 only.** Replace BM25 with the LLM classifier.
+  - *Pros*: The best understanding of paraphrase and ad-libs; the edge costs become a prior rather than the decision.
+  - *Cons*: The heaviest compute (above). The live mode inherits a model call every 1.5 s, and that call's latency counts toward the onset-lag bar.
+
+**Option D**: **Option A plus A3, a local embedding model.**
+- **The model:** pull a small embedding model into the existing Ollama (e.g. `nomic-embed-text`, ≈ 0.3 GB; the agent records the real size with `ollama show`).
+- **Scoring:** the cosine similarity between the last 15 heard words and each node's point text and anticipated sentences.
+- **The bake-off:** A3 joins as a third contestant, with the same adoption rule.
+
+  - *Pros*: Embeddings are the standard tool for matching paraphrase; they are fast (milliseconds per window) and need no LLM call in the live loop.
+  - *Cons*: It lifts the standing "no new models" constraint (fully local still holds). One more model in `doctor`, the offline gate and the setup script.
+
+**Option E**: **Keep lexical matching with back cost 4.0, and restate the §8 bars at the measured level.** The bars would become slide ≥ 0.55, point ≥ 0.30, lag median ≤ 10 s and false switches ≤ 3/min, for both levels.
+  - *Pros*: No new work beyond one constant; G16 can go green honestly.
+  - *Cons*: On screen, the deck is wrong about 40–45% of the time and visuals trail the voice by 7–10 s. That is not a usable presentation, and prepared mode (DF4) would inherit it.
 
 Your selection: _____
 
@@ -126,6 +215,28 @@ The props schema's `enum` held 157 icon names, but the prompt listed none. The m
 #### 2.12 A fix written for one example misses its siblings, and a prompt change moves errors elsewhere
 
 E3 was specced from one case, "2016", so the model's next move, "March 3rd" as a stat, passed. E4 showed the icon names, so the model began writing "Icon: Bullet" into text fields. **Name the defect class in the spec (a date, not a year), test the class against every past run, and re-read every template a prompt change reaches.** Contracts: `design_planner.md` §6 item 6 and item 7.
+
+#### 2.13 A pipeline that never crashes hides a machine that never ran
+
+Every failed image falls back to an icon, by design, so that one bad model output never ends a job. In all four of Wave H's presentation runs, **every** image failed in ≈ 970 ms because mflux could not find its weights. The videos rendered, and every gate stayed green. **Fallbacks are for the model's failures, not the machine's.** A gate must tell a quality failure (lettering found, then fallback) from an execution failure (the generator never produced an image) and fail on the second.
+
+The same happened one level up. The director's fallback to literal, after one metaphor failed three times, hid that both cold creative budgets timed a literal video and called it a creative PASS. **A measurement must check that it measured the thing it names.**
+
+Contracts: `design_testing_and_validation.md` §4 (asset execution errors) and §5 (a creative budget must be creative); `design_styles.md` §3.3 (salvage).
+
+#### 2.14 A falsification must be able to fail on the real input; "met or filed" makes a gate green on a miss; and a gate that reuses old outputs tests nothing
+
+G16's falsification asserted that shuffled speech scores below the bar. It did, but so did the real speech, so the check proved nothing. Meanwhile the script printed "FAIL (Filed)" and exited 0, because the spec said bars are "met or filed". **A gate's exit code must state its bars.** A known, filed failure gets its own exit code, and the baseline records that code. **The oracle proves the tree and the scorer, not the follower.**
+
+G16 also re-scored any matching job it found in `jobs/` instead of running the pipeline, so on the machine where the jobs were made it never tested the current code. **A gate builds its own fresh outputs every time** (like lesson 2.4's warm caches, but worse: here the whole output was cached). Contract: `design_testing_and_validation.md` §4c.
+
+#### 2.15 A layout test against a hand-kept table tests the table
+
+The overlay test checked each overlay against a hand-written list of template rectangles. The list left out `character_intro`'s avatar, and the test never compared one overlay with another. The spec's own coordinates put the label and the thought bubble on top of the motif token. **Measure the rendered boxes** (2.8, applied to layout). Contract: `design_styles.md` §3.6.
+
+#### 2.16 A stage reused in a second pipeline leaves its guards behind
+
+The presentation tree called the director but not the license check, and it hard-coded `overlays: []`. A failed director silently turned a creative run literal. The spec said only "the style applies as in `design_styles.md`". **When a stage is reused, list every check, record and side output that travels with it, and test each one in the new pipeline.** Contract: `design_presentation_simulation.md` §3.
 
 ---
 
@@ -229,6 +340,14 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 - F3 — Era stamps show a narration year or nothing — git log --grep "(f3)" — G1–G14 green bare, 264 passed (+3 tests); normalize_era_label normalizes location era_label to a four-digit year from the narration or null; applied to planner location props before validate_scene; all 8 frozen era label cases match expected values (red first); 1960s with 1960 in transcript yields 1960s, absent 1932 yields null; stub backend returning 'Present Day' produces null; falsified by keeping labels with digits (1932 era goes red bare).
 - F4 — Re-measure; close-out of Wave F — git log --grep "(f4)" — G1–G14 green bare, 265 passed, 37 slow passed; cold planner eval passes all §9 bars (8/8 critic regression, 0 word-cap violations, 0 placeholder errors, 0 armchairs, light share 33.3%–57.1% ≥ 1/3); G12 E2E step 10 verify_e2e_scenes passes with 0 unneutral tones, 0 disputed attributions, 0 quoted R7 repairs, 0 year stats, 0 date stats, 0 junk text, 0 invented era stamps, and 0 armchairs across all 5 rendered jobs; cold budget 402.81 s (≤ 600 s) with 0 cache hits; room 12, recipe box, and emu war stills verified; full battery exits 0 bare; queue complete.
 
+**Wave G — delivered; independently verified October 6, 2026.** Verdicts:
+- G1 ✓ (fixtures and checksums; `af_heart` / `llm` on `story_overdue_book`).
+- G2 ✓ (literal byte-identity holds against the frozen baseline).
+- G3 ✓ to spec. The spec let a thought aside carry nothing (→ I3) and left motif names unchecked and unspaced (→ I4).
+- G4 ✗ in one part: the callback's "seen before" dots are always 2, because `compile` gives `callback` no items and the renderer falls back to `[15, 27]` (→ I1). The overlay layer is ✓ to spec, but the spec anchored the asides on the token and over the avatar, and its test used a hand-kept table (→ I2).
+- G5 ✓.
+- G6 ✓. G15's "0 overlay overlaps" relied on G4's table (→ I2).
+
 **Wave G:**
 
 - G1 — New fixtures wired in; literal measured on long stories — git log --grep "(g1)" — G1–G14 green bare; shasum CHECKSUMS passes all 28 entries; planner eval passes 6/6 fixtures cold (story_overdue_book af_heart / llm "grandmother", 15 distinct, light 52.5%; history_great_stink am_michael / third_person, 14 distinct, light 39.4%); literal cold budget on story_overdue_book 56.87 s/min new / 79.80 s/min render / 136.67 s/min total (≤ 90 / 80 / 170 s/min), 0 cache hits; literal restatement observed on beats s003/s027, s032, s054.
@@ -237,6 +356,14 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 - G4 — Renderer: metaphor, callback, OverlayLayer, and gallery fixtures — git log --grep "(g4)" — G1–G10, G14 green bare, 290 passed, 19 vitest passed; metaphor and callback templates created and registered (18 total); OverlayLayer implemented per design; overlay bounding boxes disjoint from primary content bounds across all 10 allowed templates; falsification test fails at (540, 240); 16 new goldens cut and verified in check_gallery.sh with 0 overflows, 0.000% diff, and hold motion verified; literal baseline byte-identity holds.
 - G5 — Integration: R8, deterministic scenes, metaphor images, overlays — git log --grep "(g5)" — G1–G10, G14 green bare, 299 passed (+9 tests); selection rule R8 orders metaphor and callback with LLM primary as alternate; R2 never rewrites R8 scenes; deterministic metaphor and callback props planned with rationale "director"; metaphor illustration asset generation wired; compute_scene_overlays enforces allowed templates, token displacement <= 2 beats before payoff, aside displacement <= 1 beat, dropped overlays recorded under overlay_dropped; overlays count toward graphic_words in planner/words.py; contact sheet displays M and C badges on metaphor/callback tiles; report.json records director item fates (rendered, moved, license_dropped, overlay_dropped); end-to-end creative run on story_overdue_book reaches awaiting_review with 0 overflows, 4 rendered tokens/callback, 9 license drops, and 0 plan regressions; literal baseline byte-identity holds.
 - G6 — Creative E2E (G15), creative long budget, Wave G close-out — git log --grep "(g6)" — G1–G15 green bare, 302 fast passed, 19 vitest passed; scripts/creative_e2e.sh implemented and wired into battery as G15; both creative jobs pass verify.json, word density (0.74 and 0.84 words/s <= 1.0, light share 45.5% and 37.3% >= 33.3%), Wave E/F scene criteria (all 0), and creative bars (every motif planted before payoff, >= 2 metaphors, >= 2 asides, 0 license failures left, 0 overlay overlaps); falsification verified (stub director no motifs -> fails red); cold long creative budget on story_overdue_book measured at 59.62 s/min new / 80.83 s/min render / 140.45 s/min total (<= 110 / 85 / 195 s/min), 0 cache hits; evaluation report docs/evals/creative_2026-10-06.md generated with contact sheets, stills comparisons, and commentary; literal baseline byte-identity holds.
+
+**Wave H — delivered; independently verified October 6, 2026.** Verdicts:
+- H1 ✓. Accepted: `num_predict` 2048.
+- H2 ✓. Accepted: the presentation profile also skips R1; 0 `title_card` nodes in 4 trees, and I8 makes the second half of R1 an assertion. The creative path skips the license check and the overlays, and degrades silently (→ I7).
+- H3 ✓.
+- H4 ✓ to spec. The spec's 20-word window is a cause of Issue 8.
+- H5 ✓ for the scorer and the oracle. G16 fails open, and its falsification cannot fail (→ I8).
+- H6 ✓. Its "all green" did not see 0 generated images in all four presentation runs (→ I6).
 
 **Wave H:**
 
@@ -409,3 +536,34 @@ Wave C (C1–C7) specced. Issue 6 filed for the user.
   - fixtures, test rows, gates G15/G16 and the long-story budget in `design_testing_and_validation.md`;
   - the DF4 path in `design_future_live_and_video.md` §4.
 
+
+**October 6, 2026: verification of Waves G and H (designer).**
+- **Gates:** G1–G16 and the three cold budgets were re-run bare (`agent_execution_guide.md` §1.3). 11 of the 12 items match their specs. G4's callback dots do not.
+- **Real-output review found nine defects the gates could not see** (§1). **Six trace to the designer's specs:**
+  - the aside coordinates;
+  - the missing thought rule;
+  - unchecked, unspaced motifs;
+  - "met or filed" for G16, with no "fresh jobs" rule;
+  - the one-line "style applies" for presentations;
+  - an all-or-nothing director whose prompt never shows rule 6's words.
+  
+  The rest are the callback dots (code), names before the narration (every style, since Wave A), and the presentation runs' image failures (environment, invisible to every gate). The two cold creative budgets both measured a degraded, literal run.
+- **G16 was re-run fresh** at HEAD, building four new jobs. Every Issue 8 number reproduced within 0.05.
+- **Each was measured before specifying:**
+  - the dot counts (4 tokens shown, 2 dots drawn);
+  - the overlay rectangles against each other and the avatar;
+  - the spoiler rule replayed on the 7 most recent storyboards (7 of 32 named displays);
+  - the manifest error signatures (execution vs lettering);
+  - the director's output on the deck;
+  - G16's falsification on the real runs (it cannot fail).
+- **The matcher (Issue 8) was re-measured** by replaying the agent's `LiveMatcher` with six edge-cost variants on the recorded `heard.json` files. The best variant reaches slide accuracy 0.59; with no back edges at all, 0.45–0.55. So the agent's proposed fix was measured insufficient. The window lag is the designer's spec value. Issue 8 was rewritten with the measurements and five options.
+- **Contracts updated:**
+  - `design_styles.md` §3.3 (rules 3, 5 and 7), §3.5–3.7 (anchors, geometry, no fallbacks, the rendered overlap probe);
+  - `design_presentation_simulation.md` §3 (creative in presentation jobs, the R1 assertion, `tree.json` fields), §6.1 and §8;
+  - `design_planner.md` §6 item 6 (the name rule);
+  - `design_templates.md` §2.18 (the dot count);
+  - `design_data_contracts.md` §7 and §10;
+  - `design_testing_and_validation.md` §2 (five rows), §3 (G10, G16), §4 (step 10 columns, G15, §4c exit codes) and §5 (the asset rule);
+  - `master_implementation_plan.md` (Wave I).
+- **Lessons 2.13–2.16 were added.**
+- **Wave I (I1–I9) is specced. One question for the user: Issue 8.**

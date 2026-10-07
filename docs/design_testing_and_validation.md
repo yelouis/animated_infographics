@@ -106,6 +106,12 @@ The `voice`/`reason` expectations are the table in `design_planner.md` §10; the
 | perform (Wave H; stub backend) | the same seed gives byte-identical `performance.json`. Each operation fires at its configured rate on a 400-sentence synthetic script within ± 3 percentage points. Labels match the deck partition. A paraphrase that drops a number falls back to verbatim. The skip and back-reference operations obey their placement rules |
 | follow (Wave H; no LLM) | **causality**: identical commits when the future words are truncated. Hysteresis: one strong window never commits. Dwell: no commit within 2.0 s of the last. Edges: an unreachable node never commits. BM25 document frequencies come from the tree only. Simulated latency = decision time + measured compute time |
 | score (Wave H) | on a synthetic playback equal to ground truth: slide and point accuracy 1.0, lag 0, 0 false switches. On a playback shifted 2 s late: median lag 2.0 s. On a playback with one wrong 5 s detour: exactly one false switch and accuracy reduced by 5 s / total |
+| callback dots (Wave I; no LLM) | `compile` on a frozen creative storyboard where motif `m1` has tokens rendered on 3 earlier scenes gives the `callback` scene `len(timing.item_frames) == 3`, and its frames equal `item_frames(3, scene_frames, 0.4)`. With 1 earlier token → 1. The renderer test: a `callback` with `item_frames: []` draws 0 dots (the `[15, 27]` default is gone) |
+| overlay anchors and completeness (Wave I; no LLM) | `SceneOverlay` rejects `thought`/`label` with `top_right`, `motif_token` with `top_left`, and a `thought` with neither `icon` nor `text`. `compile` drops an incomplete aside into `overlay_dropped` with reason `incomplete`. The vitest asserts the four `OVERLAY_BOUNDS` boxes equal [840,180,960,300], [60,165,300,335], [60,200,300,302] and [100,1020,240,1160], and that every pair drawn together is disjoint: token × thought, token × label, token × prop and thought × prop (thought and label share the aside slot) |
+| director names and spacing (Wave I; stub backend) | rule 5's story-words check: "Silver Pump Handle" against the frozen `history_great_stink` transcript gives exactly `motifs[0].name: "silver" is not in the narration — name the motif with the story's own words`; "the pump handle" and "pumps" pass. Rule 3's spacing: appearances at 15, 18, 19, 51 give both spacing errors verbatim; 19, 35, 42, 48, 56 pass |
+| director salvage and prompt (Wave I; stub backend + frozen real attempts) | the recorded attempts in `docs/evals/assets/2026-10-06/wave_i_director_attempts.json` (copied into `tests/data/wave_i_director_cases.json`): case `story_overdue_book_cold` ends in a salvaged plan without `metaphors[1]`, whose `director_dropped` entry carries the rule-6 error verbatim; case `story_overdue_book_deck` gives a salvaged plan with 1 metaphor; a third attempt with a rule-2 error degrades to literal; a plan with nothing left degrades; the director prompt contains every `TEXT_EXPECTED_WORDS` word and `TEXT_EXPECTED_PHRASES` phrase |
+| names before narration (Wave I; no LLM; frozen real cases) | from `tests/data/spoiler_cases.json` (the 7 measured scenes with their transcripts, beats and bibles): each gives its exact error; the same scene moved to a beat after the name is spoken passes; a narrator `character_intro` passes; a `dialogue` with an unnamed speaker passes (avatars allowed) |
+| creative presentation (Wave I; stub backend) | with `style=creative`, `tree` makes one license call per metaphor and aside (backend counter); a non-`ok` verdict removes the item; a director that fails 3 times gives `style_degraded: true` and the log line verbatim; a point scene whose plan carries a token keeps it in `tree.json` and in `compose`'s timeline; a point node selected as `title_card` is replaced (`RuleRepair(rule="R1")`) |
 | grounding scale words (added Sept 25) | `numbers("holding 2.3 million gallons")` contains 2.3 and 2,300,000 and **not** 1,000,000; `numbers("a million reasons")` contains 1,000,000; `numbers("two million")` contains 2,000,000 |
 | `planner/voice.py` | first-person rate on all four fixtures equals the measured values in `design_planner.md` §10 (±0.01); a text whose only "I" is inside double quotes → third person; the tag cases `I (26F)` → female, `My (34M) wife (33F)` → male, `Me [F29]` → female, `My sister (22F) said` → no tag; **all 23 evidence cases** in the table in `design_planner.md` §10 (7 accepted, 16 rejected), each as its own parametrised test id; evidence not in the text → rejected; `unknown` with evidence → evidence repaired to null; the full decide() truth table (perspective × gender, 6 rows: only first_person+female → `af_heart`); `--voice am_michael` makes **zero** backend calls, counted at the backend's entry point; `--voice bm_george` → exit 2; a backend that fails 3 times → `unknown`/`no_evidence`/`am_michael`, never an exception |
 | `jobs.py` | every refusal in `design_system_architecture.md` §5 returns exit 3; an edit after approval flips `plan_sha256` |
@@ -133,13 +139,13 @@ Runs every gate **bare**, one after another, prints a table of gate / exit code 
 | G7 | TS unit | `npm --prefix renderer test` | exit 0, N passed | breaking the min-span constant |
 | G8 | Schema sync | `./scripts/check_schema_sync.sh` | exit 0 | hand-editing one generated file; **also** emptying one generated file (must be exit 1, not a vacuous pass) |
 | G9 | Renderer purity | `./scripts/check_renderer_purity.sh` | exit 0 | `useCurrentFrame()` in a template; **and** `useCurrentFrame()` in a new file under `renderer/src/templates/remotion/` (the exemption must be the exact path `renderer/src/clock/remotion/`, not any directory named `remotion`) |
-| G10 | Gallery | `./scripts/check_gallery.sh` | exit 0: 0 overflows, goldens within tolerance, hold motion present | a `max` fixture string 20 chars longer (overflow); a template frozen during hold (motion check); **deleting `overflow.json` after the render (the gate must fail closed, not skip)** |
+| G10 | Gallery | `./scripts/check_gallery.sh` | exit 0: 0 overflows, **0 overlaps** (`overlap.json`, added October 6, 2026), goldens within tolerance, hold motion present | a `max` fixture string 20 chars longer (overflow); a template frozen during hold (motion check); **deleting `overflow.json` or `overlap.json` after the render (the gate must fail closed, not skip)**; moving the thought bubble back to centre (840, 260) (`OVERLAP … overlay=thought other=motif_token`) |
 | G11 | Integration | `uv run pytest -q -m slow` | exit 0, N passed | swapping the WER bar to 0% |
 | G12 | E2E | `./scripts/e2e.sh` | exit 0 (§4) | skipping `approve` (render must refuse, and the script must notice) |
 | G13 | Offline | `./scripts/check_offline.sh` | exit 0 (§6) | removing the `deny network-outbound` line (its own self-check must fail) |
 | G14 | Doctor | `uv run infographics doctor` | exit 0 | `ollama stop` / an unpulled model name → exit 4 naming it |
 | G15 | Creative E2E (Wave G) | `./scripts/creative_e2e.sh` | exit 0 (§4b) | rendering `story_overdue_book` creative with the director stubbed to return no motifs (the motif bar must fail) |
-| G16 | Presentation simulation (Wave H) | `./scripts/presentation_sim.sh` | exit 0 (§4c) | feeding `follow` a shuffled `heard.json` (the accuracy bars must fail) |
+| G16 | Presentation simulation (Wave H) | `./scripts/presentation_sim.sh` | exit 0 when every bar is met; **exit 3 = sound but a follower bar missed (filed); exit 1 = anything else** (§4c, revised October 6, 2026) | scoring the oracle's playback as the follower's (must give exit 0 on the bars check); a shuffled `heard.json` (must give exit 3); deleting `out/oracle.mp4` (must give exit 1) |
 
 **Gallery gate details (fail-closed rules added September 25, 2026):** the gate deletes `artifacts/gallery/current/` and `artifacts/gallery/motion/` before rendering, so a stale still can never satisfy a comparison. A missing or unparseable `overflow.json` is a **failure**, not a skip. Then it renders every template × {`min`,`typical`,`max`} at its hold frame (frame 60 of a 150-frame synthetic scene whose fixture specifies `timing` explicitly) → `artifacts/gallery/<template>__<variant>.png`.
 - (a) `overflow.json` empty.
@@ -177,25 +183,55 @@ Uses a fresh `--jobs-dir` under `artifacts/e2e/<timestamp>/`. Steps and assertio
     - era stamps that are not exactly a narration year (§5);
     - "Armchair" icons.
 
+    - names shown before the narration says them (`design_planner.md` §6 item 6; column added October 6, 2026);
+    - **asset execution errors** (added October 6, 2026): `assets/manifest.json` entries with `status: "failed"` whose `error` does not start with `lettering detected`. Those are the generator never producing an image (e.g. `mflux exited with code 1`), not a quality failure.
+
     Every column must be 0; the table goes into the E2E report.
     - **Falsified** October 4, 2026: run on the pre-Wave-F E2E jobs, it reported 3 date stats and 1–3 invented era stamps per job, and exited **1**.
+    - **The two October 6 columns are falsified on recorded output:**
+      - run on `artifacts/creative_e2e/20261006_094037/jobs/*`, it must report **2 named spoilers in each of the 3 jobs** (history s004 and s015; both overdue jobs s012 and s017);
+      - run on `artifacts/e2e/20261006_092212/jobs/room12_run/*`, it must report **1** (s019, "Sofia");
+      - run on the four presentation jobs `jobs/history-great-stink-20261006-124512`, `-132526`, `jobs/story-overdue-book-20261006-134157` and `-124735`, it must report **5, 7, 5 and 5** execution errors;
+      - each must exit **1**.
 
 Writes `docs/evals/e2e_<YYYY-MM-DD>.md` (committed): every exit code, the `verify.json` contents, sync-probe counts, stage timings, and the contact sheets copied to `docs/evals/assets/<YYYY-MM-DD>/`. **MP4s are not committed** (size); the report names their paths and SHA-256.
 
 **4b. Creative E2E (`scripts/creative_e2e.sh`, G15; added October 5, 2026).** Fresh jobs dir, warm caches allowed.
 1. `new story_overdue_book.txt --style creative` → approve → render → **0**, then the same for `history_great_stink.txt --style creative`.
 2. Each job: `verify.json` all true; E2E step 9 density (≤ 1.0 graphic word/s, light share ≥ 1/3); step 10 scene criteria, all 0.
-3. The creative bars of `design_styles.md` §3.7: every motif planted before its rendered payoff, ≥ 2 metaphors, ≥ 2 asides, 0 license failures left, 0 overlay/slot overlaps.
+3. The creative bars of `design_styles.md` §3.7: every motif planted before its rendered payoff, ≥ 2 metaphors, ≥ 2 asides, 0 license failures left, and every overlay on an allowed template with its kind's anchor. **Added October 6, 2026:**
+   - each `callback` scene has `len(timing.item_frames)` equal to the number of earlier scenes carrying its motif's token, and ≥ 1;
+   - no `thought` overlay lacks both `icon` and `text`;
+   - every motif name passes `design_styles.md` §3.3 rule 5's story-words check.
 4. `new story_overdue_book.txt --style literal` → approve → render → **0**, as a control for the stills comparison.
 5. The report `docs/evals/creative_<date>.md` contains, per job:
    - every director item and its fate;
    - the contact sheets;
    - five stills: a metaphor, a callback, a plant token, an aside, and the literal job's scene at the same beat as the metaphor.
 
-**4c. Presentation simulation (`scripts/presentation_sim.sh`, G16; added October 5, 2026).**
+**4c. Presentation simulation (`scripts/presentation_sim.sh`, G16; added October 5, 2026; exit codes revised October 6, 2026).**
+- **A fresh jobs dir, always** (added October 6, 2026): `artifacts/presentation_sim/<timestamp>/jobs/`, as in §4 and §4b. The gate never scans or reuses an existing job.
+  - **Why:** the first G16 re-scored any matching job it found in `jobs/` (`presentation_sim.sh:52–80`), so it never ran the pipeline on the machine that had made them.
+  - **For iteration only,** `PRESENTATION_REUSE_JOBS="<dirs>"` re-scores the named jobs. The report is then headed `NOT A GATE RUN: re-scored existing jobs`, and `battery.sh` refuses to run G16 while the variable is set.
 - The four runs of `design_presentation_simulation.md` §9: `present-sim` → approve → render → `score`, then `score --oracle`, each → **0**.
-- **Every bar of §8 holds** on every run.
-- Inherited checks: step 10 all 0, and the density bar per second of narration.
+- **Mechanics, each failing with exit 1:**
+  - every artefact exists;
+  - inherited checks: step 10 all 0, including the asset-execution column, and the density bar per second of narration;
+  - **the oracle meets every §8 bar** on every run;
+  - no point node uses `title_card`;
+  - each **creative** run has `style_degraded: false`, ≥ 1 `metaphor` node, a `director.json` whose items all passed the license check, and ≥ 1 node scene with a non-empty `overlays`.
+- **The follower's bars:** every §8 bar is checked on every run. **The script's exit code is the result:**
+  - 0 if every bar is met;
+  - **3** if the mechanics pass but any follower bar is missed;
+  - 1 for any mechanical failure.
+  
+  It prints one `BAR <run> <metric> <value> <bar> PASS|MISS` line per check. A missed bar is filed in `ongoing_general_errors.md` (Issue 8 today), and §1.3 of the guide records `exit 3` as the baseline until the user's selection is built. **A bar check that can only print is not a gate** (lesson 2.14).
+- **Falsification, three directions, each run by the script on every invocation:**
+  - (a) the bars check applied to the **oracle's** playback must pass every bar. This proves the check can go green.
+  - (b) the bars check on a **shuffled** `heard.json` must miss the accuracy bars.
+  - (c) the mechanics check on a copy of one job with `out/oracle.mp4` deleted must fail.
+  
+  If any of (a)–(c) does not behave as stated, the script exits 1.
 - `docs/evals/presentation_<date>.md` holds the metrics table, the strip charts and the oracle comparison.
 
 ---
@@ -212,7 +248,10 @@ Writes `docs/evals/e2e_<YYYY-MM-DD>.md` (committed): every exit code, the `verif
 1. runs `ollama stop gemma4:26b` (so the model is not yet loaded);
 2. creates a fresh `INFOGRAPHICS_CACHE_DIR` and a fresh jobs dir;
 3. times `new fixtures/scripts/story_recipe_box.txt --music fixtures/music/test_bed.wav --sfx-dir fixtures/sfx`, then `approve`, then `render`, as wall-clock spans;
-4. writes `docs/evals/budget_<YYYY-MM-DD>.md` with the three spans, the critic calls and text-check calls (and regenerations) made, every stage's `timings_ms`, `llm_calls`/`cache_hits` summed from the stage logs (**cache_hits must be 0** for the run to count), and the image count.
+4. writes `docs/evals/budget_<YYYY-MM-DD>.md` with the three spans, the critic calls and text-check calls (and regenerations) made, every stage's `timings_ms`, `llm_calls`/`cache_hits` summed from the stage logs (**cache_hits must be 0** for the run to count), and the image count. **From October 6, 2026, the run also counts only with 0 asset execution errors** (§4 step 10's definition). A run whose images never generated is faster than a real one, and is not a budget measurement.
+- **A creative budget run counts only if it was creative** (added October 6, 2026). `plan_report.style_degraded` must be false, ≥ 2 `metaphor` scenes must render, and their images must be in `assets/images/`.
+  - **Why:** both cold creative long budgets so far (the agent's and the designer's) silently measured a literal run, reporting 5 images and 114 LLM calls (`design_styles.md` §3.3, "Salvage").
+  - **Kept evidence:** before cleanup, the script copies the job's `logs/`, `plan_report.json`, `director.json` and `assets/manifest.json` to `artifacts/budget/<timestamp>/<span>/`. A budget must not delete its own evidence.
 
 **Long-story budget (added October 5, 2026; the user chose 4–6-minute test stories, whose option stated that the budget would be restated per minute of video).** Measured with the same script on `story_overdue_book` (`--long`), per minute of narration:
 

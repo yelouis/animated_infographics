@@ -104,5 +104,19 @@ The first step toward live presentations, in prepared mode. The pipeline runs in
 
 Slide import and real-time playback stay deferred. Contract: `design_presentation_simulation.md`.
 
-## After Wave H (deferred; each needs a user selection)
+## Wave I: verification fixes for Waves G and H (specced October 6, 2026)
+Waves G and H were delivered and independently verified: 11 of 12 items true to spec. Real-output review found defects the gates could not see:
+- callback dots that never counted;
+- asides drawn over the motif token and the avatar;
+- empty thought bubbles;
+- motif names the story never says;
+- names on screen before the narration reveals them;
+- image generation failing wholesale behind green gates;
+- a director that loses the whole creative style to one repeated metaphor, so the creative budget measured a literal video;
+- creative presentations without the license check or overlays;
+- a presentation gate (G16) that exits 0 on failed bars and re-scores old jobs instead of running.
+
+Wave I (I1–I9) fixes them and re-measures. **Issue 8 is open:** the presentation follower misses its accuracy bars, while the oracle meets them, so the deck and the tree are sound and the matcher is not. It awaits the user's selection.
+
+## After Wave I (deferred; each needs a user selection)
 Video input with picture-in-picture · 16:9 output · **live mode** (streaming ASR → incremental planning → the same templates on a live clock, webcam in a corner) · multi-voice narration · Reddit URL fetch · public-domain photos · historical borders · a web review editor. See `ongoing_general_errors.md` §4.
