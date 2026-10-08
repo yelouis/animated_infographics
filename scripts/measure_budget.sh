@@ -53,12 +53,34 @@ fi
 log "Stopping Ollama gemma4:26b..."
 ollama stop gemma4:26b || true
 
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+BUDGET_SPAN="primary"
+if [ "$IS_LONG" = true ]; then
+  BUDGET_SPAN="long_${STYLE}"
+fi
+CURRENT_SPAN="new"
+
 # 2. Setup fresh temporary directories
 CACHE_DIR=$(mktemp -d "/tmp/infographics_budget_cache_XXXXXX")
 JOBS_DIR=$(mktemp -d "/tmp/infographics_budget_jobs_XXXXXX")
 export INFOGRAPHICS_CACHE_DIR="$CACHE_DIR"
 
+archive_evidence() {
+  local span_name="$1"
+  if [ -n "${JOB_DIR:-}" ] && [ -d "$JOB_DIR" ]; then
+    local dest="$REPO_ROOT/artifacts/budget/$TIMESTAMP/$span_name"
+    mkdir -p "$dest"
+    log "Archiving job evidence to $dest..."
+    [ -d "$JOB_DIR/logs" ] && cp -r "$JOB_DIR/logs" "$dest/"
+    [ -f "$JOB_DIR/plan_report.json" ] && cp "$JOB_DIR/plan_report.json" "$dest/"
+    [ -f "$JOB_DIR/director.json" ] && cp "$JOB_DIR/director.json" "$dest/"
+    [ -f "$JOB_DIR/assets/manifest.json" ] && cp "$JOB_DIR/assets/manifest.json" "$dest/"
+  fi
+}
+
 cleanup() {
+  archive_evidence "$CURRENT_SPAN"
+  archive_evidence "$BUDGET_SPAN"
   log "Cleaning up temporary directories..."
   rm -rf "$CACHE_DIR" "$JOBS_DIR"
 }
@@ -88,6 +110,9 @@ JOB_DIR=$(find "$JOBS_DIR" -mindepth 1 -maxdepth 1 -type d | head -n 1)
 JOB_ID=$(basename "$JOB_DIR")
 log "Job created: $JOB_ID"
 
+archive_evidence "new"
+CURRENT_SPAN="render"
+
 # Verify status
 STATUS=$(uv run infographics status "$JOB_ID" --jobs-dir "$JOBS_DIR")
 echo "$STATUS" | grep -q "awaiting_review" || fail "Job is not in awaiting_review state"
@@ -104,6 +129,9 @@ END_RENDER=$(python3 -c "import time; print(time.time())")
 
 [ -s "$JOB_DIR/out/final.mp4" ] || fail "out/final.mp4 missing or empty"
 
+archive_evidence "render"
+CURRENT_SPAN="preview"
+
 # 6. Snapshot cold run logs, state, and manifest before warm preview
 log "Snapshotting cold run logs, state, and manifest..."
 cp -r "$JOB_DIR/logs" "$JOB_DIR/logs_cold"
@@ -115,6 +143,10 @@ log "Running preview on warm caches..."
 START_PREVIEW=$(python3 -c "import time; print(time.time())")
 uv run infographics preview "$JOB_ID" --jobs-dir "$JOBS_DIR"
 END_PREVIEW=$(python3 -c "import time; print(time.time())")
+
+archive_evidence "preview"
+archive_evidence "$BUDGET_SPAN"
+
 
 # 8. Generate docs/evals/budget_<date>.md report
 IS_LONG="$IS_LONG" STYLE="$STYLE" uv run python -c "
@@ -191,6 +223,17 @@ text_check_calls = tc_counts['clean'] + tc_counts['regenerated'] + tc_counts['fa
 images_dir = job_dir / 'assets/images'
 image_count = len(list(images_dir.glob('*.png'))) if images_dir.exists() else 0
 
+from animated_infographics.evals.asset_health import execution_errors
+asset_errors = execution_errors(job_dir)
+asset_execution_error_count = len(asset_errors)
+assert asset_execution_error_count == 0, f"Expected 0 asset execution errors, got {asset_execution_error_count}: {asset_errors}"
+
+if style == 'creative':
+    style_degraded = plan_report.get('style_degraded', False)
+    assert not style_degraded, "Creative budget failed: plan_report.style_degraded is True"
+    metaphor_images = len(list(images_dir.glob('metaphor_*.png')))
+    assert metaphor_images >= 2, f"Creative budget failed: expected >= 2 metaphor images in assets/images, got {metaphor_images}"
+
 if not is_long:
     new_pass = 'PASS' if span_new <= 390.0 else 'FAIL'
     render_pass = 'PASS' if span_render <= 210.0 else 'FAIL'
@@ -217,6 +260,7 @@ Cold-cache performance budget measured on \`fixtures/scripts/story_recipe_box.tx
 - **Critic Calls (B6)**: {critic_calls} ({critic_counts['agree']} agree, {critic_counts['mismatch_retried']} mismatch_retried, {critic_counts['changed']} changed)
 - **Text Checks (B10)**: {text_check_calls} ({tc_counts['clean']} clean, {tc_counts['regenerated']} regenerated, {tc_counts['skipped']} skipped)
 - **Images Generated**: {image_count}
+- **Asset Execution Errors**: {asset_execution_error_count}
 
 ## Stage Timings (ms)
 
@@ -273,6 +317,7 @@ Cold-cache long-story performance budget measured on \`fixtures/scripts/story_ov
 - **Critic Calls (B6)**: {critic_calls} ({critic_counts['agree']} agree, {critic_counts['mismatch_retried']} mismatch_retried, {critic_counts['changed']} changed)
 - **Text Checks (B10)**: {text_check_calls} ({tc_counts['clean']} clean, {tc_counts['regenerated']} regenerated, {tc_counts['skipped']} skipped)
 - **Images Generated**: {image_count}
+- **Asset Execution Errors**: {asset_execution_error_count}
 
 ## Stage Timings (ms)
 
@@ -302,6 +347,7 @@ Measured on \`fixtures/scripts/story_overdue_book.txt\` ({narration_sec:.1f} s /
 - **Critic Calls**: {critic_calls}
 - **Text Checks**: {text_check_calls}
 - **Images Generated**: {image_count}
+- **Asset Execution Errors**: {asset_execution_error_count}
 
 ### Stage Timings (ms)
 

@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from animated_infographics.contracts.models import Beat, Bible, Transcript
+from animated_infographics.evals.asset_health import execution_errors
 from animated_infographics.planner.rhythm import QUOTED
 from animated_infographics.planner.validate import (
     PlanContext,
@@ -94,6 +95,9 @@ def verify_job_scenes(job_dir: Path) -> dict[str, Any]:
                         if re.search(date_pattern, transcript_text, re.IGNORECASE):
                             date_stats += 1
 
+            asset_errors = execution_errors(job_dir)
+            asset_execution_errors = len(asset_errors)
+
             return {
                 "job_dir": str(job_dir),
                 "unneutral_flagged_tones": 0,
@@ -105,12 +109,14 @@ def verify_job_scenes(job_dir: Path) -> dict[str, Any]:
                 "invented_era_stamps": invented_era_stamps,
                 "armchair_count": armchair_count,
                 "names_before_narration": 0,
+                "asset_execution_errors": asset_execution_errors,
                 "passed": (
                     year_stats == 0
                     and date_stats == 0
                     and junk_text == 0
                     and invented_era_stamps == 0
                     and armchair_count == 0
+                    and asset_execution_errors == 0
                 ),
             }
         raise FileNotFoundError(f"Missing plan_report.json or storyboard.json in {job_dir}")
@@ -275,6 +281,9 @@ def verify_job_scenes(job_dir: Path) -> dict[str, Any]:
             names_errs = names_before_narration_errors(sc, scene_ctx)
             names_before_narration += len(names_errs)
 
+    asset_errors = execution_errors(job_dir)
+    asset_execution_errors = len(asset_errors)
+
     return {
         "job_dir": str(job_dir),
         "unneutral_flagged_tones": unneutral_flagged_tones,
@@ -286,6 +295,7 @@ def verify_job_scenes(job_dir: Path) -> dict[str, Any]:
         "invented_era_stamps": invented_era_stamps,
         "armchair_count": armchair_count,
         "names_before_narration": names_before_narration,
+        "asset_execution_errors": asset_execution_errors,
         "passed": (
             unneutral_flagged_tones == 0
             and disputed_attributions_kept == 0
@@ -296,6 +306,7 @@ def verify_job_scenes(job_dir: Path) -> dict[str, Any]:
             and invented_era_stamps == 0
             and armchair_count == 0
             and names_before_narration == 0
+            and asset_execution_errors == 0
         ),
     }
 
@@ -312,9 +323,9 @@ def main() -> None:
     print(
         f"{'Job':<25} | {'Tones (=0)':<10} | {'Attr (=0)':<10} | {'R7 Q (=0)':<10} | "
         f"{'Years (=0)':<10} | {'Dates (=0)':<10} | {'Junk (=0)':<9} | {'Era (=0)':<8} | "
-        f"{'Armchairs (=0)':<14} | {'Names (=0)':<10} | Status"
+        f"{'Armchairs (=0)':<14} | {'Names (=0)':<10} | {'Assets (=0)':<11} | Status"
     )
-    print("-" * 153)
+    print("-" * 167)
 
     for job_path in args.jobs:
         if not job_path.is_dir() or (
@@ -333,13 +344,13 @@ def main() -> None:
                 f"{res['disputed_attributions_kept']:<10} | {res['r7_quoted_repairs']:<10} | "
                 f"{res['year_stats']:<10} | {res['date_stats']:<10} | {res['junk_text']:<9} | "
                 f"{res['invented_era_stamps']:<8} | {res['armchair_count']:<14} | "
-                f"{res['names_before_narration']:<10} | {st}"
+                f"{res['names_before_narration']:<10} | {res['asset_execution_errors']:<11} | {st}"
             )
         except Exception as e:
             print(f"{job_path.name:<25} | ERROR: {e}")
             all_passed = False
 
-    print("=" * 153)
+    print("=" * 167)
     sys.exit(0 if all_passed else 1)
 
 

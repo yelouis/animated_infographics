@@ -31,11 +31,22 @@ def run_assets_stage(job: Job, ctx: RunContext) -> None:
     regenerations = sum(max(0, len(e.attempts) - 1) for e in manifest.entities)
     elapsed_ms = int((time.perf_counter() - t0) * 1000)
 
+    failed_lines: list[str] = []
+    execution_errors_count = 0
+    for e in manifest.entities:
+        if e.status == "failed":
+            err_str = e.error or ""
+            first_line = err_str.splitlines()[0] if err_str else "unknown error"
+            failed_lines.append(f"asset {e.id} failed: {first_line}\n")
+            if not err_str.startswith("lettering detected"):
+                execution_errors_count += 1
+
+    summary_line = (
+        f"llm_calls={backend.calls} cache_hits={cache_hits} generated={generated} "
+        f"failed={failed} execution_errors={execution_errors_count} elapsed_ms={elapsed_ms} "
+        f"text_checks={text_checks} regenerations={regenerations}\n"
+    )
+
     log_file = job.dir / "logs" / "assets.log"
     log_file.parent.mkdir(parents=True, exist_ok=True)
-    log_file.write_text(
-        f"llm_calls={backend.calls} cache_hits={cache_hits} generated={generated} "
-        f"failed={failed} elapsed_ms={elapsed_ms} "
-        f"text_checks={text_checks} regenerations={regenerations}\n",
-        encoding="utf-8",
-    )
+    log_file.write_text("".join(failed_lines) + summary_line, encoding="utf-8")
