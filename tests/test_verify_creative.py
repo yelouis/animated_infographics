@@ -370,9 +370,7 @@ def test_verify_creative_fails_empty_thought(tmp_path: Path) -> None:
                 "start_frame": 180,
                 "end_frame": 240,
                 "props": {"value": 5, "decimals": 0},
-                "overlays": [
-                    {"kind": "thought", "text": None, "icon": None, "anchor": "top_left"}
-                ],
+                "overlays": [{"kind": "thought", "text": None, "icon": None, "anchor": "top_left"}],
             },
             {
                 "id": "s004",
@@ -429,3 +427,195 @@ def test_verify_creative_fails_empty_thought(tmp_path: Path) -> None:
     assert res["thought_completeness_violations"] == 1
 
 
+def test_verify_creative_accepts_director_dropped_fate(tmp_path: Path) -> None:
+    """An item with fate='director_dropped' in report.json is accepted in valid_fates."""
+    job_dir = tmp_path / "salvaged_creative_job"
+    job_dir.mkdir()
+    preview_dir = job_dir / "preview"
+    preview_dir.mkdir()
+
+    timeline = {
+        "scenes": [
+            {
+                "id": "s000",
+                "template": "title_card",
+                "start_frame": 0,
+                "end_frame": 60,
+                "props": {"title": "Title"},
+                "overlays": [],
+            },
+            {
+                "id": "s001",
+                "template": "kinetic_quote",
+                "start_frame": 60,
+                "end_frame": 120,
+                "props": {"text": "Quote"},
+                "overlays": [
+                    {"kind": "motif_token", "motif_id": "m1", "anchor": "top_right", "icon": "Key"}
+                ],
+            },
+            {
+                "id": "s002",
+                "template": "metaphor",
+                "start_frame": 120,
+                "end_frame": 180,
+                "props": {"label": "Metaphor 1", "image_entity": "meta_1", "cast_ids": []},
+                "overlays": [],
+            },
+            {
+                "id": "s003",
+                "template": "metaphor",
+                "start_frame": 180,
+                "end_frame": 240,
+                "props": {"label": "Metaphor 2", "image_entity": "meta_2", "cast_ids": []},
+                "overlays": [],
+            },
+            {
+                "id": "s004",
+                "template": "stat_callout",
+                "start_frame": 240,
+                "end_frame": 300,
+                "props": {"value": 5, "decimals": 0},
+                "overlays": [{"kind": "thought", "text": "Hmm", "anchor": "top_left"}],
+            },
+            {
+                "id": "s005",
+                "template": "reveal",
+                "start_frame": 300,
+                "end_frame": 360,
+                "props": {"text": "A secret"},
+                "overlays": [{"kind": "prop", "icon": "Coins", "anchor": "bottom_left"}],
+            },
+            {
+                "id": "s006",
+                "template": "callback",
+                "start_frame": 360,
+                "end_frame": 420,
+                "timing": {"item_frames": [20]},
+                "props": {"motif_id": "m1", "label": "Key", "icon": "Key"},
+                "overlays": [],
+            },
+        ]
+    }
+    (job_dir / "timeline.json").write_text(json.dumps(timeline), encoding="utf-8")
+
+    director = {
+        "motifs": [{"id": "m1", "name": "Key"}],
+        "metaphors": [{"beat_i": 2}, {"beat_i": 3}],
+        "asides": [{"beat_i": 4}, {"beat_i": 5}],
+        "license_dropped": [],
+        "overlay_dropped": [],
+        "director_dropped": [{"item": "metaphors[1]", "error": "error msg"}],
+    }
+    (job_dir / "director.json").write_text(json.dumps(director), encoding="utf-8")
+
+    beats = {"beats": [{"i": 0, "text": "The key was found."}]}
+    (job_dir / "beats.json").write_text(json.dumps(beats), encoding="utf-8")
+
+    report = {
+        "director_items": [
+            {"item": "metaphors[1]", "fate": "director_dropped", "error": "error msg"},
+            {"kind": "motif_token", "fate": "rendered"},
+            {"kind": "metaphor", "fate": "rendered"},
+            {"kind": "metaphor", "fate": "rendered"},
+            {"kind": "thought", "fate": "rendered"},
+            {"kind": "prop", "fate": "rendered"},
+            {"kind": "callback", "fate": "rendered"},
+        ]
+    }
+    (preview_dir / "report.json").write_text(json.dumps(report), encoding="utf-8")
+
+    res = verify_job_creative(job_dir)
+    assert res["invalid_fates_count"] == 0
+    assert res["passed"] is True
+
+
+def test_verify_creative_motif_rule_5_violation(tmp_path: Path) -> None:
+    """Rendered motif name with words missing from narration fails G15."""
+    job_dir = tmp_path / "bad_motif_name_job"
+    job_dir.mkdir()
+    preview_dir = job_dir / "preview"
+    preview_dir.mkdir()
+
+    timeline = {
+        "scenes": [
+            {
+                "id": "s000",
+                "template": "title_card",
+                "start_frame": 0,
+                "end_frame": 60,
+                "props": {"title": "Title"},
+                "overlays": [],
+            },
+            {
+                "id": "s001",
+                "template": "kinetic_quote",
+                "start_frame": 60,
+                "end_frame": 120,
+                "props": {"text": "Quote"},
+                "overlays": [
+                    {"kind": "motif_token", "motif_id": "m1", "anchor": "top_right", "icon": "Key"}
+                ],
+            },
+            {
+                "id": "s002",
+                "template": "metaphor",
+                "start_frame": 120,
+                "end_frame": 180,
+                "props": {"label": "Metaphor 1", "image_entity": "meta_1", "cast_ids": []},
+                "overlays": [],
+            },
+            {
+                "id": "s003",
+                "template": "metaphor",
+                "start_frame": 180,
+                "end_frame": 240,
+                "props": {"label": "Metaphor 2", "image_entity": "meta_2", "cast_ids": []},
+                "overlays": [],
+            },
+            {
+                "id": "s004",
+                "template": "stat_callout",
+                "start_frame": 240,
+                "end_frame": 300,
+                "props": {"value": 5, "decimals": 0},
+                "overlays": [{"kind": "thought", "text": "Hmm", "anchor": "top_left"}],
+            },
+            {
+                "id": "s005",
+                "template": "reveal",
+                "start_frame": 300,
+                "end_frame": 360,
+                "props": {"text": "A secret"},
+                "overlays": [{"kind": "prop", "icon": "Coins", "anchor": "bottom_left"}],
+            },
+            {
+                "id": "s006",
+                "template": "callback",
+                "start_frame": 360,
+                "end_frame": 420,
+                "timing": {"item_frames": [20]},
+                "props": {"motif_id": "m1", "label": "Silver Pump Handle", "icon": "Key"},
+                "overlays": [],
+            },
+        ]
+    }
+    (job_dir / "timeline.json").write_text(json.dumps(timeline), encoding="utf-8")
+
+    director = {
+        "motifs": [{"id": "m1", "name": "Silver Pump Handle"}],
+        "metaphors": [{"beat_i": 2}, {"beat_i": 3}],
+        "asides": [{"beat_i": 4}, {"beat_i": 5}],
+        "license_dropped": [],
+        "overlay_dropped": [],
+    }
+    (job_dir / "director.json").write_text(json.dumps(director), encoding="utf-8")
+
+    # Narration has "pump handle", but NOT "silver"
+    beats = {"beats": [{"i": 0, "text": "He pulled the old pump handle in the street."}]}
+    (job_dir / "beats.json").write_text(json.dumps(beats), encoding="utf-8")
+
+    res = verify_job_creative(job_dir)
+    assert res["passed"] is False
+    assert res["motif_rule5_bar"] is False
+    assert any("silver" in v for v in res["motif_rule5_violations"])

@@ -62,6 +62,26 @@
       "title": "AsideDirective",
       "type": "object"
     },
+    "DirectorDropped": {
+      "additionalProperties": false,
+      "description": "Record of an item dropped by director salvage.",
+      "properties": {
+        "error": {
+          "title": "Error",
+          "type": "string"
+        },
+        "item": {
+          "title": "Item",
+          "type": "string"
+        }
+      },
+      "required": [
+        "item",
+        "error"
+      ],
+      "title": "DirectorDropped",
+      "type": "object"
+    },
     "LicenseDropped": {
       "additionalProperties": false,
       "description": "Record of an item dropped by the license critic.",
@@ -228,6 +248,13 @@
         "$ref": "#/$defs/AsideDirective"
       },
       "title": "Asides",
+      "type": "array"
+    },
+    "director_dropped": {
+      "items": {
+        "$ref": "#/$defs/DirectorDropped"
+      },
+      "title": "Director Dropped",
       "type": "array"
     },
     "license_dropped": {

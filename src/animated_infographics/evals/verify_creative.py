@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -47,7 +48,7 @@ def verify_job_creative(job_dir: Path | str) -> dict[str, Any]:
         except Exception:
             pass
 
-    valid_fates = {"rendered", "moved", "license_dropped", "overlay_dropped"}
+    valid_fates = {"rendered", "moved", "license_dropped", "overlay_dropped", "director_dropped"}
     invalid_fates = [it for it in report_items if it.get("fate") not in valid_fates]
 
     # 1. Metaphor scenes count
@@ -139,6 +140,46 @@ def verify_job_creative(job_dir: Path | str) -> dict[str, Any]:
                 if not icon and not (text and str(text).strip()):
                     thought_completeness_violations += 1
 
+    # 6. Rule 5 check: every rendered motif name passes rule 5 against narration
+    narration_text = ""
+    transcript_path = p / "transcript.json" if p.is_dir() else p.parent / "transcript.json"
+    beats_path = p / "beats.json" if p.is_dir() else p.parent / "beats.json"
+    if transcript_path.is_file():
+        try:
+            t_data = json.loads(transcript_path.read_text(encoding="utf-8"))
+            narration_text = " ".join(w.get("text", "") for w in t_data.get("words", []))
+        except Exception:
+            pass
+    elif beats_path.is_file():
+        try:
+            b_data = json.loads(beats_path.read_text(encoding="utf-8"))
+            narration_text = " ".join(b.get("text", "") for b in b_data.get("beats", []))
+        except Exception:
+            pass
+
+    motif_rule5_violations: list[str] = []
+    if narration_text:
+        narration_words = set(w.lower() for w in re.findall(r"[A-Za-z']+", narration_text))
+        for m in director_data.get("motifs", []):
+            m_id = m.get("id")
+            if m_id in cb_motif_ids or any(t[1] == m_id for t in motif_tokens_by_scene):
+                m_name = m.get("name", "")
+                m_words = [
+                    w.lower()
+                    for w in re.findall(r"[A-Za-z']+", m_name)
+                    if w.lower() not in {"a", "an", "the", "of", "and"}
+                ]
+                for w in m_words:
+                    in_narration = (
+                        w in narration_words
+                        or (w.endswith("s") and w[:-1] in narration_words)
+                        or (w + "s" in narration_words)
+                    )
+                    if not in_narration:
+                        motif_rule5_violations.append(
+                            f"{m_id} ('{m_name}'): '{w}' not in narration"
+                        )
+
     # Bars:
     # - >= 1 motif with plant & payoff rendered
     # - unplanted_payoffs == 0
@@ -148,6 +189,7 @@ def verify_job_creative(job_dir: Path | str) -> dict[str, Any]:
     # - 0 license failures rendered
     # - 0 overlay violations
     # - 0 thought completeness violations
+    # - 0 motif rule 5 violations
     callback_dots_bar = len(callback_dots_violations) == 0
     motifs_bar = (
         motifs_rendered >= 1
@@ -160,9 +202,16 @@ def verify_job_creative(job_dir: Path | str) -> dict[str, Any]:
     license_bar = license_failures_rendered == 0
     overlays_bar = overlay_violations == 0 and thought_completeness_violations == 0
     fates_bar = len(invalid_fates) == 0
+    motif_rule5_bar = len(motif_rule5_violations) == 0
 
     all_passed = (
-        motifs_bar and metaphors_bar and asides_bar and license_bar and overlays_bar and fates_bar
+        motifs_bar
+        and metaphors_bar
+        and asides_bar
+        and license_bar
+        and overlays_bar
+        and fates_bar
+        and motif_rule5_bar
     )
 
     job_label = p.name if p.is_dir() else p.parent.name
@@ -177,6 +226,7 @@ def verify_job_creative(job_dir: Path | str) -> dict[str, Any]:
         "license_failures_rendered": license_failures_rendered,
         "overlay_violations": overlay_violations,
         "thought_completeness_violations": thought_completeness_violations,
+        "motif_rule5_violations": motif_rule5_violations,
         "invalid_fates_count": len(invalid_fates),
         "motifs_bar": motifs_bar,
         "callback_dots_bar": callback_dots_bar,
@@ -184,6 +234,7 @@ def verify_job_creative(job_dir: Path | str) -> dict[str, Any]:
         "asides_bar": asides_bar,
         "license_bar": license_bar,
         "overlays_bar": overlays_bar,
+        "motif_rule5_bar": motif_rule5_bar,
         "passed": all_passed,
     }
 

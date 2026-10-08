@@ -12,6 +12,9 @@ export type Icon = string | null;
 export type Kind = "thought" | "label" | "prop";
 export type Text = string | null;
 export type Asides = AsideDirective[];
+export type Error = string;
+export type Item = string;
+export type DirectorDropped = DirectorDropped1[];
 export type Verdict = string;
 export type LicenseDropped = LicenseDropped1[];
 export type BeatI1 = number;
@@ -36,6 +39,7 @@ export type SchemaVersion = 1;
  */
 export interface DirectorPlan {
   asides?: Asides;
+  director_dropped?: DirectorDropped;
   license_dropped?: LicenseDropped;
   metaphors?: Metaphors;
   motifs?: Motifs;
@@ -53,13 +57,20 @@ export interface AsideDirective {
   text?: Text;
 }
 /**
+ * Record of an item dropped by director salvage.
+ */
+export interface DirectorDropped1 {
+  error: Error;
+  item: Item;
+}
+/**
  * Record of an item dropped by the license critic.
  */
 export interface LicenseDropped1 {
-  item: Item;
+  item: Item1;
   verdict: Verdict;
 }
-export interface Item {
+export interface Item1 {
   [k: string]: unknown;
 }
 /**
@@ -92,9 +103,9 @@ export interface MotifAppearance {
  * Record of an overlay dropped during timeline compilation.
  */
 export interface OverlayDropped1 {
-  item: Item1;
+  item: Item2;
   reason: Reason;
 }
-export interface Item1 {
+export interface Item2 {
   [k: string]: unknown;
 }

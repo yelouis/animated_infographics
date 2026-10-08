@@ -10,9 +10,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, get_args
 
-from animated_infographics.assets.illustrate import text_expected
+from animated_infographics.assets.illustrate import (
+    TEXT_EXPECTED_PHRASES_LIST,
+    TEXT_EXPECTED_WORDS_LIST,
+    text_expected,
+)
 from animated_infographics.contracts.director import (
     AsideDirective,
+    DirectorDropped,
     DirectorPlan,
     MetaphorDirective,
     MotifDirective,
@@ -230,6 +235,9 @@ def validate_director_plan(
         else:
             beat_asides.setdefault(b, []).append(a_idx)
 
+    narration = " ".join(b.text for b in ctx.beats)
+    narration_words = set(w.lower() for w in re.findall(r"[A-Za-z']+", narration))
+
     # 3. Validator 3: Each motif
     for m_idx, motif in enumerate(motifs_raw):
         m_name = motif.get("name", "")
@@ -265,6 +273,24 @@ def validate_director_plan(
             errors.extend(
                 _check_name_leaks(f"motifs[{m_idx}].name", m_name, ctx.bible, allowed_sp_name)
             )
+
+            # Rule 5: A motif is named in the story's own words
+            m_words = [
+                w.lower()
+                for w in re.findall(r"[A-Za-z']+", m_name)
+                if w.lower() not in {"a", "an", "the", "of", "and"}
+            ]
+            for w in m_words:
+                in_narration = (
+                    w in narration_words
+                    or (w.endswith("s") and w[:-1] in narration_words)
+                    or (w + "s" in narration_words)
+                )
+                if not in_narration:
+                    errors.append(
+                        f'motifs[{m_idx}].name: "{w}" is not in the narration — '
+                        "name the motif with the story's own words"
+                    )
 
         # Validator 7: motif set_piece_id / icon
         if sp_id is not None and sp_id not in valid_set_piece_ids:
@@ -325,6 +351,34 @@ def validate_director_plan(
                         f"motifs[{m_idx}].appearances: echo on beat {b} "
                         f"must come before the payoff (beat {payoff_beat})"
                     )
+
+        # Rule 3: Spacing
+        sorted_apps = sorted(
+            [a for a in appearances if isinstance(a.get("beat_i"), int)],
+            key=lambda a: a["beat_i"],
+        )
+        for i in range(len(sorted_apps) - 1):
+            a_beat = sorted_apps[i]["beat_i"]
+            b_beat = sorted_apps[i + 1]["beat_i"]
+            if 0 < b_beat - a_beat < 3:
+                errors.append(
+                    f"motifs[{m_idx}].appearances: beats {a_beat} and {b_beat} are too close "
+                    "— keep appearances at least 3 beats apart"
+                )
+
+        if len(payoffs) == 1:
+            p_beat = payoffs[0].get("beat_i")
+            if isinstance(p_beat, int):
+                earlier_apps = [a for a in sorted_apps if a["beat_i"] < p_beat]
+                if earlier_apps:
+                    last_earlier_beat = earlier_apps[-1]["beat_i"]
+                    dist = p_beat - last_earlier_beat
+                    if dist > 20:
+                        errors.append(
+                            f"motifs[{m_idx}].appearances: the payoff at beat {p_beat} is {dist} "
+                            f"beats after the last appearance at {last_earlier_beat} — "
+                            "add an echo or move the payoff within 20 beats"
+                        )
 
     # 2. Validator 2: One directive per beat
     # at most one metaphor, one payoff, one aside; never both metaphor and payoff
@@ -473,6 +527,86 @@ def validate_director_plan(
     return data, errors
 
 
+def salvage_director_plan(
+    raw_output: dict[str, Any] | None,
+    errors: list[str],
+) -> tuple[DirectorPlan | None, list[DirectorDropped]]:
+    """Salvage a plan after 3 failed attempts if all errors are item-local or count errors.
+
+    Per design_styles.md §3.3:
+    - If every error is item-local (motifs[k], metaphors[k], asides[k]) or a count error:
+      - each erring item is removed and recorded in director_dropped
+      - count errors are waived
+      - the remaining plan is accepted if it still holds at least one motif, metaphor or aside.
+    - Any other plan-level error is not salvaged.
+    """
+    if not isinstance(raw_output, dict) or not errors:
+        return None, []
+
+    dropped_items: dict[tuple[str, int], str] = {}
+    for err in errors:
+        if (
+            err.startswith("motifs: provide 1 to 3 motifs")
+            or err.startswith("metaphors: expected exactly")
+            or err.startswith("asides: expected exactly")
+        ):
+            continue
+
+        m = re.match(r"^(motifs|metaphors|asides)\[(\d+)\]", err)
+        if m:
+            cat = m.group(1)
+            idx = int(m.group(2))
+            key = (cat, idx)
+            if key not in dropped_items:
+                dropped_items[key] = err
+        else:
+            return None, []
+
+    motifs_raw = (
+        list(raw_output.get("motifs", [])) if isinstance(raw_output.get("motifs"), list) else []
+    )
+    metaphors_raw = (
+        list(raw_output.get("metaphors", []))
+        if isinstance(raw_output.get("metaphors"), list)
+        else []
+    )
+    asides_raw = (
+        list(raw_output.get("asides", [])) if isinstance(raw_output.get("asides"), list) else []
+    )
+
+    for cat, items in [
+        ("motifs", motifs_raw),
+        ("metaphors", metaphors_raw),
+        ("asides", asides_raw),
+    ]:
+        drop_indices = sorted([idx for (c, idx) in dropped_items.keys() if c == cat], reverse=True)
+        for idx in drop_indices:
+            if 0 <= idx < len(items):
+                items.pop(idx)
+
+    total_remaining = len(motifs_raw) + len(metaphors_raw) + len(asides_raw)
+    if total_remaining < 1:
+        return None, []
+
+    dropped_records = [
+        DirectorDropped(item=f"{cat}[{idx}]", error=err)
+        for (cat, idx), err in dropped_items.items()
+    ]
+
+    try:
+        plan = DirectorPlan(
+            motifs=[MotifDirective.model_validate(m) for m in motifs_raw],
+            metaphors=[MetaphorDirective.model_validate(m) for m in metaphors_raw],
+            asides=[AsideDirective.model_validate(a) for a in asides_raw],
+            license_dropped=[],
+            overlay_dropped=[],
+            director_dropped=dropped_records,
+        )
+        return plan, dropped_records
+    except Exception:
+        return None, []
+
+
 def plan_director(
     beats: list[Beat],
     bible: Bible,
@@ -489,6 +623,7 @@ def plan_director(
     expected_metaphors, expected_asides = compute_director_counts(len(beats))
     compact_bible = _build_compact_bible(bible)
     beats_text = "\n".join(f"[{b.i}] {b.text}" for b in beats)
+    rule_6_words = ", ".join(list(TEXT_EXPECTED_WORDS_LIST) + list(TEXT_EXPECTED_PHRASES_LIST))
 
     user_content = prompt_tmpl.format(
         num_beats=len(beats),
@@ -498,6 +633,7 @@ def plan_director(
         compact_bible=compact_bible,
         icon_block=ICONS_PROMPT_BLOCK,
         beats_text=beats_text,
+        rule_6_words=rule_6_words,
     )
 
     schema = build_director_schema(beats, bible)
@@ -519,6 +655,10 @@ def plan_director(
     )
 
     if result is None:
+        if attempts and attempts[-1].errors and attempts[-1].output:
+            salvaged_plan, _ = salvage_director_plan(attempts[-1].output, attempts[-1].errors)
+            if salvaged_plan is not None:
+                return salvaged_plan, attempts
         return None, attempts
 
     # Parse into typed DirectorPlan
@@ -529,6 +669,7 @@ def plan_director(
             asides=[AsideDirective.model_validate(a) for a in result.get("asides", [])],
             license_dropped=[],
             overlay_dropped=[],
+            director_dropped=[],
         )
         return plan, attempts
     except Exception:

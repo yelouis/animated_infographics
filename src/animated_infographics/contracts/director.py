@@ -70,6 +70,15 @@ class OverlayDropped(BaseModel):
     reason: str
 
 
+class DirectorDropped(BaseModel):
+    """Record of an item dropped by director salvage."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    item: str
+    error: str
+
+
 class DirectorPlan(BaseModel):
     """Whole-story creative plan produced by the director stage."""
 
@@ -81,3 +90,4 @@ class DirectorPlan(BaseModel):
     asides: list[AsideDirective] = Field(default_factory=list)
     license_dropped: list[LicenseDropped] = Field(default_factory=list)
     overlay_dropped: list[OverlayDropped] = Field(default_factory=list)
+    director_dropped: list[DirectorDropped] = Field(default_factory=list)

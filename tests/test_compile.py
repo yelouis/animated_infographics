@@ -524,11 +524,56 @@ def test_compile_callback_item_frames_from_overlays():
         TranscriptWord(i=9, sentence_i=4, text="sentence", start_ms=5850, end_ms=6200),
     ]
     sentences = [
-        TranscriptSentence(i=0, paragraph_i=0, text="The Title", start_ms=0, end_ms=500, word_start=0, word_end=2, is_title=True),
-        TranscriptSentence(i=1, paragraph_i=0, text="Second sentence", start_ms=1000, end_ms=1700, word_start=2, word_end=4, is_title=False),
-        TranscriptSentence(i=2, paragraph_i=0, text="Third sentence", start_ms=2500, end_ms=3200, word_start=4, word_end=6, is_title=False),
-        TranscriptSentence(i=3, paragraph_i=0, text="Fourth sentence", start_ms=4000, end_ms=4700, word_start=6, word_end=8, is_title=False),
-        TranscriptSentence(i=4, paragraph_i=0, text="Fifth sentence", start_ms=5500, end_ms=6200, word_start=8, word_end=10, is_title=False),
+        TranscriptSentence(
+            i=0,
+            paragraph_i=0,
+            text="The Title",
+            start_ms=0,
+            end_ms=500,
+            word_start=0,
+            word_end=2,
+            is_title=True,
+        ),
+        TranscriptSentence(
+            i=1,
+            paragraph_i=0,
+            text="Second sentence",
+            start_ms=1000,
+            end_ms=1700,
+            word_start=2,
+            word_end=4,
+            is_title=False,
+        ),
+        TranscriptSentence(
+            i=2,
+            paragraph_i=0,
+            text="Third sentence",
+            start_ms=2500,
+            end_ms=3200,
+            word_start=4,
+            word_end=6,
+            is_title=False,
+        ),
+        TranscriptSentence(
+            i=3,
+            paragraph_i=0,
+            text="Fourth sentence",
+            start_ms=4000,
+            end_ms=4700,
+            word_start=6,
+            word_end=8,
+            is_title=False,
+        ),
+        TranscriptSentence(
+            i=4,
+            paragraph_i=0,
+            text="Fifth sentence",
+            start_ms=5500,
+            end_ms=6200,
+            word_start=8,
+            word_end=10,
+            is_title=False,
+        ),
     ]
     transcript = Transcript(
         schema_version=1,
@@ -607,4 +652,3 @@ def test_compile_callback_item_frames_from_overlays():
     cb_frames_1 = cb_scene_1.end_frame - cb_scene_1.start_frame
     assert len(cb_scene_1.timing.item_frames) == 1
     assert cb_scene_1.timing.item_frames == item_frames(1, cb_frames_1, 0.4)
-

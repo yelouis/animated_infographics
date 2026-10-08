@@ -190,5 +190,6 @@ def run_license_checks(
         asides=kept_asides,
         license_dropped=dropped,
         overlay_dropped=plan.overlay_dropped,
+        director_dropped=plan.director_dropped,
     )
     return new_plan, dropped

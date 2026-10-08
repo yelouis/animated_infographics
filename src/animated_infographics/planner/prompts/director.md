@@ -31,6 +31,7 @@ Important: Plants show only the object, never its meaning.
    - At least 1 plant, with each plant placed at least 3 beats before the payoff (e.g. plant on beat 10 requires payoff on beat 13 or later).
    - At most 4 echoes, with each echo placed before the payoff.
    - No two appearances on the same beat.
+   Name each motif with words the narration uses, and spread its appearances: at least 3 beats apart, with the payoff within 20 beats of the appearance before it.
 4. Quoted speech stays: a metaphor or payoff may NOT be placed on a beat that contains quoted speech. Asides may sit on quoted beats.
 5. Text length:
    - Motif name: at most 4 words.
@@ -38,10 +39,10 @@ Important: Plants show only the object, never its meaning.
    - Aside text: at most 3 words.
    - No digits, no quotation marks, and no cast/place/set-piece names other than the motif's own.
    - Must be complete phrases, not placeholders or instructions.
-6. Metaphor image: at most 25 words, no quotation marks, and must not ask for text/writing/lettering.
+6. Metaphor image: at most 25 words, no quotation marks. Metaphor images must not show anything that carries writing. Never use these words in an image: {rule_6_words}.
 7. Valid entities:
    - set_piece_id and cast_ids must exist in the Story Bible below.
-   - A 'thought' aside requires a valid cast_id.
+   - A 'thought' aside requires a valid cast_id and an icon or text.
    - A 'prop' aside requires an icon from the allowed icons.
    - A 'label' aside requires text.
 

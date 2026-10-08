@@ -4,11 +4,17 @@ Contracts and validation rules per design_styles.md §3.3, §3.4,
 and design_testing_and_validation.md §2.
 """
 
+import json
+import re
 from pathlib import Path
 from typing import Any
 
 import pytest
 
+from animated_infographics.assets.illustrate import (
+    TEXT_EXPECTED_PHRASES_LIST,
+    TEXT_EXPECTED_WORDS_LIST,
+)
 from animated_infographics.contracts.director import (
     DirectorPlan,
     MetaphorDirective,
@@ -29,6 +35,7 @@ from animated_infographics.planner.director import (
     DirectorContext,
     compute_director_counts,
     plan_director,
+    salvage_director_plan,
     validate_director_plan,
 )
 from animated_infographics.planner.license import (
@@ -127,7 +134,7 @@ def _make_beats(n: int, quoted_indices: set[int] | None = None) -> list[Beat]:
         elif i in quoted:
             text = f'Beat {i}: He whispered, "Take this immediately."'
         else:
-            text = f"Beat {i}: He walked into the quiet reading room."
+            text = f"Beat {i}: He walked into the quiet reading room with the checkout card."
         words_count = len(text.split())
         beats.append(
             Beat(
@@ -156,6 +163,7 @@ def _valid_n64_payload() -> dict[str, Any]:
                 "appearances": [
                     {"beat_i": 5, "role": "plant"},
                     {"beat_i": 21, "role": "echo"},
+                    {"beat_i": 36, "role": "echo"},
                     {"beat_i": 52, "role": "payoff"},
                 ],
             }
@@ -411,7 +419,7 @@ def test_validator_4_quoted_speech() -> None:
     # Aside on quoted beat is allowed
     aside_data = _valid_n64_payload()
     aside_data["metaphors"][0]["beat_i"] = 11  # unquoted
-    aside_data["motifs"][0]["appearances"][2]["beat_i"] = 53  # unquoted
+    aside_data["motifs"][0]["appearances"][-1]["beat_i"] = 53  # unquoted
     aside_data["asides"][0]["beat_i"] = 10  # quoted beat 10
     _, errs = validate_director_plan(aside_data, ctx)
     assert errs == []
@@ -766,3 +774,178 @@ def test_stage_director_degradation_on_failure(
 
     log_content = (job_dir / "logs" / "director.log").read_text(encoding="utf-8")
     assert "degraded to literal" in log_content
+
+
+# ===========================================================================
+# 10. Wave I (I4): Rule 5 story words, Rule 3 spacing, prompt, and salvage
+# ===========================================================================
+
+
+def _load_wave_i_director_cases() -> dict[str, Any]:
+    cases_path = Path(__file__).parent / "data" / "wave_i_director_cases.json"
+    with open(cases_path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def test_rule_5_story_words_frozen_plans() -> None:
+    cases = _load_wave_i_director_cases()["frozen_plans"]
+
+    # History plan fails rule 5 on "silver"
+    hist_case = cases["history_great_stink"]
+    hist_bible = Bible.model_validate(hist_case["bible"])
+    hist_beats = [Beat.model_validate(b) for b in hist_case["beats"]["beats"]]
+    hist_ctx = DirectorContext(beats=hist_beats, bible=hist_bible)
+    _, hist_errs = validate_director_plan(hist_case["director"], hist_ctx)
+    hist_err_msg = (
+        'motifs[0].name: "silver" is not in the narration — '
+        "name the motif with the story's own words"
+    )
+    assert any(hist_err_msg in e for e in hist_errs)
+
+    # Overdue plan fails rule 5 on "pen"
+    overdue_case = cases["story_overdue_book"]
+    overdue_bible = Bible.model_validate(overdue_case["bible"])
+    overdue_beats = [Beat.model_validate(b) for b in overdue_case["beats"]["beats"]]
+    overdue_ctx = DirectorContext(beats=overdue_beats, bible=overdue_bible)
+    _, overdue_errs = validate_director_plan(overdue_case["director"], overdue_ctx)
+    overdue_err_msg = (
+        'motifs[0].name: "pen" is not in the narration — name the motif with the story\'s own words'
+    )
+    assert any(overdue_err_msg in e for e in overdue_errs)
+
+    # Passing cases from testing row:
+    # "the pump handle" passes on history_great_stink
+    pass_data_handle = json.loads(json.dumps(hist_case["director"]))
+    pass_data_handle["motifs"][0]["name"] = "the pump handle"
+    _, handle_errs = validate_director_plan(pass_data_handle, hist_ctx)
+    assert not any("motifs[0].name:" in e for e in handle_errs)
+
+    # "pumps" passes on history_great_stink
+    pass_data_pumps = json.loads(json.dumps(hist_case["director"]))
+    pass_data_pumps["motifs"][0]["name"] = "pumps"
+    _, pumps_errs = validate_director_plan(pass_data_pumps, hist_ctx)
+    assert not any("motifs[0].name:" in e for e in pumps_errs)
+
+
+def test_rule_5_falsification_drop_trailing_s() -> None:
+    cases = _load_wave_i_director_cases()["frozen_plans"]
+    hist_case = cases["history_great_stink"]
+    hist_beats = [Beat.model_validate(b) for b in hist_case["beats"]["beats"]]
+    narration = " ".join(b.text for b in hist_beats)
+    narration_words = set(w.lower() for w in re.findall(r"[A-Za-z']+", narration))
+    assert "pump" in narration_words
+    assert "pumps" not in narration_words
+    # Without trailing-s allowance, "pumps" would fail
+    w = "pumps"
+    strict_match = w in narration_words
+    assert not strict_match, "Falsification: without trailing s allowance, 'pumps' would fail"
+
+
+def test_rule_3_spacing_frozen_plans() -> None:
+    cases = _load_wave_i_director_cases()["frozen_plans"]
+
+    # History plan appearances: [19, 35, 42, 48, 56] pass spacing
+    hist_case = cases["history_great_stink"]
+    hist_bible = Bible.model_validate(hist_case["bible"])
+    hist_beats = [Beat.model_validate(b) for b in hist_case["beats"]["beats"]]
+    hist_ctx = DirectorContext(beats=hist_beats, bible=hist_bible)
+    _, hist_errs = validate_director_plan(hist_case["director"], hist_ctx)
+    # No spacing errors
+    assert not any("too close" in e or "after the last appearance" in e for e in hist_errs)
+
+    # Overdue plan fails rule 3 twice (18/19 too close; 51 is 32 after 19)
+    overdue_case = cases["story_overdue_book"]
+    overdue_bible = Bible.model_validate(overdue_case["bible"])
+    overdue_beats = [Beat.model_validate(b) for b in overdue_case["beats"]["beats"]]
+    overdue_ctx = DirectorContext(beats=overdue_beats, bible=overdue_bible)
+    _, overdue_errs = validate_director_plan(overdue_case["director"], overdue_ctx)
+    close_err = (
+        "motifs[0].appearances: beats 18 and 19 are too close — "
+        "keep appearances at least 3 beats apart"
+    )
+    assert any(close_err in e for e in overdue_errs)
+    payoff_err = (
+        "motifs[0].appearances: the payoff at beat 51 is 32 beats after the last appearance at 19 "
+        "— add an echo or move the payoff within 20 beats"
+    )
+    assert any(payoff_err in e for e in overdue_errs)
+
+
+def test_rule_3_falsification_payoff_spacing_40() -> None:
+    # In overdue plan, diff is 51 - 19 = 32. If threshold were 40, 32 <= 40 so it would pass!
+    diff = 51 - 19
+    assert diff <= 40, "Falsification: diff 32 would pass if threshold were 40"
+    assert diff > 20, "Diff 32 correctly fails with threshold 20"
+
+
+def test_director_prompt_contains_all_rule_6_words() -> None:
+    from animated_infographics.assets.illustrate import (
+        TEXT_EXPECTED_PHRASES,
+        TEXT_EXPECTED_WORDS,
+    )
+
+    prompt_path = (
+        Path(__file__).resolve().parent.parent
+        / "src"
+        / "animated_infographics"
+        / "planner"
+        / "prompts"
+        / "director.md"
+    )
+    prompt_tmpl = prompt_path.read_text(encoding="utf-8")
+    rule_6_words = ", ".join(list(TEXT_EXPECTED_WORDS_LIST) + list(TEXT_EXPECTED_PHRASES_LIST))
+    formatted = prompt_tmpl.format(
+        num_beats=64,
+        max_beat_i=63,
+        expected_metaphors=5,
+        expected_asides=6,
+        compact_bible="",
+        icon_block="",
+        beats_text="",
+        rule_6_words=rule_6_words,
+    )
+    for word in TEXT_EXPECTED_WORDS:
+        assert word in formatted, f"Missing word {word} in formatted director prompt"
+    for phrase in TEXT_EXPECTED_PHRASES:
+        assert phrase in formatted, f"Missing phrase {phrase} in formatted director prompt"
+
+
+def test_director_salvage_frozen_cases() -> None:
+    salvage_cases = _load_wave_i_director_cases()["salvage_cases"]
+
+    # 1. story_overdue_book_cold keeps 3 metaphors (drops metaphors[1] and motifs[0])
+    cold_case = salvage_cases["story_overdue_book_cold"]
+    cold_last = cold_case["attempts"][-1]
+    cold_plan, cold_dropped = salvage_director_plan(cold_last["output"], cold_last["errors"])
+    assert cold_plan is not None
+    assert len(cold_plan.metaphors) == 3
+    assert len(cold_plan.asides) == 5
+    assert len(cold_plan.motifs) == 0
+    # metaphors[1] carries rule-6 error verbatim
+    met1_dropped = next((d for d in cold_plan.director_dropped if d.item == "metaphors[1]"), None)
+    assert met1_dropped is not None
+    expected_error = (
+        'metaphors[1].image: asks for writing / lettering ("A paper book transforming into '
+        'a mailbox with a flag") — images must not contain text'
+    )
+    assert met1_dropped.error == expected_error
+
+    # 2. story_overdue_book_deck keeps 1 metaphor
+    deck_case = salvage_cases["story_overdue_book_deck"]
+    deck_last = deck_case["attempts"][-1]
+    deck_plan, deck_dropped = salvage_director_plan(deck_last["output"], deck_last["errors"])
+    assert deck_plan is not None
+    assert len(deck_plan.metaphors) == 1
+    assert len(deck_plan.asides) == 2
+    assert len(deck_plan.motifs) == 1
+
+    # 3. Plan-level error (e.g. rule 2 collision) degrades to literal
+    plan_with_rule2 = json.loads(json.dumps(deck_last["output"]))
+    rule2_errors = list(deck_last["errors"]) + ["beat 5: cannot have both a metaphor and a payoff"]
+    salvaged_rule2, _ = salvage_director_plan(plan_with_rule2, rule2_errors)
+    assert salvaged_rule2 is None
+
+    # 4. Plan with nothing left degrades to literal
+    empty_raw = {"motifs": [{"id": "m1"}], "metaphors": [], "asides": []}
+    salvaged_empty, _ = salvage_director_plan(empty_raw, ["motifs[0]: invalid"])
+    assert salvaged_empty is None

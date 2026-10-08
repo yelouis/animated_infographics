@@ -25,7 +25,7 @@ describe("Callback seen-before dots", () => {
   it("draws 0 dots when item_frames is empty", () => {
     const html = renderToString(
       <SceneClockProvider value={clockValue}>
-        <Callback props={props} timing={{ item_frames: [] }} />
+        <Callback sceneId="s001" props={props} timing={{ item_frames: [] }} />
       </SceneClockProvider>
     );
     // Should have no dot elements (width:24px;height:24px;border-radius:50%)
@@ -37,7 +37,7 @@ describe("Callback seen-before dots", () => {
   it("draws 3 dots when item_frames has 3 frames", () => {
     const html = renderToString(
       <SceneClockProvider value={clockValue}>
-        <Callback props={props} timing={{ item_frames: [15, 25, 35] }} />
+        <Callback sceneId="s001" props={props} timing={{ item_frames: [15, 25, 35] }} />
       </SceneClockProvider>
     );
     const dotMatches = html.match(/width:24px;height:24px;border-radius:50%/g);

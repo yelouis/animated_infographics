@@ -523,6 +523,11 @@ def generate_storyboard_markdown(
                     det_str = f" ({', '.join(details)})" if details else ""
                     director_lines.append(f"- beat {a.beat_i}: {a.kind}{det_str}")
                 director_lines.append("")
+            if getattr(d_plan, "director_dropped", None):
+                director_lines.append("### Dropped by Director Salvage")
+                for dd in d_plan.director_dropped:
+                    director_lines.append(f"- `{dd.item}`: {dd.error}")
+                director_lines.append("")
         except Exception:
             pass
 
@@ -615,6 +620,16 @@ def generate_preview_report(
                     t_scenes = t_data.get("scenes", [])
                 except Exception:
                     pass
+
+            # 0. director_dropped
+            for dd in getattr(d_plan, "director_dropped", []):
+                director_items.append(
+                    {
+                        "item": dd.item,
+                        "fate": "director_dropped",
+                        "error": dd.error,
+                    }
+                )
 
             # 1. license_dropped
             for ld in d_plan.license_dropped:

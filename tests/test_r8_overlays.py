@@ -418,7 +418,9 @@ def test_capacity_at_most_1_token_and_1_aside() -> None:
 
 
 def test_compute_scene_overlays_drops_incomplete_asides() -> None:
-    """compute_scene_overlays drops incomplete asides into overlay_dropped with reason 'incomplete'."""
+    """compute_scene_overlays drops incomplete asides into overlay_dropped
+    with reason 'incomplete'.
+    """
     sb = Storyboard(
         scenes=[
             TitleCardScene(
@@ -597,4 +599,3 @@ def test_scene_overlay_completeness_validator() -> None:
         SceneOverlay(kind="motif_token", icon="Key", anchor="top_right")
     with pytest.raises(ValueError, match="motif_token overlay requires an icon and a motif_id"):
         SceneOverlay(kind="motif_token", motif_id="m1", anchor="top_right")
-
