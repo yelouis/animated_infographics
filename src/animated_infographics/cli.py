@@ -624,6 +624,9 @@ def rerun(
         str | None, typer.Option("--style", "-s", help="Style name (literal | creative)")
     ] = None,
     jobs_dir: Annotated[Path, typer.Option(help="Jobs directory")] = Path("./jobs"),
+    no_llm_cache: Annotated[
+        bool, typer.Option("--no-llm-cache", help="Bypass LLM response cache")
+    ] = False,
 ) -> None:
     """Rerun job pipeline from a specified stage through preview."""
     with handle_errors():
@@ -677,7 +680,7 @@ def rerun(
                     "preview",
                 }
             ]
-            ctx = RunContext(style=eff_style)
+            ctx = RunContext(style=eff_style, no_llm_cache=no_llm_cache)
             job.run(stages_to_run, STAGE_REGISTRY, ctx)
             plan_sha = job.plan_sha256()
             job.state["plan_sha256"] = plan_sha
@@ -700,7 +703,7 @@ def rerun(
         job.invalidate_after(prev_stage)
 
         stages_to_run = list(STAGES[idx:])
-        ctx = RunContext(style=eff_style)
+        ctx = RunContext(style=eff_style, no_llm_cache=no_llm_cache)
         job.run(stages_to_run, STAGE_REGISTRY, ctx)
 
         plan_sha = job.plan_sha256()

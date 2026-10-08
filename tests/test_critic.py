@@ -142,19 +142,20 @@ def test_red_first_s012_wave_a_props_critic_disagreement() -> None:
     Once critic is implemented, it flags mismatch and triggers a props retry.
     """
     bible = _make_critic_test_bible()
-    beat = Beat(
-        i=12,
-        word_start=0,
-        word_end=11,
-        start_ms=60800,
-        end_ms=65800,
-        text='"Who is Walter Lindqvist and why did he write 60 times?"',
-    )
-    tokens = beat.text.split()
+    beat_text = '"Who is Walter Lindqvist and why did he write 60 times?"'
+    tokens = ["Danny"] + beat_text.split()
     words = [
         TranscriptWord(i=i, sentence_i=0, text=tok, start_ms=i * 300, end_ms=(i + 1) * 300)
         for i, tok in enumerate(tokens)
     ]
+    beat = Beat(
+        i=12,
+        word_start=1,
+        word_end=len(tokens),
+        start_ms=60800,
+        end_ms=65800,
+        text=beat_text,
+    )
     transcript = Transcript(
         schema_version=1,
         source="tts",
@@ -1045,7 +1046,7 @@ def test_critic_tone_neutral_repair_when_retry_exhausted() -> None:
 def test_critic_text_thread_mismatch_keeps_original_and_records_retry_errors() -> None:
     """Verify un-enforced mismatch keeps original scene and records retry_errors on failure."""
     bible = _make_critic_test_bible()
-    transcript, beats = _make_transcript_and_beats(["Title", "A text message"])
+    transcript, beats = _make_transcript_and_beats(["Title Danny", "A text message"])
     initial_props = {
         "contact_name": "Danny",
         "contact_cast_id": "c2",
@@ -1080,7 +1081,7 @@ def test_critic_text_thread_mismatch_keeps_original_and_records_retry_errors() -
 def test_critic_identical_retry_changed_is_false() -> None:
     """Verify identical retry sets changed=False when no enforcement alters props."""
     bible = _make_critic_test_bible()
-    transcript, beats = _make_transcript_and_beats(["Title", "A text message"])
+    transcript, beats = _make_transcript_and_beats(["Title Danny", "A text message"])
     initial_props = {
         "contact_name": "Danny",
         "contact_cast_id": "c2",
@@ -1279,9 +1280,12 @@ def test_critic_enforcement_frozen_cases() -> None:
             "props": [{"text": "Quote", "emphasis": [], "attribution_cast_id": "c3"}],
         }
     )
-    beat_dummy = Beat(i=3, text="Quote", start_ms=0, end_ms=1000, word_start=0, word_end=1)
+    transcript_walt, beats_walt = _make_transcript_and_beats(
+        ["Title Danny", "Beat1", "Beat2", "Quote Walt"]
+    )
+    beat_dummy = beats_walt[3]
     final_fixed, rep_fixed, _ = _evaluate_scene_critic(
-        kq_init, beat_dummy, None, None, transcript, b_test, backend_fixed, "", ""
+        kq_init, beat_dummy, None, None, transcript_walt, b_test, backend_fixed, "", ""
     )
     assert rep_fixed.status == "mismatch_retried"
     assert rep_fixed.changed is True

@@ -44,7 +44,11 @@ from animated_infographics.planner.geo import Gazetteer, load_country_bboxes
 from animated_infographics.planner.llm import LLMBackend, OllamaBackend, run_with_retries
 from animated_infographics.planner.props import plan_storyboard
 from animated_infographics.planner.segment import plan_beats
-from animated_infographics.planner.validate import PlanContext, validate_plan
+from animated_infographics.planner.validate import (
+    PlanContext,
+    names_before_narration_errors,
+    validate_plan,
+)
 from animated_infographics.planner.voice import select_voice
 from animated_infographics.planner.words import graphic_words
 
@@ -758,6 +762,22 @@ def run_eval(
         )
         armchair_bar_pass = armchair_count == 0
 
+        names_before_narration_count = sum(
+            len(
+                names_before_narration_errors(
+                    s,
+                    PlanContext(
+                        transcript=transcript,
+                        bible=bible,
+                        beat=beats[s.beat_i] if beats and 0 <= s.beat_i < len(beats) else None,
+                        beats=beats,
+                    ),
+                )
+            )
+            for s in storyboard.scenes
+        )
+        names_bar_pass = names_before_narration_count == 0
+
         fixture_pass = (
             voice_match
             and distinct_bar_pass
@@ -766,6 +786,7 @@ def run_eval(
             and time_bar_pass
             and light_bar_pass
             and armchair_bar_pass
+            and names_bar_pass
         )
         if not fixture_pass:
             all_passed = False
@@ -837,6 +858,7 @@ def run_eval(
             "r6_repairs": r6_repairs,
             "r7_repairs": r7_repairs,
             "armchair_count": armchair_count,
+            "names_before_narration": names_before_narration_count,
             "passed": fixture_pass,
         }
         results.append(fix_res)
@@ -943,6 +965,7 @@ def run_eval(
                 ),
                 f"- **Validation Violations**: {len(r['violations'])}",
                 f"- **Armchair Icons**: {r['armchair_count']} (Bar: 0)",
+                f"- **Names Before Narration**: {r['names_before_narration']} (Bar: 0)",
                 (
                     f"- **Critic**: {r['critic_calls']} calls, {r['critic_agree']} agree, "
                     f"{r['critic_changed']} changed, "

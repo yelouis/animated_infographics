@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from typing import Any
 
@@ -10,6 +11,7 @@ from animated_infographics.contracts.models import (
     Bible,
     CastMember,
     CharacterIntroScene,
+    DialogueScene,
     KineticQuoteScene,
     LocationScene,
     MapFocusScene,
@@ -18,6 +20,7 @@ from animated_infographics.contracts.models import (
     SetPiece,
     StatCalloutScene,
     Storyboard,
+    TextThreadScene,
     TimelineSceneModel,
     TitleCardScene,
     Transcript,
@@ -26,6 +29,8 @@ from animated_infographics.contracts.models import (
 )
 from animated_infographics.contracts.templates import (
     CharacterIntroProps,
+    DialogueLine,
+    DialogueProps,
     KineticQuoteProps,
     LocationProps,
     MapFocusProps,
@@ -33,12 +38,17 @@ from animated_infographics.contracts.templates import (
     RelationshipEdge,
     RelationshipMapProps,
     StatCalloutProps,
+    TextMessage,
+    TextThreadProps,
     TimelineEvent,
     TimelineProps,
     TitleCardProps,
 )
 from animated_infographics.planner.validate import (
     PlanContext,
+    is_name_in_narration_prefix,
+    name_tokens_for,
+    names_before_narration_errors,
     placeholder_errors,
     validate_plan,
     validate_scene,
@@ -47,12 +57,16 @@ from animated_infographics.planner.validate import (
 
 
 def _make_dummy_ctx() -> PlanContext:
-    s0_text = "The Great Molasses Flood struck in 1919."
+    s0_text = "The Great Molasses Flood struck John and Mary in 1919."
     s1_text = "About 150 people were injured when the tank burst."
     w_list = []
     w_idx = 0
     t = 0
+    sentences = []
+    beats = []
     for s_idx, text in enumerate((s0_text, s1_text)):
+        s_w_start = w_idx
+        s_t_start = t
         for token in text.split():
             w_list.append(
                 TranscriptWord(
@@ -65,29 +79,30 @@ def _make_dummy_ctx() -> PlanContext:
             )
             w_idx += 1
             t += 250
-
-    sentences = [
-        TranscriptSentence(
-            i=0,
-            text=s0_text,
-            start_ms=w_list[0].start_ms,
-            end_ms=w_list[6].end_ms,
-            word_start=0,
-            word_end=7,
-            paragraph_i=0,
-            is_title=True,
-        ),
-        TranscriptSentence(
-            i=1,
-            text=s1_text,
-            start_ms=w_list[7].start_ms,
-            end_ms=w_list[15].end_ms,
-            word_start=7,
-            word_end=16,
-            paragraph_i=0,
-            is_title=False,
-        ),
-    ]
+        s_w_end = w_idx
+        s_t_end = t - 50
+        sentences.append(
+            TranscriptSentence(
+                i=s_idx,
+                text=text,
+                start_ms=s_t_start,
+                end_ms=s_t_end,
+                word_start=s_w_start,
+                word_end=s_w_end,
+                paragraph_i=0,
+                is_title=(s_idx == 0),
+            )
+        )
+        beats.append(
+            Beat(
+                i=s_idx,
+                text=text,
+                start_ms=s_t_start,
+                end_ms=s_t_end,
+                word_start=s_w_start,
+                word_end=s_w_end,
+            )
+        )
     transcript = Transcript(
         schema_version=1,
         source="tts",
@@ -168,24 +183,6 @@ def _make_dummy_ctx() -> PlanContext:
             ),
         ],
     )
-    beats = [
-        Beat(
-            i=0,
-            text=s0_text,
-            start_ms=0,
-            end_ms=2000,
-            word_start=0,
-            word_end=7,
-        ),
-        Beat(
-            i=1,
-            text=s1_text,
-            start_ms=2000,
-            end_ms=5000,
-            word_start=7,
-            word_end=16,
-        ),
-    ]
     return PlanContext(transcript=transcript, bible=bible, beats=beats)
 
 
@@ -1178,3 +1175,329 @@ def test_text_audit_counts_placeholder_violations(tmp_path: Path) -> None:
     res = audit_storyboards([sb_path])
     assert res["placeholder_violations_count"] == 1
     assert len(res["placeholder_violations"][0]["errors"]) == 2
+
+
+def test_names_before_narration_frozen_cases() -> None:
+    cases_path = Path(__file__).resolve().parent / "data" / "spoiler_cases.json"
+    data = json.loads(cases_path.read_text(encoding="utf-8"))
+
+    for c in data["cases"]:
+        bible = Bible(
+            schema_version=1,
+            title="Test",
+            logline="Test logline",
+            genre="history",
+            cast=[CastMember.model_validate(cm) for cm in c["bible_cast"]],
+            places=[],
+            set_pieces=[],
+        )
+        words = [TranscriptWord.model_validate(w) for w in c["transcript_words_prefix"]]
+        dur = max(w.end_ms for w in words) + 1000 if words else 1000
+        transcript = Transcript(
+            schema_version=1,
+            source="tts",
+            audio_path="test.wav",
+            duration_ms=dur,
+            words=words,
+            sentences=[],
+        )
+        beat = Beat.model_validate(c["beat"])
+        ctx = PlanContext(transcript=transcript, bible=bible, beat=beat)
+
+        scene_dict = {
+            "id": c["scene_id"],
+            "beat_i": c["beat_i"],
+            "template": c["template"],
+            "props": c["props"],
+        }
+        errs = names_before_narration_errors(scene_dict, ctx)
+        assert c["expected_error"] in errs, (
+            f"Expected {c['expected_error']} in {errs} for {c['job']} {c['scene_id']}"
+        )
+
+
+def test_names_before_narration_moved_after_name() -> None:
+    cases_path = Path(__file__).resolve().parent / "data" / "spoiler_cases.json"
+    data = json.loads(cases_path.read_text(encoding="utf-8"))
+
+    for c in data["cases"]:
+        bible = Bible(
+            schema_version=1,
+            title="Test",
+            logline="Test logline",
+            genre="history",
+            cast=[CastMember.model_validate(cm) for cm in c["bible_cast"]],
+            places=[],
+            set_pieces=[],
+        )
+        # Prepend the character's name to the transcript words
+        extra_word = TranscriptWord(
+            i=0,
+            text=c["target_name"],
+            start_ms=0,
+            end_ms=200,
+            sentence_i=0,
+        )
+        words = [extra_word] + [
+            TranscriptWord.model_validate(w).model_copy(update={"i": w["i"] + 1})
+            for w in c["transcript_words_prefix"]
+        ]
+        dur = max(w.end_ms for w in words) + 1000 if words else 1000
+        transcript = Transcript(
+            schema_version=1,
+            source="tts",
+            audio_path="test.wav",
+            duration_ms=dur,
+            words=words,
+            sentences=[],
+        )
+        beat_dict = dict(c["beat"])
+        beat_dict["word_end"] = beat_dict["word_end"] + 1
+        beat = Beat.model_validate(beat_dict)
+        ctx = PlanContext(transcript=transcript, bible=bible, beat=beat)
+
+        scene_dict = {
+            "id": c["scene_id"],
+            "beat_i": c["beat_i"],
+            "template": c["template"],
+            "props": c["props"],
+        }
+        errs = names_before_narration_errors(scene_dict, ctx)
+        assert c["expected_error"] not in errs, (
+            f"Error should be gone when moved after name: {errs}"
+        )
+
+
+def test_narrator_character_intro_passes() -> None:
+    avatar = AvatarConfig(
+        skin=1,
+        hair_style="short",
+        hair_color="black",
+        facial_hair="none",
+        headwear="none",
+        glasses=False,
+        age="adult",
+    )
+    bible = Bible(
+        schema_version=1,
+        title="Test",
+        logline="Test logline",
+        genre="personal_story",
+        cast=[
+            CastMember(
+                id="c1",
+                name="Me",
+                role="narrator",
+                is_narrator=True,
+                color_slot=1,
+                avatar=avatar,
+            )
+        ],
+    )
+    words = [
+        TranscriptWord(i=0, text="Once", start_ms=0, end_ms=200, sentence_i=0),
+        TranscriptWord(i=1, text="upon", start_ms=200, end_ms=400, sentence_i=0),
+        TranscriptWord(i=2, text="a", start_ms=400, end_ms=600, sentence_i=0),
+        TranscriptWord(i=3, text="time", start_ms=600, end_ms=800, sentence_i=0),
+    ]
+    transcript = Transcript(
+        schema_version=1,
+        source="tts",
+        audio_path="test.wav",
+        duration_ms=1000,
+        words=words,
+        sentences=[],
+    )
+    beat = Beat(
+        i=0,
+        word_start=0,
+        word_end=4,
+        start_ms=0,
+        end_ms=800,
+        text="Once upon a time",
+    )
+    ctx = PlanContext(transcript=transcript, bible=bible, beat=beat)
+    scene = CharacterIntroScene(
+        id="s001",
+        beat_i=0,
+        template="character_intro",
+        props=CharacterIntroProps(cast_id="c1", descriptor="The storyteller"),
+    )
+    errs = names_before_narration_errors(scene, ctx)
+    assert errs == []
+    val_errs = validate_scene(scene, ctx)
+    assert not any("is not named in the narration yet" in e for e in val_errs)
+
+
+def test_dialogue_unnamed_speaker_passes() -> None:
+    avatar = AvatarConfig(
+        skin=1,
+        hair_style="short",
+        hair_color="black",
+        facial_hair="none",
+        headwear="none",
+        glasses=False,
+        age="adult",
+    )
+    bible = Bible(
+        schema_version=1,
+        title="Test",
+        logline="Test logline",
+        genre="history",
+        cast=[
+            CastMember(
+                id="c1",
+                name="Anonymous Stranger",
+                role="stranger",
+                is_narrator=False,
+                color_slot=1,
+                avatar=avatar,
+            )
+        ],
+    )
+    words = [
+        TranscriptWord(i=0, text="A", start_ms=0, end_ms=200, sentence_i=0),
+        TranscriptWord(i=1, text="voice", start_ms=200, end_ms=400, sentence_i=0),
+        TranscriptWord(i=2, text="spoke", start_ms=400, end_ms=600, sentence_i=0),
+    ]
+    transcript = Transcript(
+        schema_version=1,
+        source="tts",
+        audio_path="test.wav",
+        duration_ms=1000,
+        words=words,
+        sentences=[],
+    )
+    beat = Beat(
+        i=0,
+        word_start=0,
+        word_end=3,
+        start_ms=0,
+        end_ms=600,
+        text="A voice spoke",
+    )
+    ctx = PlanContext(transcript=transcript, bible=bible, beat=beat)
+    scene = DialogueScene(
+        id="s001",
+        beat_i=0,
+        template="dialogue",
+        props=DialogueProps(
+            lines=[DialogueLine(cast_id="c1", text="Who goes there?", tone="neutral")]
+        ),
+    )
+    errs = names_before_narration_errors(scene, ctx)
+    assert errs == []
+
+
+def test_text_thread_contact_name_spoiler() -> None:
+    avatar = AvatarConfig(
+        skin=1,
+        hair_style="short",
+        hair_color="black",
+        facial_hair="none",
+        headwear="none",
+        glasses=False,
+        age="adult",
+    )
+    bible = Bible(
+        schema_version=1,
+        title="Test",
+        logline="Test logline",
+        genre="history",
+        cast=[
+            CastMember(
+                id="c2",
+                name="Alice Smith",
+                role="friend",
+                is_narrator=False,
+                color_slot=2,
+                avatar=avatar,
+            )
+        ],
+    )
+    words = [
+        TranscriptWord(i=0, text="My", start_ms=0, end_ms=200, sentence_i=0),
+        TranscriptWord(i=1, text="phone", start_ms=200, end_ms=400, sentence_i=0),
+        TranscriptWord(i=2, text="buzzed", start_ms=400, end_ms=600, sentence_i=0),
+    ]
+    transcript = Transcript(
+        schema_version=1,
+        source="tts",
+        audio_path="test.wav",
+        duration_ms=1000,
+        words=words,
+        sentences=[],
+    )
+    beat = Beat(
+        i=0,
+        word_start=0,
+        word_end=3,
+        start_ms=0,
+        end_ms=600,
+        text="My phone buzzed",
+    )
+    ctx = PlanContext(transcript=transcript, bible=bible, beat=beat)
+    scene = TextThreadScene(
+        id="s001",
+        beat_i=0,
+        template="text_thread",
+        props=TextThreadProps(
+            contact_name="Alice Smith",
+            contact_cast_id="c2",
+            messages=[
+                TextMessage(from_="them", text="Hello"),
+                TextMessage(from_="me", text="Hi Alice"),
+            ],
+        ),
+    )
+    errs = names_before_narration_errors(scene, ctx)
+    assert errs == [
+        'props.contact_cast_id: "Alice Smith" is not named in the narration yet'
+        " — leave the contact empty"
+    ]
+
+    # Prepend name
+    words_with_name = [TranscriptWord(i=0, text="Alice", start_ms=0, end_ms=200, sentence_i=0)] + [
+        TranscriptWord(
+            i=i + 1,
+            text=w.text,
+            start_ms=w.start_ms + 200,
+            end_ms=w.end_ms + 200,
+            sentence_i=0,
+        )
+        for i, w in enumerate(words)
+    ]
+    tr2 = Transcript(
+        schema_version=1,
+        source="tts",
+        audio_path="test.wav",
+        duration_ms=2000,
+        words=words_with_name,
+        sentences=[],
+    )
+    beat2 = Beat(
+        i=0,
+        word_start=0,
+        word_end=4,
+        start_ms=0,
+        end_ms=600,
+        text="Alice My phone buzzed",
+    )
+    ctx2 = PlanContext(transcript=tr2, bible=bible, beat=beat2)
+    errs2 = names_before_narration_errors(scene, ctx2)
+    assert errs2 == []
+
+
+def test_name_tokens_and_matching() -> None:
+    assert name_tokens_for("Dr. John Snow") == ["john", "snow"]
+    assert name_tokens_for("Mr. Robert Okafor") == ["robert", "okafor"]
+    assert name_tokens_for("Bo") == []
+
+    # Single-word short name matches full name whole word
+    assert is_name_in_narration_prefix("Bo", "Then Bo arrived.") is True
+    assert is_name_in_narration_prefix("Bo", "Then the Book arrived.") is False
+
+    # Name token match
+    assert is_name_in_narration_prefix("Robert Okafor", "Okafor walked in.") is True
+    assert is_name_in_narration_prefix("Robert Okafor", "Robert was there.") is True
+    assert is_name_in_narration_prefix("Robert Okafor", "Nobody was there.") is False

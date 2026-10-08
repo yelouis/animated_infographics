@@ -19,8 +19,13 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from animated_infographics.contracts.models import Beat, Bible, Transcript
 from animated_infographics.planner.rhythm import QUOTED
-from animated_infographics.planner.validate import placeholder_errors
+from animated_infographics.planner.validate import (
+    PlanContext,
+    names_before_narration_errors,
+    placeholder_errors,
+)
 
 MONTHS: str = (
     "january|february|march|april|may|june|july|august|september|october|november|december"
@@ -99,6 +104,7 @@ def verify_job_scenes(job_dir: Path) -> dict[str, Any]:
                 "junk_text": junk_text,
                 "invented_era_stamps": invented_era_stamps,
                 "armchair_count": armchair_count,
+                "names_before_narration": 0,
                 "passed": (
                     year_stats == 0
                     and date_stats == 0
@@ -128,6 +134,34 @@ def verify_job_scenes(job_dir: Path) -> dict[str, Any]:
     if not transcript_text and beats_map:
         transcript_text = " ".join(beats_map.values())
 
+    bible_path = job_dir / "bible.json"
+    bible: Bible | None = None
+    if bible_path.exists():
+        try:
+            bible = Bible.model_validate_json(bible_path.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+
+    transcript_obj: Transcript | None = None
+    if transcript_path.exists():
+        try:
+            transcript_obj = Transcript.model_validate_json(
+                transcript_path.read_text(encoding="utf-8")
+            )
+        except Exception:
+            pass
+
+    beats_models: list[Beat] = []
+    if beats_path.exists():
+        try:
+            beats_data = json.loads(beats_path.read_text(encoding="utf-8"))
+            raw_b = (
+                beats_data.get("beats", beats_data) if isinstance(beats_data, dict) else beats_data
+            )
+            beats_models = [Beat.model_validate(b) for b in raw_b if isinstance(b, dict)]
+        except Exception:
+            pass
+
     scenes_by_id = {s["id"]: s for s in storyboard.get("scenes", [])}
 
     unneutral_flagged_tones = 0
@@ -138,6 +172,7 @@ def verify_job_scenes(job_dir: Path) -> dict[str, Any]:
     junk_text = 0
     invented_era_stamps = 0
     armchair_count = 0
+    names_before_narration = 0
 
     # 1. Critic tone & attribution checks from plan_report
     for sc_rep in plan_report.get("scenes", []):
@@ -223,6 +258,23 @@ def verify_job_scenes(job_dir: Path) -> dict[str, Any]:
                 if re.search(date_pattern, beat_text, re.IGNORECASE):
                     date_stats += 1
 
+        # Names before narration check (I5)
+        if bible and transcript_obj and beats_models:
+            beat_i = sc.get("beat_i")
+            beat_obj = (
+                beats_models[beat_i]
+                if beat_i is not None and 0 <= beat_i < len(beats_models)
+                else None
+            )
+            scene_ctx = PlanContext(
+                transcript=transcript_obj,
+                bible=bible,
+                beat=beat_obj,
+                beats=beats_models,
+            )
+            names_errs = names_before_narration_errors(sc, scene_ctx)
+            names_before_narration += len(names_errs)
+
     return {
         "job_dir": str(job_dir),
         "unneutral_flagged_tones": unneutral_flagged_tones,
@@ -233,6 +285,7 @@ def verify_job_scenes(job_dir: Path) -> dict[str, Any]:
         "junk_text": junk_text,
         "invented_era_stamps": invented_era_stamps,
         "armchair_count": armchair_count,
+        "names_before_narration": names_before_narration,
         "passed": (
             unneutral_flagged_tones == 0
             and disputed_attributions_kept == 0
@@ -242,6 +295,7 @@ def verify_job_scenes(job_dir: Path) -> dict[str, Any]:
             and junk_text == 0
             and invented_era_stamps == 0
             and armchair_count == 0
+            and names_before_narration == 0
         ),
     }
 
@@ -258,9 +312,9 @@ def main() -> None:
     print(
         f"{'Job':<25} | {'Tones (=0)':<10} | {'Attr (=0)':<10} | {'R7 Q (=0)':<10} | "
         f"{'Years (=0)':<10} | {'Dates (=0)':<10} | {'Junk (=0)':<9} | {'Era (=0)':<8} | "
-        f"{'Armchairs (=0)':<14} | Status"
+        f"{'Armchairs (=0)':<14} | {'Names (=0)':<10} | Status"
     )
-    print("-" * 140)
+    print("-" * 153)
 
     for job_path in args.jobs:
         if not job_path.is_dir() or (
@@ -278,13 +332,14 @@ def main() -> None:
                 f"{job_name:<25} | {res['unneutral_flagged_tones']:<10} | "
                 f"{res['disputed_attributions_kept']:<10} | {res['r7_quoted_repairs']:<10} | "
                 f"{res['year_stats']:<10} | {res['date_stats']:<10} | {res['junk_text']:<9} | "
-                f"{res['invented_era_stamps']:<8} | {res['armchair_count']:<14} | {st}"
+                f"{res['invented_era_stamps']:<8} | {res['armchair_count']:<14} | "
+                f"{res['names_before_narration']:<10} | {st}"
             )
         except Exception as e:
             print(f"{job_path.name:<25} | ERROR: {e}")
             all_passed = False
 
-    print("=" * 140)
+    print("=" * 153)
     sys.exit(0 if all_passed else 1)
 
 

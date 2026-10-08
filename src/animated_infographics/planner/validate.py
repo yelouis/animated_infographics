@@ -435,6 +435,175 @@ def _format_stat_value(val: float, decimals: int) -> str:
         return f"{val:,.2f}"
 
 
+EXCLUDED_NAME_TOKENS: Final[frozenset[str]] = frozenset(
+    {"the", "of", "and", "mr", "mrs", "ms", "dr"}
+)
+
+
+def name_tokens_for(name: str) -> list[str]:
+    """Return name tokens (runs of letters and apostrophes of >= 3 chars, not excluded).
+
+    Per design_planner.md §6 item 6.
+    """
+    return [
+        w.casefold()
+        for w in re.findall(r"[A-Za-z']+", name)
+        if len(w) >= 3 and w.casefold() not in EXCLUDED_NAME_TOKENS
+    ]
+
+
+def is_name_in_narration_prefix(name: str, prefix_text: str) -> bool:
+    """Check if name or any of its name tokens appears as a whole word in prefix_text.
+
+    Per design_planner.md §6 item 6.
+    """
+    name_clean = name.strip()
+    if not name_clean:
+        return False
+
+    narration_words = set(w.casefold() for w in re.findall(r"[A-Za-z']+", prefix_text))
+
+    # Single-word name full match
+    name_words = [w.casefold() for w in re.findall(r"[A-Za-z']+", name_clean)]
+    if len(name_words) == 1:
+        if name_words[0] in narration_words:
+            return True
+    elif len(name_words) > 1:
+        pattern = r"\b" + r"\s+".join(re.escape(w) for w in name_words) + r"\b"
+        if re.search(pattern, prefix_text, re.IGNORECASE):
+            return True
+
+    # Any name token match (>= 3 chars, not in EXCLUDED_NAME_TOKENS)
+    tokens = name_tokens_for(name_clean)
+    for tok in tokens:
+        if tok in narration_words:
+            return True
+
+    return False
+
+
+def names_before_narration_errors(scene: Scene | Any, ctx: PlanContext) -> list[str]:
+    """Check that names on screen are not shown before the narration says them.
+
+    Per design_planner.md §6 item 6 and agent_execution_guide.md I5:
+    - Fields:
+      - kinetic_quote.attribution_cast_id
+      - character_intro.cast_id
+      - every relationship_map.cast_ids entry
+      - text_thread.contact_cast_id
+    - Exempt: cast members with is_narrator == True
+    - Narration prefix: transcript words 0 ... beat.word_end
+    - Match: the full name, or a name token (letters and apostrophes, >= 3 characters,
+      not the/of/and/mr/mrs/ms/dr), as a whole word, casefolded.
+    """
+    if not ctx.bible or not ctx.bible.cast:
+        return []
+
+    beat = ctx.beat
+    beat_i = (
+        scene.beat_i
+        if hasattr(scene, "beat_i")
+        else (scene.get("beat_i") if isinstance(scene, dict) else None)
+    )
+    if (
+        beat is None
+        and ctx.beats is not None
+        and beat_i is not None
+        and 0 <= beat_i < len(ctx.beats)
+    ):
+        beat = ctx.beats[beat_i]
+
+    if beat is None or beat.word_end is None:
+        return []
+
+    if ctx.transcript and ctx.transcript.words:
+        prefix_words = ctx.transcript.words[: beat.word_end]
+        prefix_text = " ".join(w.text for w in prefix_words)
+    elif ctx.beats and beat_i is not None and 0 <= beat_i < len(ctx.beats):
+        prefix_text = " ".join(b.text for b in ctx.beats[: beat_i + 1])
+    elif beat.text:
+        prefix_text = beat.text
+    else:
+        prefix_text = ""
+
+    cast_map = {c.id: c for c in ctx.bible.cast}
+    props = (
+        scene.props
+        if hasattr(scene, "props")
+        else (scene.get("props", {}) if isinstance(scene, dict) else None)
+    )
+    template = (
+        scene.template
+        if hasattr(scene, "template")
+        else (scene.get("template", "") if isinstance(scene, dict) else "")
+    )
+
+    errors: list[str] = []
+
+    # 1. kinetic_quote.attribution_cast_id
+    if template == "kinetic_quote" or isinstance(props, KineticQuoteProps):
+        attr_cid = (
+            getattr(props, "attribution_cast_id", None)
+            if not isinstance(props, dict)
+            else props.get("attribution_cast_id")
+        )
+        if attr_cid and attr_cid in cast_map:
+            member = cast_map[attr_cid]
+            if not member.is_narrator and not is_name_in_narration_prefix(member.name, prefix_text):
+                errors.append(
+                    f'props.attribution_cast_id: "{member.name}" is not named in the narration yet '
+                    "— leave the attribution empty"
+                )
+
+    # 2. character_intro.cast_id
+    elif template == "character_intro" or isinstance(props, CharacterIntroProps):
+        intro_cid = (
+            getattr(props, "cast_id", None) if not isinstance(props, dict) else props.get("cast_id")
+        )
+        if intro_cid and intro_cid in cast_map:
+            member = cast_map[intro_cid]
+            if not member.is_narrator and not is_name_in_narration_prefix(member.name, prefix_text):
+                errors.append(
+                    f'props.cast_id: "{member.name}" is not named in the narration yet '
+                    "— choose a scene that does not show a name"
+                )
+
+    # 3. relationship_map.cast_ids
+    elif template == "relationship_map" or isinstance(props, RelationshipMapProps):
+        cast_ids = (
+            getattr(props, "cast_ids", [])
+            if not isinstance(props, dict)
+            else props.get("cast_ids", [])
+        )
+        for cid in cast_ids:
+            if cid in cast_map:
+                member = cast_map[cid]
+                if not member.is_narrator and not is_name_in_narration_prefix(
+                    member.name, prefix_text
+                ):
+                    errors.append(
+                        f'props.cast_ids: "{member.name}" is not named in the narration yet '
+                        "— leave them out"
+                    )
+
+    # 4. text_thread.contact_cast_id
+    elif template == "text_thread" or isinstance(props, TextThreadProps):
+        contact_cid = (
+            getattr(props, "contact_cast_id", None)
+            if not isinstance(props, dict)
+            else props.get("contact_cast_id")
+        )
+        if contact_cid and contact_cid in cast_map:
+            member = cast_map[contact_cid]
+            if not member.is_narrator and not is_name_in_narration_prefix(member.name, prefix_text):
+                errors.append(
+                    f'props.contact_cast_id: "{member.name}" is not named in the narration yet '
+                    "— leave the contact empty"
+                )
+
+    return errors
+
+
 def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
     """Validate a storyboard scene against schema, references, fit, and rules.
 
@@ -754,6 +923,9 @@ def validate_scene(scene: Scene, ctx: PlanContext) -> list[str]:
     # 10. Placeholder and instruction text (item 7, Wave F)
     errors.extend(placeholder_errors(template, scene.props))
 
+    # 11. Names before narration (item 6, Wave I)
+    errors.extend(names_before_narration_errors(scene, ctx))
+
     return errors
 
 
@@ -791,7 +963,11 @@ def validate_plan(bible: Bible, storyboard: Storyboard, ctx: PlanContext) -> lis
 
     for idx, scene in enumerate(storyboard.scenes):
         # Validate individual scene
-        beat = ctx.beats[idx] if ctx.beats and idx < len(ctx.beats) else None
+        beat = (
+            ctx.beats[scene.beat_i]
+            if ctx.beats and 0 <= scene.beat_i < len(ctx.beats)
+            else (ctx.beats[idx] if ctx.beats and idx < len(ctx.beats) else None)
+        )
         scene_ctx = PlanContext(
             transcript=ctx.transcript,
             bible=bible,
