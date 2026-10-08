@@ -84,7 +84,9 @@ export const OverlayLayer: React.FC<OverlayLayerProps> = ({
         const itemOpacity = Math.min(1, Math.max(0, enterSpring));
 
         if (overlay.kind === "motif_token") {
-          // 120 px bgRaised circle with a 4 px highlight ring and a 72 px highlight icon, centred at (900, 240)
+          if (!overlay.icon || !overlay.motif_id) {
+            return null;
+          }
           return (
             <div
               key={key}
@@ -108,7 +110,7 @@ export const OverlayLayer: React.FC<OverlayLayerProps> = ({
               }}
             >
               <Icon
-                name={overlay.icon || "Sparkle"}
+                name={overlay.icon}
                 size={72}
                 color={palette.highlight}
                 weight="fill"
@@ -118,6 +120,9 @@ export const OverlayLayer: React.FC<OverlayLayerProps> = ({
         }
 
         if (overlay.kind === "thought") {
+          if (!overlay.text && !overlay.icon) {
+            return null;
+          }
           // Cloud 240x170 centred at (180, 250), fill ink at 0.92; 84 px navy icon or <=3 words in body 700 36->28
           return (
             <div
@@ -157,7 +162,7 @@ export const OverlayLayer: React.FC<OverlayLayerProps> = ({
                 />
               ) : (
                 <Icon
-                  name={overlay.icon || "ChatCircleDots"}
+                  name={overlay.icon!}
                   size={84}
                   color={palette.bgDeep}
                   weight="fill"
@@ -168,6 +173,9 @@ export const OverlayLayer: React.FC<OverlayLayerProps> = ({
         }
 
         if (overlay.kind === "label") {
+          if (!overlay.text) {
+            return null;
+          }
           // Chip bgDeep / ink, body 700 34->26 * 2 lines * 240 px, within [60, 200, 300, 302]
           return (
             <div
@@ -193,7 +201,7 @@ export const OverlayLayer: React.FC<OverlayLayerProps> = ({
             >
               <FitText
                 slot={LABEL_SLOT}
-                text={overlay.text || "Aside"}
+                text={overlay.text}
                 sceneId={sceneId}
                 template="overlays"
                 slotName={`label_${idx}`}
@@ -211,6 +219,9 @@ export const OverlayLayer: React.FC<OverlayLayerProps> = ({
         }
 
         if (overlay.kind === "prop") {
+          if (!overlay.icon) {
+            return null;
+          }
           // 140 px icon in inkMuted, centred at (170, 1090)
           return (
             <div
@@ -230,7 +241,7 @@ export const OverlayLayer: React.FC<OverlayLayerProps> = ({
               }}
             >
               <Icon
-                name={overlay.icon || "Package"}
+                name={overlay.icon}
                 size={140}
                 color={palette.inkMuted}
                 weight="fill"

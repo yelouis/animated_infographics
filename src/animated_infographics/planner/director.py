@@ -431,6 +431,8 @@ def validate_director_plan(
         if kind == "thought":
             if not cid or cid not in valid_cast_ids:
                 errors.append(f"asides[{a_idx}]: thought aside requires a valid cast_id")
+            if not icon and not (text and isinstance(text, str) and text.strip()):
+                errors.append(f"asides[{a_idx}]: a thought needs an icon or text")
         elif kind == "prop":
             if not icon or icon not in valid_icon_names:
                 errors.append(f"asides[{a_idx}]: prop aside requires an icon from the allowed list")

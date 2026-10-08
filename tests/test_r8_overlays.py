@@ -137,7 +137,7 @@ def test_graphic_words_counts_overlay_text() -> None:
     assert base_count == 1
 
     overlays = [
-        SceneOverlay(kind="motif_token", icon="Key", anchor="top_right"),
+        SceneOverlay(kind="motif_token", icon="Key", anchor="top_right", motif_id="m1"),
         SceneOverlay(kind="label", text="Old Relic", anchor="top_left"),
     ]
     with_overlays = graphic_words("stat_callout", props, overlays=overlays)
@@ -417,6 +417,49 @@ def test_capacity_at_most_1_token_and_1_aside() -> None:
     assert kinds == {"motif_token", "thought"}
 
 
+def test_compute_scene_overlays_drops_incomplete_asides() -> None:
+    """compute_scene_overlays drops incomplete asides into overlay_dropped with reason 'incomplete'."""
+    sb = Storyboard(
+        scenes=[
+            TitleCardScene(
+                id="s000", beat_i=0, template="title_card", props=TitleCardProps(title="Title")
+            ),
+            KineticQuoteScene(
+                id="s001",
+                beat_i=1,
+                template="kinetic_quote",
+                props=KineticQuoteProps(text="Quote 1"),
+            ),
+            StatCalloutScene(
+                id="s002",
+                beat_i=2,
+                template="stat_callout",
+                props=StatCalloutProps(value=10, decimals=0),
+            ),
+            KineticQuoteScene(
+                id="s003",
+                beat_i=3,
+                template="kinetic_quote",
+                props=KineticQuoteProps(text="Quote 2"),
+            ),
+        ]
+    )
+    plan = DirectorPlan(
+        asides=[
+            AsideDirective(beat_i=1, kind="thought", icon=None, text=None, cast_id="c1"),
+            AsideDirective(beat_i=2, kind="prop", icon=None, text=None),
+            AsideDirective(beat_i=3, kind="label", icon=None, text=None),
+        ]
+    )
+    overlays_map, dropped = compute_scene_overlays(sb, plan)
+    assert len(dropped) == 3
+    assert all(d.reason == "incomplete" for d in dropped)
+    assert dropped[0].item["kind"] == "thought"
+    assert dropped[1].item["kind"] == "prop"
+    assert dropped[2].item["kind"] == "label"
+    assert all(len(ovs) == 0 for ovs in overlays_map.values())
+
+
 def test_contact_sheet_badges_and_report_fates(tmp_path: Path) -> None:
     """Preview draws M/C badges and records director item fates in report.json."""
     job_dir = tmp_path / "job"
@@ -528,4 +571,30 @@ def test_scene_overlay_anchor_validator() -> None:
     SceneOverlay(kind="prop", icon="Coins", anchor="bottom_left")
     with pytest.raises(ValueError, match="prop requires anchor 'bottom_left'"):
         SceneOverlay(kind="prop", icon="Coins", anchor="top_left")
+
+
+def test_scene_overlay_completeness_validator() -> None:
+    """SceneOverlay enforces completeness per design_testing_and_validation.md §2 row 110."""
+    # thought requires icon or text
+    SceneOverlay(kind="thought", text="Idea", anchor="top_left")
+    SceneOverlay(kind="thought", icon="Sparkle", anchor="top_left")
+    with pytest.raises(ValueError, match="thought overlay requires an icon or text"):
+        SceneOverlay(kind="thought", anchor="top_left")
+
+    # prop requires icon
+    SceneOverlay(kind="prop", icon="Coins", anchor="bottom_left")
+    with pytest.raises(ValueError, match="prop overlay requires an icon"):
+        SceneOverlay(kind="prop", anchor="bottom_left")
+
+    # label requires text
+    SceneOverlay(kind="label", text="Aside", anchor="top_left")
+    with pytest.raises(ValueError, match="label overlay requires text"):
+        SceneOverlay(kind="label", anchor="top_left")
+
+    # motif_token requires icon and motif_id
+    SceneOverlay(kind="motif_token", icon="Key", motif_id="m1", anchor="top_right")
+    with pytest.raises(ValueError, match="motif_token overlay requires an icon and a motif_id"):
+        SceneOverlay(kind="motif_token", icon="Key", anchor="top_right")
+    with pytest.raises(ValueError, match="motif_token overlay requires an icon and a motif_id"):
+        SceneOverlay(kind="motif_token", motif_id="m1", anchor="top_right")
 

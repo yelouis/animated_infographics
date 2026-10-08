@@ -116,9 +116,11 @@ def verify_job_creative(job_dir: Path | str) -> dict[str, Any]:
                 if any(o.get("kind") == kind for o in sc.get("overlays", [])):
                     license_failures_rendered += 1
 
-    # 5. Overlays clearance / overlaps:
+    # 5. Overlays clearance / overlaps / completeness:
     # Overlays only on ALLOWED_OVERLAY_TEMPLATES, at most 1 token and 1 aside per scene
+    # No thought overlay lacks both icon and text (I3)
     overlay_violations = 0
+    thought_completeness_violations = 0
     for sc in scenes:
         ovs = sc.get("overlays", [])
         if not ovs:
@@ -130,6 +132,12 @@ def verify_job_creative(job_dir: Path | str) -> dict[str, Any]:
         asides = [o for o in ovs if o.get("kind") in ("thought", "label", "prop")]
         if len(tokens) > 1 or len(asides) > 1:
             overlay_violations += 1
+        for o in ovs:
+            if o.get("kind") == "thought":
+                icon = o.get("icon")
+                text = o.get("text")
+                if not icon and not (text and str(text).strip()):
+                    thought_completeness_violations += 1
 
     # Bars:
     # - >= 1 motif with plant & payoff rendered
@@ -139,6 +147,7 @@ def verify_job_creative(job_dir: Path | str) -> dict[str, Any]:
     # - >= 2 asides
     # - 0 license failures rendered
     # - 0 overlay violations
+    # - 0 thought completeness violations
     callback_dots_bar = len(callback_dots_violations) == 0
     motifs_bar = (
         motifs_rendered >= 1
@@ -149,7 +158,7 @@ def verify_job_creative(job_dir: Path | str) -> dict[str, Any]:
     metaphors_bar = metaphors_count >= 2
     asides_bar = asides_count >= 2
     license_bar = license_failures_rendered == 0
-    overlays_bar = overlay_violations == 0
+    overlays_bar = overlay_violations == 0 and thought_completeness_violations == 0
     fates_bar = len(invalid_fates) == 0
 
     all_passed = (
@@ -167,6 +176,7 @@ def verify_job_creative(job_dir: Path | str) -> dict[str, Any]:
         "asides_count": asides_count,
         "license_failures_rendered": license_failures_rendered,
         "overlay_violations": overlay_violations,
+        "thought_completeness_violations": thought_completeness_violations,
         "invalid_fates_count": len(invalid_fates),
         "motifs_bar": motifs_bar,
         "callback_dots_bar": callback_dots_bar,

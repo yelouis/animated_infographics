@@ -527,6 +527,14 @@ def test_validator_7_entities_and_aside_kinds() -> None:
     _, errs = validate_director_plan(bad_data, ctx)
     assert any("thought aside requires a valid cast_id" in e for e in errs)
 
+    # Thought aside without icon or text (I3)
+    bad_data = _valid_n64_payload()
+    bad_data["asides"][0]["icon"] = None
+    bad_data["asides"][0]["text"] = None
+    bad_data["asides"][0]["cast_id"] = "c1"
+    _, errs = validate_director_plan(bad_data, ctx)
+    assert any("asides[0]: a thought needs an icon or text" in e for e in errs)
+
     # Prop aside without icon
     bad_data = _valid_n64_payload()
     bad_data["asides"][2]["icon"] = None

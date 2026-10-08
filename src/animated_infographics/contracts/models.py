@@ -785,19 +785,35 @@ class SceneOverlay(BaseModel):
     motif_id: str | None = None
 
     @model_validator(mode="after")
-    def validate_anchor(self) -> Self:
-        if self.kind == "motif_token" and self.anchor != "top_right":
-            raise ValueError(
-                f"motif_token requires anchor 'top_right', got '{self.anchor}'"
-            )
-        if self.kind in ("thought", "label") and self.anchor != "top_left":
-            raise ValueError(
-                f"{self.kind} requires anchor 'top_left', got '{self.anchor}'"
-            )
-        if self.kind == "prop" and self.anchor != "bottom_left":
-            raise ValueError(
-                f"prop requires anchor 'bottom_left', got '{self.anchor}'"
-            )
+    def validate_overlay(self) -> Self:
+        if self.kind == "motif_token":
+            if self.anchor != "top_right":
+                raise ValueError(
+                    f"motif_token requires anchor 'top_right', got '{self.anchor}'"
+                )
+            if not self.icon or not self.motif_id:
+                raise ValueError("motif_token overlay requires an icon and a motif_id")
+        elif self.kind == "thought":
+            if self.anchor != "top_left":
+                raise ValueError(
+                    f"thought requires anchor 'top_left', got '{self.anchor}'"
+                )
+            if not self.icon and not (self.text and self.text.strip()):
+                raise ValueError("thought overlay requires an icon or text")
+        elif self.kind == "label":
+            if self.anchor != "top_left":
+                raise ValueError(
+                    f"label requires anchor 'top_left', got '{self.anchor}'"
+                )
+            if not (self.text and self.text.strip()):
+                raise ValueError("label overlay requires text")
+        elif self.kind == "prop":
+            if self.anchor != "bottom_left":
+                raise ValueError(
+                    f"prop requires anchor 'bottom_left', got '{self.anchor}'"
+                )
+            if not self.icon:
+                raise ValueError("prop overlay requires an icon")
         return self
 
 

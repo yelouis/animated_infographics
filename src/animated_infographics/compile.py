@@ -203,6 +203,28 @@ def compute_scene_overlays(
     # 2. Place asides
     for aside in director_plan.asides:
         orig_beat = aside.beat_i
+        aside_icon = aside.icon if aside.icon in ICON_NAMES else None
+        has_text = bool(aside.text and isinstance(aside.text, str) and aside.text.strip())
+
+        is_incomplete = False
+        if aside.kind == "thought":
+            is_incomplete = not aside_icon and not has_text
+        elif aside.kind == "prop":
+            is_incomplete = not aside_icon
+        elif aside.kind == "label":
+            is_incomplete = not has_text
+        else:
+            is_incomplete = True
+
+        if is_incomplete:
+            dropped.append(
+                OverlayDropped(
+                    item=aside.model_dump(),
+                    reason="incomplete",
+                )
+            )
+            continue
+
         candidates = [
             b
             for b in range(n_scenes)
@@ -218,7 +240,6 @@ def compute_scene_overlays(
             anchor: Literal["top_left", "bottom_left"] = (
                 "bottom_left" if aside.kind == "prop" else "top_left"
             )
-            aside_icon = aside.icon if aside.icon in ICON_NAMES else None
             overlay = SceneOverlay(
                 kind=aside.kind,
                 icon=aside_icon,  # type: ignore[arg-type]
