@@ -17,18 +17,18 @@ This document owns the **presentation simulation**: the first step toward live p
 
 ## 1. The command and the job
 
-`infographics present-sim <script.txt> --style literal|creative --perturb mild|strong --seed <int> [--jobs-dir …]` creates a **presentation job** (`kind: "presentation"` in `state.json`). The job runs these stages and stops at the review gate like any job:
+`infographics present-sim <script.txt> --style literal|creative --perturb mild|strong --seed <int> [--matcher bm25|anticipate|llm] [--jobs-dir …]` creates a **presentation job** (`kind: "presentation"` in `state.json`). The job runs these stages and stops at the review gate like any job:
 
 ```
-script ──► deck ──► deck_bible ──► tree ─────────────┐
-   │                                                   ▼
+script ──► deck ──► deck_bible ──► tree ──► anticipate ──┐   (anticipate: only with --matcher anticipate, §6.6.1)
+   │                                                       ▼
    └──► perform ──► speak ──► hear ──► follow ──► compose ──► preview ─(review)─► render ──► score
 ```
 
 - **`deck` and `tree` never see the performance**, and the tree never sees the script (§3). This is the honest part of the simulation: at presentation time, only the deck is known.
 - **`perform`, `speak` and `hear` stand in for the live speaker.**
 - **`follow` is the only component that would run live.** It sees only what was *heard*: ASR words with timestamps.
-- **`score` uses the ground truth** that `perform` records. Nothing upstream of `score` may read it; a test asserts that `follow`'s inputs are only `tree.json` and the ASR words.
+- **`score` uses the ground truth** that `perform` records. Nothing upstream of `score` may read it; a test asserts that `follow`'s inputs are only `tree.json`, the ASR words and, for the `anticipate` matcher, `anticipation.json` (itself built from the deck only).
 
 Every stage obeys the standing rules: job-local inputs, `run_with_retries`, stage logs ending in `llm_calls=… cache_hits=… elapsed_ms=…`, and invalidation by input hash.
 
@@ -153,7 +153,7 @@ A node with no matching edge cannot be reached in one commit.
 - at the end of any word followed by a gap ≥ 300 ms, and
 - otherwise at least every 1.5 s of audio.
 
-At a decision point it sees only the words ended so far. It looks at a **window** of the last 20 words (fewer at the start). *Measured October 6, 2026: 20 words hold ≈ 8 s of speech, so a new point outweighs the old one only halfway through it. This window is one cause of Issue 8 (`ongoing_general_errors.md`), and the matcher's design awaits the user's selection there.*
+At a decision point it sees only the words ended so far. It looks at a **window** of the last 20 words (fewer at the start). *Measured October 6, 2026: 20 words hold ≈ 8 s of speech, so a new point outweighs the old one only halfway through it. This window is one cause of Issue 8 (`ongoing_general_errors.md`). §6.1–§6.4 describe the **`bm25` matcher**, the baseline; the user selected Option A on October 7, 2026, and §6.6 specifies the two contestants and the rule that picks one.*
 
 ### 6.2 Scoring
 
@@ -183,6 +183,130 @@ It passes the window and the two candidates' point texts, and adds the call's me
 ### 6.5 Output
 
 `playback.json`: `[{"node": "<id>", "start_ms": int, "decided_ms": int, "latency_ms": int, "score_margin": float}]`, in time order.
+
+`playback.json` also records `"matcher": "bm25" | "anticipate" | "llm"` (added October 7, 2026).
+
+### 6.6 The follower bake-off (Issue 8 → Option A, selected by the user October 7, 2026)
+
+**The finding** (Issue 8): the `bm25` matcher misses every accuracy bar while the oracle meets them. Two failures add up:
+- a 12-word deck point and a paraphrase of it share too few words;
+- the 20-word window holds ≈ 8 s of speech.
+
+**The decision.** Build two followers from deck-only knowledge with the existing models, and adopt one by a fixed rule (§6.6.4). Nothing here may read the script, the performance or the ground truth. The isolation and causality tests cover both contestants.
+
+**Frozen during the bake-off:**
+- the scorer and every §8 bar;
+- decision points (§6.1);
+- normalisation and BM25 parameters (§6.2);
+- simulated latency (§6.3);
+- the tree, the deck, and the corpus's `perform`/`speak`/`hear` outputs.
+
+Only the follower changes.
+
+#### 6.6.1 Contestant A1: anticipated speech + forward tracker (`--matcher anticipate`; no LLM in the live loop)
+
+**The `anticipate` stage** runs after `tree`, only when the job's matcher is `anticipate`. Otherwise it is skipped and writes nothing. It reads only `deck.json` and `tree.json`.
+- **Calls:** one per node (section and point): `run_with_retries(stage="anticipate", num_predict=320)`, temperature 0.6, 3 attempts.
+- **Point node prompt** (user message, verbatim):
+
+  ```
+  Here is one slide from a talk.
+  Slide title: <slide title>
+  Points on this slide:
+  - <point 1>
+  - <point 2>
+  …
+  The presenter is now covering this point: "<point text>"
+  Write 4 different sentences the presenter might actually say out loud while covering this point. Use plain spoken English, the way a person talks, not slide text. Do not add facts that are not on the slide.
+  ```
+- **Section node prompt:** the same, with the last two lines replaced by `The presenter is now moving on to this slide.` and `Write 4 different sentences the presenter might say out loud to introduce this slide. Use plain spoken English, the way a person talks, not slide text. Do not add facts that are not on the slide.`
+- **Schema:** `{"sentence_1": str, "sentence_2": str, "sentence_3": str, "sentence_4": str}`, all required, one key per item (lesson 2.9), with no length constraints given to the model.
+- **Validators** (each failure is a retry message):
+  - each sentence has 6–35 words;
+  - no two sentences are equal, casefolded and stripped of punctuation;
+  - no sentence equals the point text (for a section node, the slide title);
+  - every digit run in a sentence occurs in the slide's title or points.
+
+  Error strings:
+  - `sentence_<k>: <n> words — write 6 to 35 words`
+  - `sentence_<j> repeats sentence_<k> — write a different sentence`
+  - `sentence_<k> copies the slide — say it the way a presenter would`
+  - `sentence_<k>: "<digits>" is not on the slide — do not add numbers`
+- **After 3 failed attempts** the node keeps 0 anticipated sentences. The log records `anticipate: <node id> failed: <last error>`. The job never crashes.
+- **Output:** `anticipation.json`: `{"schema_version": 1, "nodes": {"<node id>": ["<s1>", "<s2>", "<s3>", "<s4>"]}}`. The log ends `anticipate: nodes=<n> filled=<f> failed=<x> llm_calls=… cache_hits=… elapsed_ms=…`.
+
+**The tracker** (`follow` with `--matcher anticipate`):
+- **Document per node:** the node's `text` (§3) followed by its anticipated sentences, joined by spaces. BM25 document frequencies and average length are computed over these documents.
+- **Window:** the last **10** heard words (fewer at the start).
+- **Candidates:**
+  - the current node `c`;
+  - the **forward set**, the next 3 nodes after `c` in deck order (section nodes included): `f1`, `f2`, `f3`;
+  - the **back set**, every point node before `c` in deck order.
+  
+  Nothing else is eligible. `tree.json`'s edges and their costs are not used; they remain the `bm25` matcher's.
+- **Score:** `BM25(window, doc) − cost`, with cost 0 for `c` and `f1`, 0.15 for `f2`, 0.30 for `f3`, and 0.5 for any back node.
+- **Commit** (dwell ≥ 2.0 s on `c` is required in every case):
+  - **Forward step:** the top candidate is `f1`, and `score(f1) − score(c) ≥ 0.5`, at **one** decision point.
+  - **Any other move** (`f2`, `f3`, or a back node): the same node is top at **2 consecutive** decision points, and its score exceeds `c`'s by **≥ 1.5**.
+  - Otherwise **hold**. Holds record their reason as in the `bm25` matcher.
+- **Unchanged:** the first section is shown from t = 0, compute time is added to latency, and the matcher is causal.
+
+#### 6.6.2 Contestant A2: LLM point classifier (`--matcher llm`)
+
+At **each** decision point, one call: `generate_json(stage="follow_llm", temperature=0, num_predict=32)`, with no retries. A failed or invalid answer means **hold**, with reason `llm_error`.
+- **Candidates:**
+  - the current node `c`;
+  - the next 3 nodes after `c` in deck order;
+  - every point node before `c`.
+
+  `tree.json`'s edges are not used.
+- **Prompt** (user message, verbatim):
+
+  ```
+  You are following a live talk against its slide deck. You hear only the last few seconds of speech.
+  The speaker is currently on: <c id> — <slide title>: <point text>
+  Candidates:
+  <id> — <slide title>: <point text>
+  …
+  Last words heard: "<the last 25 heard words>"
+  Which point is the speaker on now? If they are between points, telling a side story, or you are unsure, answer the current point. Answer one id.
+  ```
+  A section node is listed as `<id> — <slide title>: (start of this slide)`.
+- **Schema:** `{"node": <enum of the candidate ids>}`, required.
+- **Commit** (dwell ≥ 2.0 s on `c` is required in every case):
+  - the answer is the next node in deck order (`f1`), at **one** decision point;
+  - or any other non-current answer, the **same** answer at **2 consecutive** decision points.
+  - An answer of `c` holds.
+- **Latency is honest on warm reruns.** The commit takes effect at the decision time plus the call's elapsed time. On a cache hit, that is the `elapsed_ms` stored in the cache entry, never the near-zero time of the hit. A warm rerun therefore reproduces the cold run's commits and latencies exactly.
+- **Reported, not a bar:** the median and p90 call time per decision. A2 is viable live only if p90 < 1.5 s (the decision cadence). The report states whether it is.
+
+#### 6.6.3 The corpus and the replay harness
+
+- **The corpus:** 8 presentation jobs, the four §9 configurations × seeds **7 and 11**, created once with `--matcher bm25` after Wave I lands, in `artifacts/matcher_bakeoff/<date>/corpus/`.
+  - Seed 7 is **the decision set**: the "four runs" of the user's rule.
+  - Seed 11 is **the held-out set**, a guard against tuning to the decision set.
+  - The corpus is never regenerated during the bake-off.
+- **The harness:** `uv run python -m animated_infographics.evals.matcher_bakeoff --corpus <dir> --matcher <m> --out <dir>`. For each corpus job it:
+  1. copies the job into `<out>/<job id>/`;
+  2. runs `anticipate` (A1 only), `follow` with the matcher, `compose` and `score` (no render, no oracle);
+  3. writes `bakeoff.json` with, per job, every §8 metric, its bar, PASS/MISS, the matcher's LLM calls, and the median and p90 compute time per decision;
+  4. prints one `BAR <job> <metric> <value> <bar> PASS|MISS` line per check;
+  5. exits 0 only if every bar passes on all 8 jobs.
+- **Diagnostic column, not a bar: "perfect hearing".** The same matcher fed the performed sentences (`performance.json` text) with each sentence's words spread evenly over its `speak_timing.json` span, in place of `heard.json`. It separates matcher error from ASR error. It reads the ground truth, so only the harness builds it, outside any job. It is never reachable from `present-sim` and never decides adoption.
+- **The baseline row:** `--matcher bm25` through the harness must reproduce each corpus job's own `presentation_score.json` within 0.01 on every metric. This proves the harness changes nothing but the follower.
+
+#### 6.6.4 The adoption rule (the user's Option A, applied mechanically)
+
+1. **Build A1 and run the harness.**
+   - If A1 meets every §8 bar on all **4 decision-set** jobs **and** all **4 held-out** jobs, **adopt A1** and stop; A2 is not built.
+   - If A1 passes the decision set but misses on the held-out set, **stop and file it** with both tables. This is a generalisation question for the user, not a reason to move on.
+2. **Otherwise build A2 and run the harness,** with the same two conditions and the same stop-and-file case.
+3. **If neither is adopted,** file a new issue with both contestants' tables, the best result per metric, and the "perfect hearing" column, and stop. G16 stays at exit 3.
+4. **On adoption:**
+   - the adopted matcher becomes `present-sim`'s default and the one G16 gates;
+   - `bm25` stays selectable as the baseline;
+   - a fresh G16 must exit **0**.
+5. **No tuning, ever.** No constant in §6.6.1–§6.6.2 changes during the bake-off: windows, margins, costs, candidate sets, prompts, temperatures, the BM25 parameters. A contestant that misses, misses. If a constant is wrong, the evidence goes into the filed issue for the designer.
 
 ---
 

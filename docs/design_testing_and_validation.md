@@ -112,6 +112,10 @@ The `voice`/`reason` expectations are the table in `design_planner.md` §10; the
 | director salvage and prompt (Wave I; stub backend + frozen real attempts) | the recorded attempts in `docs/evals/assets/2026-10-06/wave_i_director_attempts.json` (copied into `tests/data/wave_i_director_cases.json`): case `story_overdue_book_cold` ends in a salvaged plan without `metaphors[1]`, whose `director_dropped` entry carries the rule-6 error verbatim; case `story_overdue_book_deck` gives a salvaged plan with 1 metaphor; a third attempt with a rule-2 error degrades to literal; a plan with nothing left degrades; the director prompt contains every `TEXT_EXPECTED_WORDS` word and `TEXT_EXPECTED_PHRASES` phrase |
 | names before narration (Wave I; no LLM; frozen real cases) | from `tests/data/spoiler_cases.json` (the 7 measured scenes with their transcripts, beats and bibles): each gives its exact error; the same scene moved to a beat after the name is spoken passes; a narrator `character_intro` passes; a `dialogue` with an unnamed speaker passes (avatars allowed) |
 | creative presentation (Wave I; stub backend) | with `style=creative`, `tree` makes one license call per metaphor and aside (backend counter); a non-`ok` verdict removes the item; a director that fails 3 times gives `style_degraded: true` and the log line verbatim; a point scene whose plan carries a token keeps it in `tree.json` and in `compose`'s timeline; a point node selected as `title_card` is replaced (`RuleRepair(rule="R1")`) |
+| anticipate stage (Wave J; stub backend) | one call per node; the point and section prompts are byte-equal to `design_presentation_simulation.md` §6.6.1 for a fixed slide; the schema has exactly `sentence_1`…`sentence_4`, all required, with no length keywords; each validator's error string, verbatim, on a failing case (5 words; a repeat; a copy of the point; "1859" not on the slide); 3 failures → `[]` and the log line; `anticipate` reads only `deck.json` and `tree.json` (file access patched); skipped entirely when the matcher is not `anticipate` |
+| anticipate tracker A1 (Wave J; no LLM) | on a synthetic 3-slide tree with fixed anticipations and a synthetic word stream: (a) the forward step commits `f1` at the **first** decision point where it leads `c` by ≥ 0.5 after 2.0 s of dwell, and not before 2.0 s; (b) a jump to `f2` needs 2 consecutive tops and a lead ≥ 1.5; (c) a back node needs the same; (d) a node 4 places ahead is never a candidate; (e) the window is exactly the last 10 words; (f) causality: identical commits with the future truncated; (g) document frequencies include the anticipated sentences |
+| LLM classifier A2 (Wave J; stub backend) | the prompt is byte-equal to §6.6.2 for a fixed state, lists exactly `c`, the next 3 nodes and every earlier point, and contains only words ended by the decision time (the stub records every prompt; **causality**); the schema's enum equals the candidate ids; next-node answer → commit at one decision point; another answer → commit only on the second consecutive identical answer; `c` → hold; a raised exception → hold with reason `llm_error`; on a cache hit the latency equals the cache entry's `elapsed_ms` |
+| bake-off harness (Wave J) | `--matcher bm25` on each corpus job reproduces its `presentation_score.json` within 0.01 on every metric; the harness never writes into the corpus (corpus file hashes unchanged after a run); `bakeoff.json` has one row per job and metric; exit 0 only when all 8 jobs pass, exit 1 otherwise; the "perfect hearing" input spreads each performed sentence's words evenly across its `speak_timing.json` span |
 | grounding scale words (added Sept 25) | `numbers("holding 2.3 million gallons")` contains 2.3 and 2,300,000 and **not** 1,000,000; `numbers("a million reasons")` contains 1,000,000; `numbers("two million")` contains 2,000,000 |
 | `planner/voice.py` | first-person rate on all four fixtures equals the measured values in `design_planner.md` §10 (±0.01); a text whose only "I" is inside double quotes → third person; the tag cases `I (26F)` → female, `My (34M) wife (33F)` → male, `Me [F29]` → female, `My sister (22F) said` → no tag; **all 23 evidence cases** in the table in `design_planner.md` §10 (7 accepted, 16 rejected), each as its own parametrised test id; evidence not in the text → rejected; `unknown` with evidence → evidence repaired to null; the full decide() truth table (perspective × gender, 6 rows: only first_person+female → `af_heart`); `--voice am_michael` makes **zero** backend calls, counted at the backend's entry point; `--voice bm_george` → exit 2; a backend that fails 3 times → `unknown`/`no_evidence`/`am_michael`, never an exception |
 | `jobs.py` | every refusal in `design_system_architecture.md` §5 returns exit 3; an edit after approval flips `plan_sha256` |
@@ -233,6 +237,20 @@ Writes `docs/evals/e2e_<YYYY-MM-DD>.md` (committed): every exit code, the `verif
   
   If any of (a)–(c) does not behave as stated, the script exits 1.
 - `docs/evals/presentation_<date>.md` holds the metrics table, the strip charts and the oracle comparison.
+- **The matcher G16 gates** is `present-sim`'s default (`bm25` until Wave J adopts a contestant). The report names it.
+
+**4d. The matcher bake-off (Wave J; run by hand, not a battery gate; added October 7, 2026).** `design_presentation_simulation.md` §6.6 is the contract.
+- **Corpus:** the 8 jobs of §6.6.3, created once after Wave I, in `artifacts/matcher_bakeoff/<date>/corpus/`.
+- **Each contestant** runs through the harness and writes `docs/evals/matcher_bakeoff_<date>.md`. The report holds:
+  - the baseline (`bm25`) row;
+  - each contestant's BAR table on the decision set and on the held-out set;
+  - the "perfect hearing" column;
+  - LLM calls and compute-time percentiles;
+  - the strip charts of one decision-set job per contestant;
+  - **the adoption decision, quoting the rule.**
+- **Falsify the harness before trusting it:**
+  - feed it a **test-only** matcher (defined in the harness's tests, never reachable from `present-sim`) that commits each ground-truth node at its first word: it must PASS every bar, so the harness can go green;
+  - feed it the shuffled-`heard.json` case of §4c: it must MISS, so it can go red.
 
 ---
 

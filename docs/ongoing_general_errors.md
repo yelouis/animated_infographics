@@ -78,13 +78,15 @@
      - **The spec gaps:** the designer's spec never showed the model rule 6's word list (lesson 2.11), and specified degradation without salvage.
 - **Defects 1–7 and 9 are Wave I** (I1–I9 in the guide), within approved behaviour. **Defect 8 needs the user's selection.**
 
-**Open decision for the user:** Issue 8 (how the presentation follower should match speech to the deck).
+**No open decision.** Issue 8 was decided by the user on October 7, 2026 (Option A), and is being built as Wave J.
 
 ## ⚠️ Unresolved Issues & Suggestions
 
 ### Issue 8: The presentation follower cannot track paraphrased speech with lexical matching
 
-**Status**: ⚠️ Confirmed Unresolved. Filed by the implementing agent on October 6, 2026; **re-measured and rewritten by the designer the same day.** Every run misses every accuracy bar. The tree is not the cause: the oracle (each point shown from its first spoken word) scores 1.00, 0.98, 0.98 and 1.00. The follower is.
+**Status**: ✅ Decided: **Option A**, by the user in chat on October 7, 2026. It is being built as **Wave J** (`agent_execution_guide.md`); the contract is `design_presentation_simulation.md` §6.6.
+- **Validation added by the designer:** each contestant must also pass a held-out set (the same four configurations at seed 11). If the held-out result disagrees with the decision set, that is filed for the user, not decided by the agent.
+- **The original filing:** by the implementing agent on October 6, 2026; **re-measured and rewritten by the designer the same day.** Every run misses every accuracy bar. The tree is not the cause: the oracle (each point shown from its first spoken word) scores 1.00, 0.98, 0.98 and 1.00. The follower is.
 
 | Run (`jobs/…`) | Slide (bar) | Point (bar) | Lag median / p90 (bar) | False switches (bar) |
 |---|---|---|---|---|
@@ -157,7 +159,7 @@ The LLM tie-break changed point accuracy by +1.4, −2.6, +0.8 and 0.0 points.
   - *Pros*: No new work beyond one constant; G16 can go green honestly.
   - *Cons*: On screen, the deck is wrong about 40–45% of the time and visuals trail the voice by 7–10 s. That is not a usable presentation, and prepared mode (DF4) would inherit it.
 
-Your selection: _____
+Your selection: **Option A**. Given by the user in chat on October 7, 2026, verbatim: *"For issue 8, select Option A and write the agent execution guide to reflect that with validation"*. Recorded by the designer.
 
 ---
 
@@ -567,3 +569,18 @@ Wave C (C1–C7) specced. Issue 6 filed for the user.
   - `master_implementation_plan.md` (Wave I).
 - **Lessons 2.13–2.16 were added.**
 - **Wave I (I1–I9) is specced. One question for the user: Issue 8.**
+
+**October 7, 2026: Issue 8 decided (user, in chat).**
+- *"For issue 8, select Option A and write the agent execution guide to reflect that with validation"*.
+- **Specced as Wave J (J1–J4)**, after Wave I:
+  - a frozen 8-job corpus and a replay harness;
+  - contestant A1 (anticipated speech + forward tracker);
+  - contestant A2 (LLM point classifier), built only if A1 is not adopted;
+  - adoption by the rule.
+- **Contract:** `design_presentation_simulation.md` §6.6 (exact prompts, schemas, windows, costs, commit rules and the adoption rule); `design_data_contracts.md` §10 (`ingest.json` → `matcher`, `anticipation.json`, `playback.json` → `matcher`); `design_testing_and_validation.md` §2 (four rows) and §4d.
+- **Validation added by the designer:**
+  - a held-out seed-11 set, so that no contestant is adopted on numbers it was tuned to;
+  - a baseline row proving the harness reproduces `bm25`'s scores;
+  - a "perfect hearing" diagnostic separating matcher error from ASR error;
+  - harness falsification in both directions;
+  - a no-tuning rule.

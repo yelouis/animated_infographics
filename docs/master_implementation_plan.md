@@ -118,5 +118,16 @@ Waves G and H were delivered and independently verified: 11 of 12 items true to 
 
 Wave I (I1–I9) fixes them and re-measures. **Issue 8 is open:** the presentation follower misses its accuracy bars, while the oracle meets them, so the deck and the tree are sound and the matcher is not. It awaits the user's selection.
 
-## After Wave I (deferred; each needs a user selection)
+## Wave J: the presentation follower bake-off (Issue 8 → Option A, selected October 7, 2026)
+Two followers are built from deck-only knowledge with the existing models:
+- **A1:** sentences anticipated from each slide, with a forward-biased tracker on a 10-word window; no LLM in the live loop;
+- **A2:** the local LLM classifying which point is being spoken.
+
+**The test:** each runs on a frozen corpus of 8 simulated talks (4 to decide on, 4 held out), judged by the unchanged scorer.
+
+**The rule:** adopt the first contestant that meets every bar on both sets. A2 is built only if A1 misses. If neither meets them, the evidence goes back to the user.
+
+Contract: `design_presentation_simulation.md` §6.6.
+
+## After Wave J (deferred; each needs a user selection)
 Video input with picture-in-picture · 16:9 output · **live mode** (streaming ASR → incremental planning → the same templates on a live clock, webcam in a corner) · multi-voice narration · Reddit URL fetch · public-domain photos · historical borders · a web review editor. See `ongoing_general_errors.md` §4.

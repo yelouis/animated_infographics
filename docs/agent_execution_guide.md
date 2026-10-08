@@ -1,15 +1,15 @@
-# Agent Execution Guide — Active Build: Wave I (verification fixes for Waves G and H, 9 items) — October 6, 2026
+# Agent Execution Guide — Active Build: Wave I (verification fixes, 9 items), then Wave J (Issue 8 → Option A, 4 items) — October 7, 2026
 
 **You are an engineering agent with no memory of this project.** Waves A–H are built, committed and pushed (head `main`).
 - **The verification.** Waves G and H were independently verified on October 6, 2026. 11 of their 12 items are true to spec. Real-output review then found **nine defects the gates could not see** (`ongoing_general_errors.md` §1). Six of them come from the designer's specs, not from the code.
 - **Wave I (I1–I9) fixes eight of them**, all within approved behaviour.
-- **The ninth is the presentation follower's accuracy.** It is **Issue 8**, and it waits for the user's selection. **Do not touch the matcher** (§4).
+- **The ninth is the presentation follower's accuracy, Issue 8.** On October 7, 2026 the user selected **Option A**: *"For issue 8, select Option A and write the agent execution guide to reflect that with validation"*. That is **Wave J**: a bake-off of two deck-only followers, adopted by a fixed rule. **Wave J starts only after Wave I is closed,** and during Wave I the matcher is not touched (constraint 15).
 
 **The user's words (October 5, 2026):**
 - *"the generated animations are very literal to what is being said at any given moment. Lets set up something like a style library. We can keep this as one of the styles but lets have a style that is a bit more creative where the animation adds something to the story (also pick more interesting stories that maybe is longer)."*
 - *"…create a couple of slides from the transcript (key moments) and use that as the power point, then you can create the tree of animations that links each slide together. Then perform some flair on the original transcript … and see what video generates from it. Then we can still run similar analysis that analyzes if the final outputted video was done well."*
 
-**Status:** **Active Build: Wave I** (I1–I9), in the §2 order. Issue 8 is open; its `Your selection:` line belongs to the user.
+**Status:** **Active Build: Wave I** (I1–I9), then **Wave J** (J1–J4), in the §2 order. No user decision is pending. J2 or J3 may end in a filed **Issue 9**, whose `Your selection:` line will belong to the user.
 
 **Every number and literal string in this guide and the design docs is a decision, not a suggestion.**
 
@@ -32,7 +32,8 @@ An offline **presentation simulation** derives a deck from a script, builds an a
 
 1. **The battery is the regression bar.** After every item, run the full battery (G1–G16) bare and update §1.3. Read every exit code bare.
    - **Until I8 lands,** G16 exits 0 even though its bars fail; §1.3 records that honestly.
-   - **After I8,** the expected G16 code is **3** (follower bars missed, Issue 8). A 1 is a regression. A 0 would mean the follower met the bars, which is impossible without touching the matcher, so investigate it.
+   - **After I8 and until J4,** the expected G16 code is **3** (follower bars missed, Issue 8). A 1 is a regression. A 0 would mean the follower met the bars, which is impossible without touching the matcher, so investigate it.
+   - **After J4 adopts a contestant,** G16 must exit **0**.
 2. **Fully local at runtime.** No cloud API, and no network except loopback. **Pull no new models**: `gemma4:26b`, Kokoro, mlx-whisper and FLUX.2 klein 4B only.
 3. **Python (Pydantic) is the source of truth for every contract.** Generated files are never hand-edited, and G8 covers every contract change (I2, I3, I7).
 4. **Templates read time only through the clock.**
@@ -40,13 +41,16 @@ An offline **presentation simulation** derives a deck from a script, builds an a
 6. **The planner never crashes the pipeline.** Every LLM call goes through `run_with_retries`. LLM-facing schemas carry no length constraints; validators enforce limits through retry messages. Every new error string is copied **verbatim** from the design doc that defines it.
 7. **Red first, on real inputs.** Before building, run the item's falsifying check against the current code, using the recorded artefacts this guide names, and record the failure.
 8. **One item = one Conventional Commit, scope = item id** (`fix(i1): …`, `feat(i2): …`). Put the WHY and the red and green runs in the body. Push after every item. Never amend a pushed commit.
-9. **Record each resolution in the same commit** as one line under a new "**Wave I:**" heading in `ongoing_general_errors.md` §3: `I<n> — <title> — git log --grep "(i<n>)" — <measured result>`.
+9. **Record each resolution in the same commit** as one line under a new "**Wave I:**" or "**Wave J:**" heading in `ongoing_general_errors.md` §3: `I<n> — <title> — git log --grep "(i<n>)" — <measured result>` (likewise `J<n>`).
 10. **When this guide and a design doc disagree, stop and file it.**
 11. Every stage log ends in `llm_calls=<n> cache_hits=<m> elapsed_ms=<t>`.
 12. **Nothing in the package changes the environment at import.** Export `HF_HOME=$HOME/.cache/huggingface` in your shell if needed. Any run that generates images must show **0 asset execution errors** (I6) to count.
-13. **Ids:** waves A–I; deferred features DF1–DF9; live constraints LC1–LC6.
+13. **Ids:** waves A–J; deferred features DF1–DF9; live constraints LC1–LC6; issues up to 8 (the next is Issue 9).
 14. **Eval reports are named by date.** A second E2E or budget run on the same day overwrites the first. Commit each report in the item that produced it.
-15. **Issue 8 owns the matcher.** Do not change `presentation/match.py`'s scoring, window, decision points, commit rule, hysteresis, dwell or tie-break, or the edge costs in `presentation/tree.py`, and do not change the §8 bars. I8 changes how G16 **reports** them, not what they are.
+15. **The follower changes only in Wave J, and only as `design_presentation_simulation.md` §6.6 says.**
+    - **During Wave I:** do not change `presentation/match.py`'s scoring, window, decision points, commit rule, hysteresis, dwell or tie-break, or the edge costs in `presentation/tree.py`. I8 changes how G16 **reports** the bars, not what they are.
+    - **In Wave J:** the contestants are **new** classes, and `LiveMatcher` (`bm25`) stays byte-identical as the baseline.
+    - **Never:** change the §8 bars or the scorer, regenerate the frozen corpus, or tune a §6.6 constant to pass (§6.6.4 rule 5).
 
 ---
 
@@ -99,7 +103,7 @@ An offline **presentation simulation** derives a deck from a script, builds an a
 | Creative presentation | `history-great-stink-20261006-132526` has 2 metaphor nodes that were never license-checked and 0 overlays. `story-overdue-book-20261006-124735` (creative) has **no `director.json`**, and its template counts are identical to the literal run's |
 | G16 | `presentation_sim.sh:336` prints "FAIL (Filed)" and `:424` exits 0. The falsification at `:226–268` asserts that shuffled speech scores below the mild bars, and so do the real runs (slide 0.32–0.56). **And `:52–80` re-scores any matching job in `jobs/` instead of running the pipeline.** The designer's battery run re-scored the agent's four jobs and built nothing |
 | Director all-or-nothing | After `ollama stop` with a cold cache, all 3 attempts on `story_overdue_book` kept the beat-24 metaphor "A paper book … mailbox flag", which breaks rule 6 ("book"), so the job degraded to literal. The overdue **deck** fails the same way ("…burying a single small book") on every run, so every creative presentation of it has been literal. Warm-loaded, the same story plans 1 motif, 4 metaphors and 5 asides. The attempts are in `docs/evals/assets/2026-10-06/wave_i_director_attempts.json` |
-| Matcher (Issue 8, not Wave I) | Oracle 0.98–1.00. Follower: slide 0.32–0.56, point 0.20–0.36, lag median 7.4–10 s. The best edge-cost variant (back 4.0) reaches slide 0.55–0.59 |
+| Matcher (Issue 8 → Wave J) | Oracle 0.98–1.00. Follower: slide 0.32–0.56, point 0.20–0.36, lag median 7.4–10 s. The best edge-cost variant (back 4.0) reaches slide 0.55–0.59 |
 
 ---
 
@@ -115,7 +119,11 @@ An offline **presentation simulation** derives a deck from a script, builds an a
 | I6 | An execution failure fails the gate | Adds the asset column to step 10. I8's mechanics need it, and I9's budgets must count it |
 | I7 | Creative presentations get the license check, overlays and honest degradation | Needs I2/I3's overlay contract, I1's dot count and I4's director rules |
 | I8 | G16 states its bars in its exit code | Its mechanics assert I5, I6 and I7's outputs |
-| I9 | Re-measure; close-out | Measures the finished system |
+| I9 | Re-measure; close-out of Wave I | Measures the finished system. The corpus J1 freezes must come from it |
+| J1 | `--matcher` plumbing, frozen corpus, replay harness | The ruler first. The corpus needs Wave I's trees (I4/I7 change creative trees), honest images (I6) and an honest G16 (I8) |
+| J2 | Contestant A1 (anticipate + forward tracker); decide | The rule builds A1 first: no LLM in the live loop, and the cheapest |
+| J3 | Contestant A2 (LLM classifier); decide | **Only if J2 ends with "A1 misses the decision set"** |
+| J4 | Adopt, gate, close out | Needs the decision |
 
 ---
 
@@ -361,7 +369,7 @@ An offline **presentation simulation** derives a deck from a script, builds an a
    - **For `--style creative`,** it also exits 1 unless `plan_report.style_degraded` is false and ≥ 2 metaphor images are in `assets/images/`.
    - Before its cleanup trap deletes the temp dirs, it copies the job's `logs/`, `plan_report.json`, `director.json` and `assets/manifest.json` to `artifacts/budget/<timestamp>/<span>/`.
 4. **The assets log.** `stages/assets.py` adds `execution_errors=<n>` to its summary line, and logs one line per failure before it: `asset <id> failed: <first line of the error>`.
-5. **Diagnose the agent's environment.** In your normal shell, re-run a copy of `jobs/history-great-stink-20261006-124512` with `rerun --from tree`. Presentation jobs allow only `deck`, `tree`, `perform`, `follow` and `compose` (`cli.py:655`). The assets stage runs after the tree, and a warm LLM cache keeps the tree identical.
+5. **Diagnose the agent's environment.** In your normal shell, re-run a copy of `jobs/history-great-stink-20261006-124512` with `rerun --from tree`. Presentation jobs allow only `deck`, `tree`, `perform`, `follow` and `compose` (`cli.py:654`). The assets stage runs after the tree, and a warm LLM cache keeps the tree identical.
    - Record `env | grep -E '^HF_'` and whether images generate.
    - If the cause is in the repository (e.g. a stage that sets `HF_HUB_OFFLINE` without `HF_HOME`), fix it in this item.
    - Otherwise, write the cause in the commit body.
@@ -486,7 +494,7 @@ An offline **presentation simulation** derives a deck from a script, builds an a
 
 ### I9 — Re-measure; close-out
 
-**What this means for the user:** the fixes are proven on fresh output, and the remaining open question (Issue 8) is stated with fresh numbers.
+**What this means for the user:** the fixes are proven on fresh output, and the follower bake-off (Wave J) starts from a sound pipeline.
 
 1. **The full battery G1–G16, bare.** Expected: everything 0 except **G16 = 3**. Record the BAR table.
 2. **The three cold budgets** (`measure_budget.sh`, `--long`, `--long --style creative`), each with 0 cache hits **and 0 asset execution errors**. **The creative one must be creative:** not degraded, with ≥ 2 metaphor images. It is the first valid creative budget, so record its spans against 110 / 85 / 195 s/min, and file any miss.
@@ -504,13 +512,184 @@ An offline **presentation simulation** derives a deck from a script, builds an a
    - `ongoing_general_errors.md`: the Wave I lines, and §1 for Wave I;
    - `master_implementation_plan.md`: the Wave I paragraph already exists; mark it delivered;
    - the README, if commands changed.
-6. **Rewrite this guide** to **Queue Complete — waiting on Issue 8**, with §1.3 re-measured. **Then stop. Do not invent work.**
+6. **Update §1.3** (re-measured) and add Wave I to §5.1. **Do not stop:** continue with J1.
+
+---
+
+### J1 — `--matcher` plumbing, the frozen corpus, and the replay harness
+
+**What this means for the user:** before any new follower is judged, the ruler is proven. The same 8 talks and the same scorer are used, and only the follower is swapped. Swapping in today's follower must change nothing.
+
+**The gap:**
+- **No choice of follower:** `present-sim` has `--tiebreak` (`cli.py:277`) but no `--matcher`, and `presentation/follow.py:37` always builds `LiveMatcher`.
+- **No frozen corpus:** G16 rebuilds its jobs on every run.
+- **No held-out set and no replay harness.**
+- **Contract:** `design_presentation_simulation.md` §6.6 (§6.6.3 for this item), `design_data_contracts.md` §10, and `design_testing_and_validation.md` §2 (row "bake-off harness") and §4d.
+
+**Implementation:**
+1. **CLI and contracts.**
+   - `present-sim --matcher bm25|anticipate|llm`, default `bm25`, validated where `--tiebreak` is (`cli.py:303`). Error, verbatim: `matcher must be one of bm25, anticipate, llm; got '<x>'`.
+   - `--tiebreak llm` with any matcher other than `bm25` is an error: `--tiebreak applies only to --matcher bm25`.
+   - Record the matcher in `ingest.json` (`matcher`); a presentation `ingest.json` without it loads as `bm25`.
+   - `playback.json` gains `matcher` (G8).
+   - `rerun --from follow` uses the job's recorded matcher.
+2. **Dispatch.**
+   - In `follow.py`, `bm25` runs today's `LiveMatcher` **unchanged**. Its `playback.json` must be byte-identical to today's on every corpus job, apart from the new `matcher` key.
+   - `anticipate` and `llm` fail with `matcher '<m>' is not built yet` (exit 2) until J2 and J3 build them.
+   - `logs/follow.log` adds `matcher=<m>`.
+3. **The harness** `src/animated_infographics/evals/matcher_bakeoff.py`, exactly as §6.6.3:
+   - it copies each job, then runs the stage functions themselves (not reimplementations): `anticipate` when needed, `follow`, `compose`, and `compute_presentation_score(..., oracle=False)`;
+   - it writes `bakeoff.json` and the BAR lines;
+   - it exits 0 only when all 8 jobs pass;
+   - it offers the "perfect hearing" diagnostic (`--hearing perfect`).
+4. **The corpus.** Only after I9 has closed Wave I, create the 8 jobs in `artifacts/matcher_bakeoff/<date>/corpus/`. For each §9 configuration and each seed in {7, 11}:
+   ```
+   uv run infographics present-sim <fixture> --style <s> --perturb <p> --seed <seed> --matcher bm25 --jobs-dir <corpus>
+   uv run infographics score <job id> --jobs-dir <corpus>
+   ```
+   - **Check each job:**
+     - 0 asset execution errors (I6);
+     - creative jobs not degraded (I7);
+     - `director.json` present on creative jobs.
+   - **Freeze it.** Write `<corpus>/corpus.json` listing each job id, its configuration, and the SHA-256 of its `deck.json`, `tree.json`, `performance.json`, `speak_timing.json` and `heard.json`. The harness verifies these hashes before every run and exits 1 on any mismatch. **The corpus is never regenerated during Wave J.**
+5. **The baseline.** Run the harness with `--matcher bm25` and write the first `docs/evals/matcher_bakeoff_<date>.md`, the "before": both sets' BAR tables and the "perfect hearing" column.
+
+**Validation:**
+- **Red first:** today, `present-sim … --matcher anticipate` fails with typer's `No such option: --matcher`. Record it.
+- **Green:**
+  - the "bake-off harness" unit row;
+  - the `bm25` baseline reproduces every corpus job's own `presentation_score.json` within 0.01 on every metric, on all 8;
+  - the corpus hashes are unchanged after a harness run;
+  - `bm25` playbacks are byte-identical to today's (step 2).
+- **Falsify the harness both ways** (§4d):
+  - the test-only ground-truth matcher → PASS on every bar;
+  - the shuffled `heard.json` → MISS.
+- **Look:** compare the baseline's decision-set numbers with Issue 8's table.
+  - **Literal jobs** should agree within 0.05.
+  - **Creative jobs** may move, because I4 and I7 changed their trees (salvaged directors, overlays).
+  
+  Report both, and explain any literal move beyond 0.05.
+
+**Blast radius:**
+- `cli.py`;
+- the ingest contract and `contracts/playback.py`, with generated schema and TS (G8);
+- `presentation/follow.py`;
+- `evals/matcher_bakeoff.py`;
+- tests;
+- the corpus (artifacts, not committed) and the report (committed).
+
+---
+
+### J2 — Contestant A1: the `anticipate` stage and the forward tracker; decide
+
+**What this means for the user:** the follower learns, from the deck alone, how a presenter would actually *say* each point. It steps to the next point as soon as that point is being said, instead of eight seconds later.
+
+**The gap:**
+- **No anticipations:** node documents hold only deck text (`presentation/match.py:226`, `normalize_tokens(n.text)`).
+- **The window** is the last 20 words (`match.py:361`).
+- **Every move,** forward or not, needs 2 consecutive tops and a lead of 1.0 (`match.py:437–446`).
+- **Contract:** `design_presentation_simulation.md` §6.6.1, verbatim, and §6.6.4 for the decision.
+
+**Implementation:**
+1. **The stage.** Add `presentation/anticipate.py`.
+   - Register `anticipate` in `PRESENTATION_STAGES` right after `tree` (`jobs.py:34–47`), with inputs `deck.json` and `tree.json` and output `anticipation.json`, in the output and input maps (`jobs.py:66–72`, `:90–98`).
+   - Add it to `rerun`'s presentation stages (`cli.py:654`).
+   - Skip it unless the matcher is `anticipate`, logging `anticipate: skipped (matcher=<m>)` and writing nothing.
+   - The prompts, schema, validators, error strings, temperature, `num_predict` and the failure rule are **verbatim from §6.6.1**, all through `run_with_retries`.
+2. **The contract:** `contracts/anticipation.py` (`AnticipationPlan`), exported to the schema and TS (G8).
+3. **The tracker.** Add a **new** class `AnticipateMatcher` in `match.py`; `LiveMatcher` is not edited.
+   - `BM25Index` gains an optional `extra_text: dict[str, str] | None = None`, appended to each node's document. With `None` it must behave exactly as today; the J1 byte-identity check guards that.
+   - Window, candidates, costs and commit rules exactly as §6.6.1, with holds and reasons like `LiveMatcher`'s, and compute time measured per decision.
+4. **Dispatch:** `follow` with `anticipate` reads `anticipation.json` (missing → error `anticipation.json missing — run the anticipate stage`).
+5. **Run the bake-off:** the harness with `--matcher anticipate` on the frozen corpus. The `anticipate` stage runs on the copies; jobs that share a deck share their anticipation calls through the LLM cache.
+6. **Decide by §6.6.4,** and write the decision and the rule's wording into the report:
+   - **A1 passes both sets → adopted.** J3 is not built; record "J3 not built: A1 adopted under Issue 8's rule". Go to J4.
+   - **A1 passes the decision set but misses the held-out set → STOP.** File **Issue 9** with both tables, the "perfect hearing" column, and options for the user (e.g. adopt A1 anyway; build A2 as well; …). Wait for the selection.
+   - **A1 misses the decision set →** go to J3.
+
+**Validation:**
+- **Red first:** the new A1 unit cases fail against the unbuilt code. The J1 baseline is the "before".
+- **Green:**
+  - the unit rows "anticipate stage" and "anticipate tracker A1";
+  - isolation: `anticipate` reads only `deck.json` and `tree.json`, and `follow` reads `anticipation.json` only for this matcher;
+  - causality;
+  - a warm rerun of the harness gives a byte-identical `bakeoff.json`.
+- **Falsify:** with the anticipated sentences left out of the documents (`extra_text=None`), decision-set point accuracy must fall below A1's. That proves the anticipations are what is being measured. Restore.
+- **Look:**
+  - open `anticipation.json` for one corpus job, and quote 3 nodes' sentences in the report: do they sound like speech, and do they add any fact the slide does not have?
+  - open the strip chart of one decision-set job under `bm25` and under A1, and describe where A1 switches and where it still lags.
+- **Report:** the full BAR tables (decision and held-out), "perfect hearing", and compute-time percentiles, in `docs/evals/matcher_bakeoff_<date>.md`.
+
+**Blast radius:**
+- `presentation/anticipate.py`, `contracts/anticipation.py` and generated files;
+- `jobs.py`, `cli.py`;
+- `presentation/match.py` (a new class, plus `BM25Index`'s optional argument), `presentation/follow.py`;
+- tests, the report, and the Wave J line in `ongoing_general_errors.md` §3.
+
+---
+
+### J3 — Contestant A2: the LLM point classifier; decide
+
+**Build only if J2 ended with "A1 misses the decision set".** If A1 was adopted, or J2 stopped to file, J3 is not started.
+
+**What this means for the user:** if phrasing alone is not enough, the local model reads the last few seconds of speech and says which point the speaker is on.
+
+**The gap:**
+- **Nothing exists.** The tie-break (`match.py:391–428`) only arbitrates between two BM25 candidates, and only when they are within 1.0 of each other.
+- **Latency on warm reruns:** a cache hit takes ≈ 0 ms (`planner/llm.py:192`), so a warm rerun would understate the latency.
+- **Contract:** `design_presentation_simulation.md` §6.6.2, verbatim, and §6.6.4.
+
+**Implementation:**
+1. **The classifier.** Add a new class `ClassifierMatcher` in `match.py`. Prompt, candidates, schema enum, temperature 0, `num_predict` 32, no retries, the commit rules, and hold-with-`llm_error` on any exception or invalid answer: all verbatim from §6.6.2.
+2. **Honest latency.**
+   - `OllamaBackend` exposes the elapsed time of its last call, e.g. `last_elapsed_ms`. On a cache hit it is set to the `elapsed_ms` stored in the cache entry (written at `planner/llm.py:252–267`).
+   - The matcher's compute time for a decision is that value, plus its own non-LLM time.
+3. **Dispatch:** `follow` with `llm` builds an `OllamaBackend` honouring `--no-llm-cache`.
+4. **Run the bake-off:** the harness with `--matcher llm`, cold for the first run (`INFOGRAPHICS_CACHE_DIR` set to a fresh dir), so the recorded call times are real.
+5. **Decide by §6.6.4:**
+   - **A2 passes both sets → adopted.** Go to J4.
+   - **It passes the decision set but misses the held-out set → STOP and file Issue 9** (both tables), and wait.
+   - **It misses the decision set → STOP and file Issue 9** with both contestants' tables, the best result per metric, "perfect hearing", and options for the user. Wait for the selection.
+
+**Validation:**
+- **Green:**
+  - the unit row "LLM classifier A2", including causality through the stub's recorded prompts;
+  - a warm rerun reproduces the cold run's commits **and latencies** exactly.
+- **Report:**
+  - the call time median and p90, and the sentence "live-viable: yes/no (p90 vs 1.5 s)";
+  - the LLM calls per job and the total bake-off time.
+- **Falsify:** replace the 25 heard words with an empty string in a scratch copy. Decision-set point accuracy must collapse, and ad-lib stability alone must not carry a PASS. Restore.
+- **Look:** read 10 decisions sampled across a decision-set job (prompt, answer, ground truth). Describe the error patterns in the report.
+
+**Blast radius:** `presentation/match.py` (a new class), `planner/llm.py` (the elapsed-time accessor), `presentation/follow.py`, tests and the report.
+
+---
+
+### J4 — Adopt, gate, close out
+
+**What this means for the user:** the follower that met the bars becomes the one every presentation uses, and the presentation gate turns honestly green. Or, if neither met them, the user gets the evidence and the next decision.
+
+1. **If a contestant was adopted** (J2 or J3):
+   - Make it `present-sim`'s default (`cli.py`) and G16's. G16's falsifications use it too (`design_testing_and_validation.md` §4c).
+   - Run G16 bare on fresh jobs: **exit 0**. Record the BAR table. If it is not 0, STOP and file it; never re-tune.
+   - Update the docs:
+     - `design_presentation_simulation.md` §6.6 gains a short **Result** paragraph (the adopted matcher, its numbers on both sets, its compute p90);
+     - `design_future_live_and_video.md` §4 records the adopted matcher and its compute p90, for DF4;
+     - `ongoing_general_errors.md`: Issue 8 moves to the resolved index;
+     - the README documents `--matcher`.
+2. **If none was adopted:** Issue 9 is filed. G16 stays at exit 3. Nothing becomes default.
+3. **Full battery, bare** (G1–G16). Update §1.3.
+4. **Rewrite this guide** to **Queue Complete** (or **Queue Complete — waiting on Issue 9**). **Then stop. Do not invent work.**
+
 
 ---
 
 ## 4. Deferred — do NOT start
 
-- **Issue 8 (the follower's matching)** waits for the user's selection. Until then, nothing in standing constraint 15 changes. Do not prototype a matcher, tune costs, or enable the tie-break.
+- **Wave J before Wave I is closed.** The corpus must come from the fixed pipeline.
+- **J3 (A2)** unless J2 ends with "A1 misses the decision set".
+- **Issue 8's unselected options:** D (an embedding model; it would lift "no new models") and E (lowering the bars). Do not build them.
+- **Using the adopted follower live** (DF4: microphone, streaming ASR, a real-time player) stays deferred. Wave J only records the compute time live use would need.
 - **DF1–DF9** (`ongoing_general_errors.md` §4). The real-time parts of DF4 (live mode) stay deferred:
   - slide import (.pptx / PDF / Google Slides), per the user's "We do not need to build this out now";
   - a browser player on a requestAnimationFrame clock;
@@ -582,9 +761,15 @@ An offline **presentation simulation** derives a deck from a script, builds an a
 - **Slide import:** not now.
 - **"Make sure to not actually perform any coding and just update the docs + execution guide for another agent to implement".** This applies to the designer; you implement.
 
-**Open:** Issue 8 (the follower's matching). Not yours to decide.
+**October 7, 2026:**
+- **Issue 8 → Option A:** *"For issue 8, select Option A and write the agent execution guide to reflect that with validation"*.
+- **Designer's validation, added under that instruction:** a held-out seed-11 set. If it disagrees with the decision set, that is filed for the user, not decided by you.
 
 ### 5.4 Invariants and intentional design decisions
+
+**New (October 7, 2026):**
+- **The follower bake-off is judged on a frozen corpus by the unchanged scorer,** and no contestant is tuned on it. The held-out set exists to catch exactly that.
+- **Every follower sees only the deck** (and sentences anticipated from the deck) **and the words heard so far.** `LiveMatcher` (`bm25`) stays as the measured baseline.
 
 **New (October 6, 2026):**
 - **An overlay's anchor follows from its kind:** token top-right, thought and label top-left, prop bottom-left. Overlap is measured on the rendered gallery, never in a hand-kept table.
@@ -635,7 +820,8 @@ An offline **presentation simulation** derives a deck from a script, builds an a
   - **Raising word caps for creative scenes.**
   - **A creative style that changes the cast's look or the illustration `STYLE`.**
 - **New, October 6, 2026:**
-  - **Making G16 green by tuning edge costs, loosening the §8 bars or enabling the tie-break.** Issue 8 decides.
+  - **Making G16 green by tuning edge costs, loosening the §8 bars or enabling the tie-break.** Wave J's rule decides.
+  - **Tuning a contestant on the corpus,** whether windows, margins, costs, candidate sets, prompts or temperatures. A miss is filed with its evidence.
   - **Raising the back-edge cost as the fix for Issue 8.** It was measured: at best slide 0.55–0.59.
   - **Re-introducing renderer defaults** for dots or overlay icons.
   - **Loosening the motif spacing (3 / 20) or the spoiler rule** to keep a fixture from degrading. File it instead.
@@ -653,7 +839,9 @@ An offline **presentation simulation** derives a deck from a script, builds an a
 | The name rule (item 6), R8 and the rule order | `design_planner.md` §4, §6 |
 | `callback`'s dot count; templates; word caps | `design_templates.md` §2.18, §5 |
 | Test rows (Wave I), G10 overlaps, step 10's new columns, G15 additions, G16's exit codes, the budget's asset rule | `design_testing_and_validation.md` §2–§5 |
-| Issue 8, the lessons (2.13–2.16), verdicts, deferred list | `ongoing_general_errors.md` |
+| The follower bake-off: A1, A2, the corpus, the harness, the adoption rule | `design_presentation_simulation.md` §6.6; tests in `design_testing_and_validation.md` §2 and §4d |
+| `ingest.json` → `matcher`, `anticipation.json`, `playback.json` → `matcher` | `design_data_contracts.md` §10 |
+| Issue 8 (decided: Option A), the lessons (2.13–2.16), verdicts, deferred list | `ongoing_general_errors.md` |
 
 ---
 
@@ -668,6 +856,7 @@ An offline **presentation simulation** derives a deck from a script, builds an a
 - **A gate must be able to fail, must fail closed, and its exit code must state its bars** (2.13, 2.14). A falsification that passes on the real input proves nothing.
 - **For creative output, judgement is part of validation:** open the stills, describe what each creative item adds, and say plainly when it misfires.
 - **For the simulation, honesty is part of validation:** isolation and causality tests are gates, not niceties.
+- **A decision made on measured numbers needs a held-out check.** Numbers you watched while building can be tuned to without meaning to (Wave J's seed-11 set).
 - **Never loosen a bar to pass it.** File it with the measurement and options.
 
 ---
@@ -675,9 +864,9 @@ An offline **presentation simulation** derives a deck from a script, builds an a
 ## 8. THE LOOP
 
 ```
-(1) Is there an approved item? Wave I (I1–I9), in §2 order. If all are done,
-    STOP. Never start Issue 8's work, DF1–DF9, or anything not in §3.
-    Never fill in a `Your selection:` line.
+(1) Is there an approved item? Wave I (I1–I9), then Wave J (J1–J4), in §2
+    order. J3 only on its trigger. If all are done, STOP. Never start
+    DF1–DF9 or anything not in §3. Never fill in a `Your selection:` line.
 (2) Read the item and EVERY design section it names. Copy rules, thresholds
     and error strings VERBATIM.
 (3) RED FIRST on the recorded artefacts the item names; record the failure.
@@ -686,17 +875,21 @@ An offline **presentation simulation** derives a deck from a script, builds an a
 (6) Open every artefact and describe it, with your judgement for creative
     output.
 (7) Full battery, bare. Update §1.3.
-(8) ONE commit, scope = item id (`fix(i1): …`). WHY + red/green in the
-    body. ONE line under "Wave I" in ongoing_general_errors.md §3.
-    Never amend after pushing.
+(8) ONE commit, scope = item id (`fix(i1): …`, `feat(j2): …`). WHY +
+    red/green in the body. ONE line under "Wave I" or "Wave J" in
+    ongoing_general_errors.md §3. Never amend after pushing.
 (9) git push origin main.
 (10) Next item. A failed bar or an impossible rule → file it and stop at
-    that item until the user selects.
+    that item until the user selects. In Wave J, §6.6.4 says exactly when
+    a contestant's result means "continue" and when it means "stop and
+    file".
 ```
 
 ---
 
-## 9. Definition of Done: Wave I
+## 9. Definition of Done: Waves I and J
+
+**Wave I**
 
 - [ ] I1–I9 each landed as one pushed commit scoped to its id, with red and green runs recorded.
 - [ ] Callbacks show one dot per earlier rendered token (4 on both creative E2E stories); no renderer default remains.
@@ -707,4 +900,12 @@ An offline **presentation simulation** derives a deck from a script, builds an a
 - [ ] Creative presentation runs: license-checked, with overlays, not degraded (or filed).
 - [ ] G16 builds four fresh jobs on every run and exits 3, with a BAR table. Falsifications (a)–(c) are each shown to bite.
 - [ ] §1.3 re-measured bare (G1–G16, three budgets), with the creative budget a real creative run.
-- [ ] This guide rewritten to **Queue Complete — waiting on Issue 8**. **Then stop. Do not invent work.**
+- [ ] §1.3 updated and Wave I added to §5.1; continue to Wave J.
+
+**Wave J**
+- [ ] J1: `--matcher` exists; `bm25` playbacks are byte-identical to before; the 8-job corpus is frozen with hashes; the harness reproduces each job's `bm25` score within 0.01 and is falsified both ways; the baseline report is written.
+- [ ] J2: the `anticipate` stage and `AnticipateMatcher` match §6.6.1 verbatim, with isolation, causality and determinism tested. The bake-off tables cover both sets. The decision is written out with the rule.
+- [ ] J3: built only on its trigger. `ClassifierMatcher` matches §6.6.2 verbatim, and latency stays honest on warm reruns. Tables and the decision are written out.
+- [ ] J4: the adopted matcher is the default, and G16 on fresh jobs exits **0**. Or Issue 9 is filed and G16 stays at 3.
+- [ ] §1.3 re-measured bare (G1–G16).
+- [ ] This guide rewritten to **Queue Complete** (or **Queue Complete — waiting on Issue 9**). **Then stop. Do not invent work.**

@@ -256,11 +256,13 @@ All are Pydantic contracts in `contracts/`, exported to `schema/*.schema.json` a
 | `state.json` → `kind` | `new` / `present-sim` | `jobs.py`, CLI | `"video"` (default; a pre-Wave-H state without the key loads as `"video"`) \| `"presentation"` |
 | `deck.json` | `deck` | `tree`, `perform`, `score`, `preview` | `design_presentation_simulation.md` §2 |
 | `tree.json` | `tree` | `follow`, `compose` | §3 of the same document; `style_degraded: bool = false` added October 6, 2026 |
+| `ingest.json` → `matcher` | `present-sim` | `anticipate`, `follow`, eval | `"bm25"` \| `"anticipate"` \| `"llm"` (added October 7, 2026). The default is `"bm25"` until Wave J adopts a contestant. A presentation `ingest.json` without the key loads as `"bm25"` |
+| `anticipation.json` | `anticipate` (only with matcher `anticipate`) | `follow` | `design_presentation_simulation.md` §6.6.1: `{"schema_version": 1, "nodes": {"<node id>": [str, str, str, str]}}`; a node whose calls failed maps to `[]` |
 | `performance.json` | `perform` | `speak`, `score` **only** | §4: `{"seed", "level", "sentences": [{"text", "label", "op", "source_sentence_id"}], "op_counts"}` |
 | `speak_timing.json` | `speak` | `score` only | `[{"sentence_i", "start_ms", "end_ms"}]` |
 | `heard.json` | `hear` | `follow`, `compose` | the transcript contract of §2 (`source: "asr"`) |
-| `playback.json` | `follow` | `compose`, `score` | §6.5 |
+| `playback.json` | `follow` | `compose`, `score` | §6.5, plus `matcher` (added October 7, 2026) |
 | `presentation_score.json` | `score` | eval report | §8 metrics, the bars applied, and the oracle row |
 
-**Isolation invariant (tested):** `follow` reads only `tree.json` and `heard.json`; `tree` reads only `deck.json`, `deck_bible.json` (the bible stage run on the deck text; same contract as `bible.json`) and the style; neither reads `performance.json`, `speak_timing.json` or the script. A unit test patches file access during each stage and fails on any other read.
+**Isolation invariant (tested):** `follow` reads only `tree.json`, `heard.json` and, with matcher `anticipate`, `anticipation.json`; `anticipate` reads only `deck.json` and `tree.json`; `tree` reads only `deck.json`, `deck_bible.json` (the bible stage run on the deck text; same contract as `bible.json`) and the style; neither reads `performance.json`, `speak_timing.json` or the script. A unit test patches file access during each stage and fails on any other read.
 
