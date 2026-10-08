@@ -13,6 +13,172 @@ export type To = string;
 export type Edges = TreeEdge[];
 export type Id = string;
 export type Kind1 = "section" | "point";
+export type Anchor = "top_right" | "bottom_left" | "top_left";
+export type Icon =
+  | (
+      | "Airplane"
+      | "Armchair"
+      | "Baby"
+      | "Bank"
+      | "Bed"
+      | "BeerBottle"
+      | "Bell"
+      | "Bicycle"
+      | "Bird"
+      | "Boat"
+      | "Bomb"
+      | "Book"
+      | "BookOpen"
+      | "Bookmark"
+      | "Bread"
+      | "Briefcase"
+      | "Broadcast"
+      | "Bug"
+      | "Building"
+      | "BuildingApartment"
+      | "BuildingOffice"
+      | "Buildings"
+      | "Bus"
+      | "Cake"
+      | "Calendar"
+      | "CalendarBlank"
+      | "Camera"
+      | "Car"
+      | "CarProfile"
+      | "Cat"
+      | "Certificate"
+      | "Chat"
+      | "ChatCircle"
+      | "ChatDots"
+      | "Church"
+      | "Clock"
+      | "Cloud"
+      | "CloudLightning"
+      | "CloudRain"
+      | "Coffee"
+      | "Coins"
+      | "Compass"
+      | "Cookie"
+      | "CookingPot"
+      | "CreditCard"
+      | "Crosshair"
+      | "Crown"
+      | "CurrencyDollar"
+      | "CurrencyEur"
+      | "CurrencyGbp"
+      | "Dog"
+      | "Door"
+      | "Drop"
+      | "Envelope"
+      | "EnvelopeSimple"
+      | "ExclamationMark"
+      | "Eye"
+      | "Factory"
+      | "File"
+      | "FileText"
+      | "Files"
+      | "Fire"
+      | "FirstAid"
+      | "Fish"
+      | "Flower"
+      | "ForkKnife"
+      | "Gavel"
+      | "Gear"
+      | "GenderIntersex"
+      | "Hamburger"
+      | "Hammer"
+      | "HandCoins"
+      | "HandFist"
+      | "HandsClapping"
+      | "HandsPraying"
+      | "Handshake"
+      | "Heart"
+      | "HeartBreak"
+      | "Heartbeat"
+      | "Horse"
+      | "Hospital"
+      | "Hourglass"
+      | "House"
+      | "HouseLine"
+      | "IdentificationBadge"
+      | "IdentificationCard"
+      | "Key"
+      | "Leaf"
+      | "Lightbulb"
+      | "Lock"
+      | "LockOpen"
+      | "MagnifyingGlass"
+      | "MapPin"
+      | "Medal"
+      | "Megaphone"
+      | "Microphone"
+      | "Moon"
+      | "Newspaper"
+      | "Notebook"
+      | "OrangeSlice"
+      | "Package"
+      | "Phone"
+      | "PhoneCall"
+      | "PiggyBank"
+      | "Pill"
+      | "Pizza"
+      | "Plant"
+      | "PoliceCar"
+      | "Question"
+      | "Receipt"
+      | "RocketLaunch"
+      | "Scales"
+      | "Screwdriver"
+      | "Scroll"
+      | "Shield"
+      | "ShieldChevron"
+      | "ShieldWarning"
+      | "Skull"
+      | "Smiley"
+      | "SmileyAngry"
+      | "SmileyMeh"
+      | "SmileyNervous"
+      | "SmileySad"
+      | "SmileyWink"
+      | "Snowflake"
+      | "Sparkle"
+      | "Stethoscope"
+      | "Storefront"
+      | "Suitcase"
+      | "Sun"
+      | "Sword"
+      | "Syringe"
+      | "Tag"
+      | "Target"
+      | "Thermometer"
+      | "ThumbsDown"
+      | "ThumbsUp"
+      | "Timer"
+      | "Train"
+      | "Trash"
+      | "Tree"
+      | "TrendDown"
+      | "TrendUp"
+      | "Trophy"
+      | "Truck"
+      | "User"
+      | "UserCheck"
+      | "UserFocus"
+      | "UserMinus"
+      | "UserPlus"
+      | "Users"
+      | "Wallet"
+      | "Warehouse"
+      | "Watch"
+      | "WaveSine"
+      | "Wine"
+      | "Wrench"
+    )
+  | null;
+export type Kind2 = "motif_token" | "thought" | "label" | "prop";
+export type MotifId = string | null;
+export type Text = string | null;
+export type Overlays = SceneOverlay[];
 export type PointI = number | null;
 export type Scene =
   | TitleCardScene
@@ -37,7 +203,7 @@ export type Scene =
 export type BeatI = number;
 export type Id1 = string;
 export type MuteSfx = boolean;
-export type Icon =
+export type Icon1 =
   | (
       | "Airplane"
       | "Armchair"
@@ -210,7 +376,7 @@ export type AttributionCastId = string | null;
  * @maxItems 3
  */
 export type Emphasis = [] | [string] | [string, string] | [string, string, string];
-export type Text = string;
+export type Text1 = string;
 export type Rationale1 = string;
 export type Template1 = "kinetic_quote";
 export type BeatI2 = number;
@@ -218,7 +384,7 @@ export type Id3 = string;
 export type MuteSfx2 = boolean;
 export type Decimals = 0 | 1 | 2;
 export type DisplayScale = "none" | "thousand" | "million" | "billion";
-export type Icon1 =
+export type Icon2 =
   | (
       | "Airplane"
       | "Armchair"
@@ -393,7 +559,7 @@ export type Heading = string | null;
  * @maxItems 3
  */
 export type Items = [IconListItem, IconListItem] | [IconListItem, IconListItem, IconListItem];
-export type Icon2 =
+export type Icon3 =
   | "Airplane"
   | "Armchair"
   | "Baby"
@@ -558,7 +724,7 @@ export type BeatI4 = number;
 export type Id5 = string;
 export type MuteSfx4 = boolean;
 export type Kicker = string;
-export type Text1 = string;
+export type Text2 = string;
 export type Rationale4 = string;
 export type Template4 = "reveal";
 export type BeatI5 = number;
@@ -569,7 +735,7 @@ export type MuteSfx5 = boolean;
  * @maxItems 3
  */
 export type Nodes1 = [CauseEffectNode, CauseEffectNode] | [CauseEffectNode, CauseEffectNode, CauseEffectNode];
-export type Icon3 =
+export type Icon4 =
   | (
       | "Airplane"
       | "Armchair"
@@ -738,7 +904,7 @@ export type Id7 = string;
 export type MuteSfx6 = boolean;
 export type CastId = string | null;
 export type Heading1 = string;
-export type Icon4 =
+export type Icon5 =
   | (
       | "Airplane"
       | "Armchair"
@@ -922,7 +1088,7 @@ export type MuteSfx8 = boolean;
  */
 export type Lines = [DialogueLine] | [DialogueLine, DialogueLine];
 export type CastId2 = string;
-export type Text2 = string;
+export type Text3 = string;
 export type Tone = "neutral" | "angry" | "happy" | "sad" | "shocked" | "sarcastic";
 export type Rationale8 = string;
 export type Template8 = "dialogue";
@@ -937,7 +1103,7 @@ export type ContactName = string;
  */
 export type Messages = [TextMessage, TextMessage] | [TextMessage, TextMessage, TextMessage];
 export type From1 = "me" | "them";
-export type Text3 = string;
+export type Text4 = string;
 export type Rationale9 = string;
 export type Template9 = "text_thread";
 export type BeatI10 = number;
@@ -1031,7 +1197,7 @@ export type Template16 = "metaphor";
 export type BeatI17 = number;
 export type Id18 = string;
 export type MuteSfx17 = boolean;
-export type Icon5 =
+export type Icon6 =
   | (
       | "Airplane"
       | "Armchair"
@@ -1193,7 +1359,7 @@ export type Icon5 =
     )
   | null;
 export type Label6 = string | null;
-export type MotifId = string;
+export type MotifId1 = string;
 export type SetPieceId1 = string | null;
 export type Rationale17 = string;
 export type Template17 = "callback";
@@ -1206,9 +1372,10 @@ export type Title1 = string;
 export type Rationale18 = string;
 export type Template18 = "section_title";
 export type Slide = string;
-export type Text4 = string;
+export type Text5 = string;
 export type Nodes = TreeNode[];
 export type SchemaVersion = 1;
+export type StyleDegraded = boolean;
 
 /**
  * Complete presentation animation tree with nodes and edges.
@@ -1217,6 +1384,7 @@ export interface TreePlan {
   edges: Edges;
   nodes: Nodes;
   schema_version?: SchemaVersion;
+  style_degraded?: StyleDegraded;
 }
 /**
  * A directed edge in the presentation animation tree with transition cost.
@@ -1233,10 +1401,18 @@ export interface TreeEdge {
 export interface TreeNode {
   id: Id;
   kind: Kind1;
+  overlays?: Overlays;
   point_i?: PointI;
   scene: Scene;
   slide: Slide;
-  text: Text4;
+  text: Text5;
+}
+export interface SceneOverlay {
+  anchor: Anchor;
+  icon?: Icon;
+  kind: Kind2;
+  motif_id?: MotifId;
+  text?: Text;
 }
 export interface TitleCardScene {
   beat_i: BeatI;
@@ -1247,7 +1423,7 @@ export interface TitleCardScene {
   template?: Template;
 }
 export interface TitleCardProps {
-  icon?: Icon;
+  icon?: Icon1;
   subtitle?: Subtitle;
   title: Title;
 }
@@ -1262,7 +1438,7 @@ export interface KineticQuoteScene {
 export interface KineticQuoteProps {
   attribution_cast_id?: AttributionCastId;
   emphasis?: Emphasis;
-  text: Text;
+  text: Text1;
 }
 export interface StatCalloutScene {
   beat_i: BeatI2;
@@ -1275,7 +1451,7 @@ export interface StatCalloutScene {
 export interface StatCalloutProps {
   decimals: Decimals;
   display_scale?: DisplayScale;
-  icon?: Icon1;
+  icon?: Icon2;
   prefix?: Prefix;
   suffix?: Suffix;
   value: Value;
@@ -1293,7 +1469,7 @@ export interface IconListProps {
   items: Items;
 }
 export interface IconListItem {
-  icon: Icon2;
+  icon: Icon3;
   label: Label;
 }
 export interface RevealScene {
@@ -1306,7 +1482,7 @@ export interface RevealScene {
 }
 export interface RevealProps {
   kicker: Kicker;
-  text: Text1;
+  text: Text2;
 }
 export interface CauseEffectScene {
   beat_i: BeatI5;
@@ -1320,7 +1496,7 @@ export interface CauseEffectProps {
   nodes: Nodes1;
 }
 export interface CauseEffectNode {
-  icon?: Icon3;
+  icon?: Icon4;
   label: Label1;
 }
 export interface ComparisonScene {
@@ -1338,7 +1514,7 @@ export interface ComparisonProps {
 export interface ComparisonPanel {
   cast_id?: CastId;
   heading: Heading1;
-  icon?: Icon4;
+  icon?: Icon5;
   points: Points;
 }
 export interface CharacterIntroScene {
@@ -1366,7 +1542,7 @@ export interface DialogueProps {
 }
 export interface DialogueLine {
   cast_id: CastId2;
-  text: Text2;
+  text: Text3;
   tone?: Tone;
 }
 export interface TextThreadScene {
@@ -1384,7 +1560,7 @@ export interface TextThreadProps {
 }
 export interface TextMessage {
   from: From1;
-  text: Text3;
+  text: Text4;
 }
 export interface EmotionBeatScene {
   beat_i: BeatI10;
@@ -1494,9 +1670,9 @@ export interface CallbackScene {
   template?: Template17;
 }
 export interface CallbackProps {
-  icon?: Icon5;
+  icon?: Icon6;
   label?: Label6;
-  motif_id: MotifId;
+  motif_id: MotifId1;
   set_piece_id?: SetPieceId1;
 }
 export interface SectionTitleScene {

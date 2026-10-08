@@ -80,9 +80,11 @@ def check_metaphor_license(
     metaphor: MetaphorDirective,
     beats: list[Beat],
     backend: LLMBackend,
+    passage: str | None = None,
 ) -> str:
     """Run blind license check for a single metaphor directive."""
-    passage = _build_passage(beats, metaphor.beat_i)
+    if passage is None:
+        passage = _build_passage(beats, metaphor.beat_i)
     label_part = f'\nlabel: "{metaphor.label}"' if metaphor.label else ""
     visual_desc = f'image: "{metaphor.image}"{label_part}'
 
@@ -118,9 +120,11 @@ def check_aside_license(
     aside: AsideDirective,
     beats: list[Beat],
     backend: LLMBackend,
+    passage: str | None = None,
 ) -> str:
     """Run blind license check for a single aside directive."""
-    passage = _build_passage(beats, aside.beat_i)
+    if passage is None:
+        passage = _build_passage(beats, aside.beat_i)
     lines: list[str] = [f"kind: {aside.kind}"]
     if aside.icon:
         lines.append(f"icon: {aside.icon}")
@@ -160,6 +164,7 @@ def run_license_checks(
     plan: DirectorPlan,
     beats: list[Beat],
     backend: LLMBackend,
+    passages: dict[int, str] | None = None,
 ) -> tuple[DirectorPlan, list[LicenseDropped]]:
     """Evaluate each metaphor and aside against the license check.
 
@@ -169,7 +174,8 @@ def run_license_checks(
     dropped: list[LicenseDropped] = list(plan.license_dropped)
 
     for metaphor in plan.metaphors:
-        verdict = check_metaphor_license(metaphor, beats, backend)
+        p = passages.get(metaphor.beat_i) if passages is not None else None
+        verdict = check_metaphor_license(metaphor, beats, backend, passage=p)
         if verdict == "ok":
             kept_metaphors.append(metaphor)
         else:
@@ -177,7 +183,8 @@ def run_license_checks(
 
     kept_asides: list[AsideDirective] = []
     for aside in plan.asides:
-        verdict = check_aside_license(aside, beats, backend)
+        p = passages.get(aside.beat_i) if passages is not None else None
+        verdict = check_aside_license(aside, beats, backend, passage=p)
         if verdict == "ok":
             kept_asides.append(aside)
         else:

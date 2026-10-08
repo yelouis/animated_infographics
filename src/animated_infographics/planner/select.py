@@ -117,6 +117,15 @@ def apply_rules(
                     RuleRepair(rule="R1", scene=f"s{i:03d}", to=target, **{"from": "title_card"})
                 )
                 res[i] = Choice(beat_i=i, primary=target, alternate="kinetic_quote")
+    else:
+        # In presentation profile, no point node may use title_card (R1 second half)
+        for i in range(len(res)):
+            if res[i].primary == "title_card":
+                target = res[i].alternate if res[i].alternate != "title_card" else "kinetic_quote"
+                repairs.append(
+                    RuleRepair(rule="R1", scene=f"s{i:03d}", to=target, **{"from": "title_card"})
+                )
+                res[i] = Choice(beat_i=i, primary=target, alternate="kinetic_quote")
 
     # R8: Director metaphors and motif payoffs (creative style)
     r8_scenes: set[int] = set()

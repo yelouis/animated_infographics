@@ -5,11 +5,11 @@ Per design_presentation_simulation.md §3 and design_data_contracts.md §10.
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
-from animated_infographics.contracts.models import SceneUnion
+from animated_infographics.contracts.models import SceneOverlay, SceneUnion
 
 
 class TreeNode(BaseModel):
@@ -23,6 +23,7 @@ class TreeNode(BaseModel):
     point_i: int | None = None
     text: str
     scene: SceneUnion
+    overlays: list[SceneOverlay] = Field(default_factory=list)
 
 
 class TreeEdge(BaseModel):
@@ -44,6 +45,8 @@ class TreePlan(BaseModel):
     schema_version: Literal[1] = 1
     nodes: list[TreeNode]
     edges: list[TreeEdge]
+    style_degraded: bool = False
+    _tree_metrics: dict[str, Any] = PrivateAttr(default_factory=dict)
 
 
 AnimationTree = TreePlan

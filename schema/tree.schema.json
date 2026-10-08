@@ -1744,6 +1744,231 @@
       "title": "RevealScene",
       "type": "object"
     },
+    "SceneOverlay": {
+      "additionalProperties": false,
+      "properties": {
+        "anchor": {
+          "enum": [
+            "top_right",
+            "bottom_left",
+            "top_left"
+          ],
+          "title": "Anchor",
+          "type": "string"
+        },
+        "icon": {
+          "anyOf": [
+            {
+              "enum": [
+                "Airplane",
+                "Armchair",
+                "Baby",
+                "Bank",
+                "Bed",
+                "BeerBottle",
+                "Bell",
+                "Bicycle",
+                "Bird",
+                "Boat",
+                "Bomb",
+                "Book",
+                "BookOpen",
+                "Bookmark",
+                "Bread",
+                "Briefcase",
+                "Broadcast",
+                "Bug",
+                "Building",
+                "BuildingApartment",
+                "BuildingOffice",
+                "Buildings",
+                "Bus",
+                "Cake",
+                "Calendar",
+                "CalendarBlank",
+                "Camera",
+                "Car",
+                "CarProfile",
+                "Cat",
+                "Certificate",
+                "Chat",
+                "ChatCircle",
+                "ChatDots",
+                "Church",
+                "Clock",
+                "Cloud",
+                "CloudLightning",
+                "CloudRain",
+                "Coffee",
+                "Coins",
+                "Compass",
+                "Cookie",
+                "CookingPot",
+                "CreditCard",
+                "Crosshair",
+                "Crown",
+                "CurrencyDollar",
+                "CurrencyEur",
+                "CurrencyGbp",
+                "Dog",
+                "Door",
+                "Drop",
+                "Envelope",
+                "EnvelopeSimple",
+                "ExclamationMark",
+                "Eye",
+                "Factory",
+                "File",
+                "FileText",
+                "Files",
+                "Fire",
+                "FirstAid",
+                "Fish",
+                "Flower",
+                "ForkKnife",
+                "Gavel",
+                "Gear",
+                "GenderIntersex",
+                "Hamburger",
+                "Hammer",
+                "HandCoins",
+                "HandFist",
+                "HandsClapping",
+                "HandsPraying",
+                "Handshake",
+                "Heart",
+                "HeartBreak",
+                "Heartbeat",
+                "Horse",
+                "Hospital",
+                "Hourglass",
+                "House",
+                "HouseLine",
+                "IdentificationBadge",
+                "IdentificationCard",
+                "Key",
+                "Leaf",
+                "Lightbulb",
+                "Lock",
+                "LockOpen",
+                "MagnifyingGlass",
+                "MapPin",
+                "Medal",
+                "Megaphone",
+                "Microphone",
+                "Moon",
+                "Newspaper",
+                "Notebook",
+                "OrangeSlice",
+                "Package",
+                "Phone",
+                "PhoneCall",
+                "PiggyBank",
+                "Pill",
+                "Pizza",
+                "Plant",
+                "PoliceCar",
+                "Question",
+                "Receipt",
+                "RocketLaunch",
+                "Scales",
+                "Screwdriver",
+                "Scroll",
+                "Shield",
+                "ShieldChevron",
+                "ShieldWarning",
+                "Skull",
+                "Smiley",
+                "SmileyAngry",
+                "SmileyMeh",
+                "SmileyNervous",
+                "SmileySad",
+                "SmileyWink",
+                "Snowflake",
+                "Sparkle",
+                "Stethoscope",
+                "Storefront",
+                "Suitcase",
+                "Sun",
+                "Sword",
+                "Syringe",
+                "Tag",
+                "Target",
+                "Thermometer",
+                "ThumbsDown",
+                "ThumbsUp",
+                "Timer",
+                "Train",
+                "Trash",
+                "Tree",
+                "TrendDown",
+                "TrendUp",
+                "Trophy",
+                "Truck",
+                "User",
+                "UserCheck",
+                "UserFocus",
+                "UserMinus",
+                "UserPlus",
+                "Users",
+                "Wallet",
+                "Warehouse",
+                "Watch",
+                "WaveSine",
+                "Wine",
+                "Wrench"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Icon"
+        },
+        "kind": {
+          "enum": [
+            "motif_token",
+            "thought",
+            "label",
+            "prop"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "motif_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Motif Id"
+        },
+        "text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Text"
+        }
+      },
+      "required": [
+        "kind",
+        "anchor"
+      ],
+      "title": "SceneOverlay",
+      "type": "object"
+    },
     "SectionTitleProps": {
       "additionalProperties": false,
       "properties": {
@@ -2625,6 +2850,13 @@
           "title": "Kind",
           "type": "string"
         },
+        "overlays": {
+          "items": {
+            "$ref": "#/$defs/SceneOverlay"
+          },
+          "title": "Overlays",
+          "type": "array"
+        },
         "point_i": {
           "anyOf": [
             {
@@ -2741,6 +2973,11 @@
       "default": 1,
       "title": "Schema Version",
       "type": "integer"
+    },
+    "style_degraded": {
+      "default": false,
+      "title": "Style Degraded",
+      "type": "boolean"
     }
   },
   "required": [

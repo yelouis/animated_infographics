@@ -17,16 +17,21 @@ from animated_infographics.compile import (
     _TIMELINE_SCENE_ADAPTER,
     CAST_COLORS,
     _get_item_count,
+    callback_item_count,
+    compute_scene_overlays,
 )
 from animated_infographics.contracts.deck import DeckPlan
+from animated_infographics.contracts.director import DirectorPlan
 from animated_infographics.contracts.models import (
     Beat,
     Bible,
     CallbackScene,
     MetaphorScene,
     Scene,
+    SceneOverlay,
     SectionTitleProps,
     SectionTitleScene,
+    Storyboard,
     Timeline,
     TimelineAudio,
     TimelineCaptions,
@@ -50,6 +55,7 @@ from animated_infographics.contracts.tree import TreeEdge, TreeNode, TreePlan
 from animated_infographics.jobs import Job, RunContext
 from animated_infographics.planner.critic import needs_critic
 from animated_infographics.planner.director import plan_director
+from animated_infographics.planner.license import run_license_checks
 from animated_infographics.planner.llm import LLMBackend, OllamaBackend
 from animated_infographics.planner.props import (
     _evaluate_scene_critic,
@@ -133,6 +139,14 @@ def plan_tree(
         for p_idx, pt in enumerate(slide.points):
             all_points.append((slide.id, pt.text, p_idx, slide.title))
 
+    slide_passage_by_id = {
+        slide.id: f"{slide.title}. " + " ".join(p.text for p in slide.points)
+        for slide in deck.slides
+    }
+    slide_passages: dict[int, str] = {
+        k: slide_passage_by_id[slide_id] for k, (slide_id, _, _, _) in enumerate(all_points)
+    }
+
     # 1. Build synthetic points transcript and beats
     points_transcript = build_points_transcript([(s, t, p) for s, t, p, _ in all_points])
     beats = [
@@ -150,13 +164,30 @@ def plan_tree(
     ]
 
     # 2. Director if creative
-    director_plan = None
+    director_plan: DirectorPlan | None = None
+    style_degraded: bool = False
+    director_status: str = "ok"
+    license_calls: int = 0
+    license_dropped_count: int = 0
+    degraded_msg: str | None = None
+
     if style == "creative":
-        director_plan, _ = plan_director(beats, bible, backend)
-        if director_plan is not None and job_dir is not None:
-            (job_dir / "director.json").write_text(
-                director_plan.model_dump_json(indent=2) + "\n", encoding="utf-8"
+        director_plan, attempts = plan_director(beats, bible, backend)
+        if director_plan is None:
+            style_degraded = True
+            director_status = "degraded"
+            last_err = (
+                attempts[-1].errors[0] if (attempts and attempts[-1].errors) else "unknown error"
             )
+            degraded_msg = (
+                f"director: degraded to literal after {len(attempts)} attempts: {last_err}"
+            )
+        else:
+            license_calls = len(director_plan.metaphors) + len(director_plan.asides)
+            director_plan, _ = run_license_checks(
+                director_plan, beats, backend, passages=slide_passages
+            )
+            license_dropped_count = len(director_plan.license_dropped)
 
     # 3. Select templates with presentation profile (R2, R6, R7 off)
     choices, _, _, _ = plan_template_selection(
@@ -176,7 +207,8 @@ def plan_tree(
     compact_bible = _build_compact_bible(bible)
 
     # 4. Build nodes
-    nodes: list[TreeNode] = []
+    raw_nodes: list[tuple[str, str, str, int | None, str, Scene]] = []
+    point_scenes: list[Scene] = []
     node_to_slide_idx: dict[str, int] = {}
     point_node_ids: list[str] = []
 
@@ -202,19 +234,13 @@ def plan_tree(
             rationale="deterministic section",
         )
         sec_norm_text = normalize_node_text(slide.title)
-        sec_node = TreeNode(
-            id=sec_id,
-            slide=slide.id,
-            kind="section",
-            point_i=None,
-            text=sec_norm_text,
-            scene=sec_scene,
-        )
-        nodes.append(sec_node)
+        raw_nodes.append(("section", sec_id, slide.id, None, sec_norm_text, sec_scene))
         node_to_slide_idx[sec_id] = s_idx
 
         # Point nodes for this slide
-        slide_passage = f"{slide.title}. " + " ".join(p.text for p in slide.points)
+        slide_passage = slide_passages.get(
+            pt_cursor, f"{slide.title}. " + " ".join(p.text for p in slide.points)
+        )
         slide_context = (
             f"Presentation Slide Context:\nSlide Title: {slide.title}\n"
             f"Points on this slide:\n" + "\n".join(f"- {p.text}" for p in slide.points)
@@ -232,6 +258,8 @@ def plan_tree(
             choice = choices[global_k] if global_k < len(choices) else None
             primary = choice.primary if choice else "kinetic_quote"
             alternate = choice.alternate if choice else "kinetic_quote"
+            if primary == "title_card":
+                primary = alternate if alternate != "title_card" else "kinetic_quote"
 
             scene_id_str = f"s{scene_counter:03d}"
             scene_counter += 1
@@ -381,17 +409,61 @@ def plan_tree(
             combined_raw = f"{slide.title} {pt.text} {' '.join(scene_free_texts)}"
             norm_text = normalize_node_text(combined_raw)
 
-            pt_node = TreeNode(
-                id=pt_id,
-                slide=slide.id,
-                kind="point",
-                point_i=p_idx,
-                text=norm_text,
-                scene=planned_scene,
-            )
-            nodes.append(pt_node)
+            point_scenes.append(planned_scene)
+            raw_nodes.append(("point", pt_id, slide.id, p_idx, norm_text, planned_scene))
             node_to_slide_idx[pt_id] = s_idx
             point_node_ids.append(pt_id)
+
+    # Compute overlays if director_plan is present
+    scene_overlays_map: dict[int, list[SceneOverlay]] = {}
+    if director_plan is not None:
+        point_storyboard = Storyboard(
+            schema_version=1,
+            scenes=[sc.model_copy(update={"id": f"s{k:03d}"}) for k, sc in enumerate(point_scenes)],
+        )
+        scene_overlays_map, newly_dropped = compute_scene_overlays(
+            point_storyboard, director_plan, bible
+        )
+        if newly_dropped:
+            all_dropped = list(director_plan.overlay_dropped) + newly_dropped
+            director_plan = director_plan.model_copy(update={"overlay_dropped": all_dropped})
+        if job_dir is not None:
+            (job_dir / "director.json").write_text(
+                director_plan.model_dump_json(indent=2) + "\n", encoding="utf-8"
+            )
+
+    # Assemble TreeNode objects with overlays
+    nodes: list[TreeNode] = []
+    pt_k = 0
+    for kind, nid, sid, node_pt_i, text, sc in raw_nodes:
+        if kind == "section":
+            nodes.append(
+                TreeNode(
+                    id=nid,
+                    slide=sid,
+                    kind="section",
+                    point_i=None,
+                    text=text,
+                    scene=sc,
+                    overlays=[],
+                )
+            )
+        else:
+            ovs = scene_overlays_map.get(pt_k, [])
+            pt_k += 1
+            nodes.append(
+                TreeNode(
+                    id=nid,
+                    slide=sid,
+                    kind="point",
+                    point_i=node_pt_i,
+                    text=text,
+                    scene=sc,
+                    overlays=ovs,
+                )
+            )
+
+    overlays_count = sum(len(n.overlays) for n in nodes)
 
     # 5. Build edges
     edges: list[TreeEdge] = []
@@ -452,11 +524,28 @@ def plan_tree(
                     TreeEdge(to=to_node.id, kind="back", cost=0.5, **{"from": from_node.id})
                 )
 
-    return TreePlan(schema_version=1, nodes=nodes, edges=edges)
+    tree = TreePlan(
+        schema_version=1,
+        nodes=nodes,
+        edges=edges,
+        style_degraded=style_degraded,
+    )
+    tree._tree_metrics = {
+        "director": director_status,
+        "license_calls": license_calls,
+        "license_dropped": license_dropped_count,
+        "overlays": overlays_count,
+        "degraded_msg": degraded_msg,
+    }
+    return tree
 
 
 def compile_tree_timeline(tree: TreePlan, bible: Bible, plan_sha: str = "") -> Timeline:
     """Compile presentation tree node scenes into a timeline for preview stills rendering."""
+    point_nodes = [n for n in tree.nodes if n.kind == "point"]
+    point_scenes = [pn.scene for pn in point_nodes]
+    point_overlays = {i: pn.overlays for i, pn in enumerate(point_nodes)}
+
     timeline_scenes: list[TimelineScene] = []
 
     for idx, node in enumerate(tree.nodes):
@@ -467,7 +556,14 @@ def compile_tree_timeline(tree: TreePlan, bible: Bible, plan_sha: str = "") -> T
 
         spec = REGISTRY.get(sc.template)
         spread = spec.spread if spec and spec.spread is not None else 0.0
-        n_items = _get_item_count(sc)
+        if sc.template == "callback":
+            pt_idx = next((i for i, pn in enumerate(point_nodes) if pn.id == node.id), None)
+            if pt_idx is not None:
+                n_items = callback_item_count(pt_idx, point_scenes, point_overlays)
+            else:
+                n_items = 0
+        else:
+            n_items = _get_item_count(sc)
 
         if n_items > 0 and spread > 0.0:
             it_frames = item_frames(n_items, scene_frames, spread)
@@ -491,7 +587,7 @@ def compile_tree_timeline(tree: TreePlan, bible: Bible, plan_sha: str = "") -> T
             "hide_captions": True,
             "timing": timing,
             "props": clean_props,
-            "overlays": [],
+            "overlays": list(node.overlays),
         }
         timeline_scene = _TIMELINE_SCENE_ADAPTER.validate_python(sc_dict)
         timeline_scenes.append(timeline_scene)
@@ -578,10 +674,23 @@ def run_tree_stage(job: Job, ctx: RunContext) -> None:
 
     elapsed_ms = int((time.perf_counter() - t0) * 1000)
 
+    metrics = getattr(tree, "_tree_metrics", {})
+    director_status = metrics.get("director", "ok")
+    license_calls = metrics.get("license_calls", 0)
+    license_dropped = metrics.get("license_dropped", 0)
+    overlays_count = metrics.get("overlays", 0)
+    degraded_msg = metrics.get("degraded_msg")
+
     log_file = job.dir / "logs" / "tree.log"
     log_file.parent.mkdir(parents=True, exist_ok=True)
     with open(log_file, "w", encoding="utf-8") as f:
+        if degraded_msg:
+            f.write(f"{degraded_msg}\n")
         f.write(
             f"Tree: nodes={len(tree.nodes)}, edges={len(tree.edges)}, "
             f"llm_calls={backend.calls}, elapsed_ms={elapsed_ms}\n"
+        )
+        f.write(
+            f"director={director_status} license_calls={license_calls} "
+            f"license_dropped={license_dropped} overlays={overlays_count}\n"
         )

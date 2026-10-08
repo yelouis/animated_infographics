@@ -12,6 +12,7 @@ from typing import Any
 from pydantic import TypeAdapter
 
 from animated_infographics.audio.mix_prep import prepare_music, prepare_sfx
+from animated_infographics.compile import callback_item_count
 from animated_infographics.config import (
     ENTER_FRAMES,
     EXIT_FRAMES,
@@ -183,16 +184,31 @@ def compose_presentation_timeline(
     if raw_scenes and raw_scenes[-1]["end_frame"] < total_frames:
         raw_scenes[-1]["end_frame"] = total_frames
 
+    point_nodes = [n for n in tree.nodes if n.kind == "point"]
+    point_scenes = [pn.scene for pn in point_nodes]
+    point_overlays = {i: pn.overlays for i, pn in enumerate(point_nodes)}
+
     timeline_scenes: list[TimelineScene] = []
     for r_sc in raw_scenes:
         sc = r_sc["orig_scene"]
+        node = node_map.get(r_sc["node_id"])
         s_f = r_sc["start_frame"]
         e_f = r_sc["end_frame"]
         scene_frames = e_f - s_f
 
         spec = REGISTRY.get(sc.template)
         spread = spec.spread if spec and spec.spread is not None else 0.0
-        n_items = _get_item_count(sc)
+        if sc.template == "callback":
+            pt_idx = next(
+                (i for i, pn in enumerate(point_nodes) if pn.id == (node.id if node else "")),
+                None,
+            )
+            if pt_idx is not None:
+                n_items = callback_item_count(pt_idx, point_scenes, point_overlays)
+            else:
+                n_items = 0
+        else:
+            n_items = _get_item_count(sc)
 
         if n_items > 0 and spread > 0.0:
             it_frames = item_frames(n_items, scene_frames, spread)
@@ -216,7 +232,7 @@ def compose_presentation_timeline(
             "hide_captions": False,
             "timing": timing,
             "props": clean_props,
-            "overlays": [],
+            "overlays": list(node.overlays) if node else [],
         }
         timeline_scene = _TIMELINE_SCENE_ADAPTER.validate_python(sc_dict)
         timeline_scenes.append(timeline_scene)

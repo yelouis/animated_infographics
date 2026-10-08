@@ -14,8 +14,11 @@ from unittest.mock import patch
 import pytest
 
 from animated_infographics.contracts.deck import DeckPlan, DeckPoint, DeckSlide
+from animated_infographics.contracts.director import DirectorPlan
 from animated_infographics.contracts.models import (
+    AvatarConfig,
     Bible,
+    CastMember,
     KineticQuoteProps,
     KineticQuoteScene,
     Place,
@@ -23,11 +26,16 @@ from animated_infographics.contracts.models import (
     SectionTitleScene,
     StatCalloutProps,
     StatCalloutScene,
+    Transcript,
+    TranscriptSentence,
+    TranscriptWord,
 )
+from animated_infographics.contracts.playback import PlaybackCommit, PlaybackPlan
 from animated_infographics.contracts.tree import TreePlan
 from animated_infographics.jobs import Job, RunContext
 from animated_infographics.planner.llm import LLMBackend
 from animated_infographics.planner.select import Choice, apply_rules
+from animated_infographics.presentation.compose import compose_presentation_timeline
 from animated_infographics.presentation.deck_bible import build_deck_transcript
 from animated_infographics.presentation.match import (
     extract_scene_free_text,
@@ -103,7 +111,24 @@ def _make_sample_bible() -> Bible:
         title="The Great Stink",
         logline="London summer crisis",
         genre="history",
-        cast=[],
+        cast=[
+            CastMember(
+                id="c1",
+                name="Historian",
+                role="narrator",
+                is_narrator=True,
+                color_slot=0,
+                avatar=AvatarConfig(
+                    skin=1,
+                    hair_style="short",
+                    hair_color="black",
+                    facial_hair="none",
+                    headwear="none",
+                    glasses=False,
+                    age="adult",
+                ),
+            )
+        ],
         places=[
             Place(
                 id="p1",
@@ -182,7 +207,7 @@ def test_deck_bible_build_transcript():
 
 
 def test_presentation_profile_rules():
-    """Verify presentation profile disables R1, R2, R6, R7 while keeping R4, R5, R8."""
+    """Verify presentation profile disables R2, R6, R7 while keeping R1 second half, R4, R5, R8."""
     # Video profile forces title_card at beat 0 (R1)
     raw_choices = [
         Choice(beat_i=0, primary="stat_callout", alternate="kinetic_quote"),
@@ -197,12 +222,25 @@ def test_presentation_profile_rules():
     assert video_res[0].primary == "title_card"
     assert any(r.rule == "R1" for r in video_repairs)
 
-    # In presentation profile, R1 does not fire, so stat_callout is preserved
+    # In presentation profile, R1 does not force title_card at beat 0, so stat_callout is preserved
     pres_res, pres_repairs = apply_rules(
         raw_choices, len(raw_choices), bible=bible, profile="presentation"
     )
     assert pres_res[0].primary == "stat_callout"
     assert not any(r.rule in ("R1", "R2", "R6", "R7") for r in pres_repairs)
+
+    # In presentation profile, R1 second half replaces any title_card with its alternate
+    title_choices = [
+        Choice(beat_i=0, primary="title_card", alternate="stat_callout"),
+        Choice(beat_i=1, primary="title_card", alternate="kinetic_quote"),
+    ]
+    pres_res2, pres_repairs2 = apply_rules(
+        title_choices, len(title_choices), bible=bible, profile="presentation"
+    )
+    assert pres_res2[0].primary == "stat_callout"
+    assert pres_res2[1].primary == "kinetic_quote"
+    assert len(pres_repairs2) == 2
+    assert all(r.rule == "R1" for r in pres_repairs2)
 
 
 def test_plan_tree_nodes_and_edges():
@@ -405,3 +443,333 @@ def test_tree_stage_isolation_falsification(tmp_path: Path):
         patch.object(Path, "read_text", side_effect=guarded_read_text, autospec=True),
     ):
         run_tree_stage(job, ctx)
+
+
+class CreativeStubBackend(LLMBackend):
+    """Stub LLM backend for deterministic creative tree planning tests."""
+
+    def __init__(
+        self,
+        director_response: dict[str, Any] | None = None,
+        license_verdict: str = "ok",
+        license_verdict_map: dict[str, str] | None = None,
+    ) -> None:
+        self.director_response = director_response
+        self.license_verdict = license_verdict
+        self.license_verdict_map = license_verdict_map or {}
+        self.calls: int = 0
+        self.calls_by_stage: dict[str, int] = {}
+        self.cache_hits: int = 0
+        self.model: str = "stub"
+
+    def generate_json(
+        self,
+        *,
+        stage: str,
+        messages: list[dict[str, Any]] | None = None,
+        schema: dict[str, Any],
+        attempt: int,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        self.calls += 1
+        self.calls_by_stage[stage] = self.calls_by_stage.get(stage, 0) + 1
+        if stage == "director":
+            if self.director_response is not None:
+                return self.director_response
+            return {}
+        if stage == "license":
+            user_msg = str(messages or [])
+            for key, v in self.license_verdict_map.items():
+                if key in user_msg:
+                    return {"verdict": v}
+            return {"verdict": self.license_verdict}
+        return {}
+
+
+def _make_valid_director_dict() -> dict[str, Any]:
+    return {
+        "motifs": [
+            {
+                "id": "m1",
+                "name": "waste",
+                "icon": "Drop",
+                "appearances": [
+                    {"beat_i": 1, "role": "plant"},
+                    {"beat_i": 5, "role": "payoff"},
+                ],
+            }
+        ],
+        "metaphors": [
+            {
+                "beat_i": 2,
+                "image": "A dark stormy cloud hovering over the parliament building",
+                "label": "Storm",
+                "cast_ids": [],
+            },
+            {
+                "beat_i": 4,
+                "image": "A massive mechanical gear slowly grinding forward underground",
+                "label": "Sewers",
+                "cast_ids": [],
+            },
+        ],
+        "asides": [
+            {
+                "beat_i": 2,
+                "kind": "thought",
+                "cast_id": "c1",
+                "icon": "Sparkle",
+                "text": "terrible odor",
+            },
+            {
+                "beat_i": 3,
+                "kind": "label",
+                "text": "abandoned room",
+            },
+        ],
+    }
+
+
+def test_creative_presentation_license_calls_and_backend_counter(tmp_path: Path):
+    """Verify creative tree makes 1 license call per metaphor/aside and matches backend counter."""
+    deck = _make_sample_deck()
+    bible = _make_sample_bible()
+    backend = CreativeStubBackend(director_response=_make_valid_director_dict())
+
+    tree = plan_tree(deck, bible, backend, style="creative", job_dir=tmp_path)
+
+    assert tree.style_degraded is False
+    assert tree._tree_metrics["director"] == "ok"
+    assert tree._tree_metrics["license_calls"] == 4
+    assert tree._tree_metrics["license_dropped"] == 0
+    assert backend.calls_by_stage.get("director") == 1
+    assert backend.calls_by_stage.get("license") == 4
+    assert (tmp_path / "director.json").is_file()
+
+    dir_plan = DirectorPlan.model_validate_json((tmp_path / "director.json").read_text())
+    assert len(dir_plan.metaphors) == 2
+    assert len(dir_plan.asides) == 2
+    assert len(dir_plan.license_dropped) == 0
+
+
+def test_creative_presentation_non_ok_verdict_drops_item(tmp_path: Path):
+    """Verify non-ok license check removes the item into license_dropped."""
+    deck = _make_sample_deck()
+    bible = _make_sample_bible()
+    backend = CreativeStubBackend(
+        director_response=_make_valid_director_dict(),
+        license_verdict_map={"dark stormy cloud": "adds_event"},
+    )
+
+    tree = plan_tree(deck, bible, backend, style="creative", job_dir=tmp_path)
+
+    assert tree.style_degraded is False
+    assert tree._tree_metrics["license_calls"] == 4
+    assert tree._tree_metrics["license_dropped"] == 1
+
+    dir_plan = DirectorPlan.model_validate_json((tmp_path / "director.json").read_text())
+    assert len(dir_plan.metaphors) == 1
+    assert len(dir_plan.license_dropped) == 1
+    assert dir_plan.license_dropped[0].verdict == "adds_event"
+
+
+def test_creative_presentation_director_fails_degraded(tmp_path: Path):
+    """Verify director that fails 3 times sets style_degraded and writes verbatim log line."""
+    job_dir = tmp_path / "job_degraded"
+    job_dir.mkdir(parents=True)
+
+    deck = _make_sample_deck()
+    bible = _make_sample_bible()
+
+    (job_dir / "deck.json").write_text(deck.model_dump_json(indent=2), encoding="utf-8")
+    (job_dir / "deck_bible.json").write_text(bible.model_dump_json(indent=2), encoding="utf-8")
+    (job_dir / "state.json").write_text(
+        json.dumps(
+            {
+                "job_id": "job-degraded-01",
+                "created_at": "2026-10-06T00:00:00Z",
+                "state": "created",
+                "kind": "presentation",
+                "completed_stages": [],
+                "stage_input_sha256": {},
+                "timings_ms": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    job = Job(job_dir)
+    ctx = RunContext(style="creative")
+    backend = CreativeStubBackend(director_response=None)
+
+    with (
+        patch("animated_infographics.presentation.tree.OllamaBackend", return_value=backend),
+        patch("animated_infographics.presentation.tree.run_assets"),
+    ):
+        run_tree_stage(job, ctx)
+
+    tree_data = json.loads((job_dir / "tree.json").read_text(encoding="utf-8"))
+    assert tree_data["style_degraded"] is True
+    assert not (job_dir / "director.json").exists()
+
+    tree_log = (job_dir / "logs" / "tree.log").read_text(encoding="utf-8")
+    assert "director: degraded to literal after 3 attempts:" in tree_log
+    assert tree_log.endswith("director=degraded license_calls=0 license_dropped=0 overlays=0\n")
+
+
+def test_creative_presentation_overlays_kept_in_tree_and_compose_timeline(tmp_path: Path):
+    """Verify point scenes keep overlays in tree.json and timeline, and callback gets dots."""
+    deck = _make_sample_deck()
+    bible = _make_sample_bible()
+    backend = CreativeStubBackend(director_response=_make_valid_director_dict())
+
+    tree = plan_tree(deck, bible, backend, style="creative", job_dir=tmp_path)
+
+    # In tree.nodes:
+    # Section nodes must have 0 overlays
+    sec_nodes = [n for n in tree.nodes if n.kind == "section"]
+    for s_node in sec_nodes:
+        assert s_node.overlays == []
+
+    # Point nodes must carry overlays (plant token at beat 1, thought at beat 2, label at beat 3)
+    pt_nodes = [n for n in tree.nodes if n.kind == "point"]
+    assert any(len(n.overlays) > 0 for n in pt_nodes)
+
+    # Point node at beat 1 carries motif_token m1
+    beat1_node = pt_nodes[1]
+    assert any(ov.kind == "motif_token" and ov.motif_id == "m1" for ov in beat1_node.overlays)
+
+    # Point node at beat 5 is callback
+    beat5_node = pt_nodes[5]
+    assert beat5_node.scene.template == "callback"
+
+    # Now verify compose copies overlays and calculates callback timing
+    commits = [
+        PlaybackCommit(
+            at_ms=i * 2000,
+            decision_ms=i * 2000,
+            compute_ms=50,
+            score=1.0,
+            node_id=n.id,
+        )
+        for i, n in enumerate(tree.nodes)
+    ]
+    playback = PlaybackPlan(schema_version=1, commits=commits)
+    heard_words = [
+        TranscriptWord(i=0, text="hello", start_ms=0, end_ms=500, sentence_i=0),
+        TranscriptWord(
+            i=1,
+            text="world",
+            start_ms=1000,
+            end_ms=len(tree.nodes) * 2000 + 1000,
+            sentence_i=0,
+        ),
+    ]
+    heard_sent = [
+        TranscriptSentence(
+            i=0,
+            text="hello world",
+            start_ms=0,
+            end_ms=len(tree.nodes) * 2000 + 1000,
+            word_start=0,
+            word_end=2,
+            paragraph_i=0,
+            is_title=False,
+        )
+    ]
+    heard = Transcript(
+        schema_version=1,
+        source="tts",
+        audio_path="points.wav",
+        duration_ms=len(tree.nodes) * 2000 + 1000,
+        words=heard_words,
+        sentences=heard_sent,
+    )
+
+    timeline, _ = compose_presentation_timeline(tree, playback, heard, bible)
+
+    # Verify overlays copied into timeline scenes
+    tl_beat1_scene = next(
+        sc
+        for sc in timeline.scenes
+        if sc.props
+        and getattr(sc.props, "index", None) is None
+        and any(ov.kind == "motif_token" for ov in sc.overlays)
+    )
+    assert len(tl_beat1_scene.overlays) > 0
+
+    # Verify callback scene in timeline has item_frames matching earlier token count (1)
+    cb_tl_scene = next(sc for sc in timeline.scenes if sc.template == "callback")
+    assert len(cb_tl_scene.timing.item_frames) == 1
+
+
+def test_creative_presentation_isolation_with_license(tmp_path: Path):
+    """Verify creative tree stage reads ONLY deck.json and deck_bible.json, no transcript leak."""
+    job_dir = tmp_path / "job_creative_iso"
+    job_dir.mkdir(parents=True)
+
+    deck = _make_sample_deck()
+    bible = _make_sample_bible()
+
+    (job_dir / "deck.json").write_text(deck.model_dump_json(indent=2), encoding="utf-8")
+    (job_dir / "deck_bible.json").write_text(bible.model_dump_json(indent=2), encoding="utf-8")
+    (job_dir / "state.json").write_text(
+        json.dumps(
+            {
+                "job_id": "job-iso-01",
+                "created_at": "2026-10-06T00:00:00Z",
+                "state": "created",
+                "kind": "presentation",
+                "completed_stages": [],
+                "stage_input_sha256": {},
+                "timings_ms": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    forbidden_files = [
+        "transcript.json",
+        "performance.json",
+        "speak_timing.json",
+        "script.txt",
+        "narration.json",
+    ]
+    for fn in forbidden_files:
+        (job_dir / fn).write_text("FORBIDDEN CONTENT", encoding="utf-8")
+
+    job = Job(job_dir)
+    ctx = RunContext(style="creative")
+    backend = CreativeStubBackend(director_response=_make_valid_director_dict())
+
+    original_read_text = Path.read_text
+    original_read_bytes = Path.read_bytes
+    read_paths: list[Path] = []
+
+    def tracking_read_text(self: Path, *args: Any, **kwargs: Any) -> str:
+        read_paths.append(self)
+        if self.name in forbidden_files:
+            raise PermissionError(f"Isolation violation: {self.name}")
+        return original_read_text(self, *args, **kwargs)
+
+    def tracking_read_bytes(self: Path, *args: Any, **kwargs: Any) -> bytes:
+        read_paths.append(self)
+        if self.name in forbidden_files:
+            raise PermissionError(f"Isolation violation: {self.name}")
+        return original_read_bytes(self, *args, **kwargs)
+
+    with (
+        patch("animated_infographics.presentation.tree.OllamaBackend", return_value=backend),
+        patch("animated_infographics.presentation.tree.run_assets"),
+        patch.object(Path, "read_text", side_effect=tracking_read_text, autospec=True),
+        patch.object(Path, "read_bytes", side_effect=tracking_read_bytes, autospec=True),
+    ):
+        run_tree_stage(job, ctx)
+
+    assert (job_dir / "tree.json").is_file()
+    assert (job_dir / "timeline.json").is_file()
+    assert (job_dir / "director.json").is_file()
+
+    read_file_names = {p.name for p in read_paths}
+    for fn in forbidden_files:
+        assert fn not in read_file_names, f"Creative tree stage accessed forbidden file {fn}"
