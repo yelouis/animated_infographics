@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Final, Literal
+from typing import Any, Final, Literal, Mapping, Sequence
 
 from pydantic import TypeAdapter
 
@@ -77,6 +77,50 @@ def _get_item_count(scene: Any) -> int:
     if template == "timeline":
         return len(getattr(props, "events", []))
     return 0
+
+
+def callback_item_count(
+    idx: int,
+    scenes: Sequence[Any],
+    scene_overlays: Mapping[int, Sequence[Any]] | None,
+) -> int:
+    """Return the number of earlier scenes with a motif_token matching the callback's motif_id.
+
+    Per design_templates.md §2.18 and design_styles.md §3.6.
+    """
+    if idx <= 0 or not scene_overlays:
+        return 0
+    if idx >= len(scenes):
+        return 0
+    cb_scene = scenes[idx]
+    template = getattr(cb_scene, "template", None) or (
+        cb_scene.get("template") if isinstance(cb_scene, dict) else None
+    )
+    if template != "callback":
+        return 0
+    props = getattr(cb_scene, "props", None) or (
+        cb_scene.get("props") if isinstance(cb_scene, dict) else None
+    )
+    target_motif_id = (
+        getattr(props, "motif_id", None)
+        if props is not None and hasattr(props, "motif_id")
+        else (props.get("motif_id") if isinstance(props, dict) else None)
+    )
+    if not target_motif_id:
+        return 0
+
+    count = 0
+    for earlier_idx in range(idx):
+        overlays = scene_overlays.get(earlier_idx, [])
+        for ov in overlays:
+            kind = getattr(ov, "kind", None) or (ov.get("kind") if isinstance(ov, dict) else None)
+            motif_id = getattr(ov, "motif_id", None) or (
+                ov.get("motif_id") if isinstance(ov, dict) else None
+            )
+            if kind == "motif_token" and motif_id == target_motif_id:
+                count += 1
+                break
+    return count
 
 
 def compute_scene_overlays(
@@ -243,7 +287,10 @@ def compile_timeline(
 
         spec = TEMPLATE_REGISTRY.get(sc.template)
         spread = spec.spread if spec and spec.spread is not None else 0.0
-        n_items = _get_item_count(sc)
+        if sc.template == "callback":
+            n_items = callback_item_count(idx, storyboard.scenes, scene_overlays)
+        else:
+            n_items = _get_item_count(sc)
 
         if n_items > 0 and spread > 0.0:
             it_frames = item_frames(n_items, scene_frames, spread)

@@ -70,6 +70,7 @@ def verify_job_creative(job_dir: Path | str) -> dict[str, Any]:
     callback_scenes = [s for s in scenes if s.get("template") == "callback"]
     payoffs_count = len(callback_scenes)
     unplanted_payoffs: list[str] = []
+    callback_dots_violations: list[str] = []
 
     for cb in callback_scenes:
         m_id = cb.get("props", {}).get("motif_id")
@@ -82,6 +83,13 @@ def verify_job_creative(job_dir: Path | str) -> dict[str, Any]:
         ]
         if not plants_before:
             unplanted_payoffs.append(f"{cb.get('id')}:{m_id}")
+
+        timing = cb.get("timing") or {}
+        item_frames_list = timing.get("item_frames") or []
+        if len(item_frames_list) != len(plants_before) or len(item_frames_list) < 1:
+            callback_dots_violations.append(
+                f"{cb.get('id')}: items={len(item_frames_list)} expected={len(plants_before)}"
+            )
 
     # Total motifs rendered: motifs that have at least a payoff or a token
     cb_motif_ids = [
@@ -126,11 +134,18 @@ def verify_job_creative(job_dir: Path | str) -> dict[str, Any]:
     # Bars:
     # - >= 1 motif with plant & payoff rendered
     # - unplanted_payoffs == 0
+    # - callback dots equal earlier token count and >= 1
     # - >= 2 metaphors
     # - >= 2 asides
     # - 0 license failures rendered
     # - 0 overlay violations
-    motifs_bar = motifs_rendered >= 1 and payoffs_count >= 1 and len(unplanted_payoffs) == 0
+    callback_dots_bar = len(callback_dots_violations) == 0
+    motifs_bar = (
+        motifs_rendered >= 1
+        and payoffs_count >= 1
+        and len(unplanted_payoffs) == 0
+        and callback_dots_bar
+    )
     metaphors_bar = metaphors_count >= 2
     asides_bar = asides_count >= 2
     license_bar = license_failures_rendered == 0
@@ -147,12 +162,14 @@ def verify_job_creative(job_dir: Path | str) -> dict[str, Any]:
         "motifs_rendered": motifs_rendered,
         "payoffs_rendered": payoffs_count,
         "unplanted_payoffs": unplanted_payoffs,
+        "callback_dots_violations": callback_dots_violations,
         "metaphors_count": metaphors_count,
         "asides_count": asides_count,
         "license_failures_rendered": license_failures_rendered,
         "overlay_violations": overlay_violations,
         "invalid_fates_count": len(invalid_fates),
         "motifs_bar": motifs_bar,
+        "callback_dots_bar": callback_dots_bar,
         "metaphors_bar": metaphors_bar,
         "asides_bar": asides_bar,
         "license_bar": license_bar,

@@ -499,3 +499,112 @@ def test_compile_missing_music_fails_loudly(tmp_path: Path) -> None:
 
     expected_sfx_msg = "input/missing_sfx_dir is recorded in ingest.json but missing from the job"
     assert expected_sfx_msg in str(exc_info_sfx.value)
+
+
+def test_compile_callback_item_frames_from_overlays():
+    from animated_infographics.contracts.models import (
+        CallbackScene,
+        CharacterIntroProps,
+        CharacterIntroScene,
+        SceneOverlay,
+    )
+    from animated_infographics.contracts.templates import CallbackProps
+    from animated_infographics.timing.items import item_frames
+
+    words = [
+        TranscriptWord(i=0, sentence_i=0, text="The", start_ms=0, end_ms=200),
+        TranscriptWord(i=1, sentence_i=0, text="Title", start_ms=250, end_ms=500),
+        TranscriptWord(i=2, sentence_i=1, text="Second", start_ms=1000, end_ms=1300),
+        TranscriptWord(i=3, sentence_i=1, text="sentence", start_ms=1350, end_ms=1700),
+        TranscriptWord(i=4, sentence_i=2, text="Third", start_ms=2500, end_ms=2800),
+        TranscriptWord(i=5, sentence_i=2, text="sentence", start_ms=2850, end_ms=3200),
+        TranscriptWord(i=6, sentence_i=3, text="Fourth", start_ms=4000, end_ms=4300),
+        TranscriptWord(i=7, sentence_i=3, text="sentence", start_ms=4350, end_ms=4700),
+        TranscriptWord(i=8, sentence_i=4, text="Fifth", start_ms=5500, end_ms=5800),
+        TranscriptWord(i=9, sentence_i=4, text="sentence", start_ms=5850, end_ms=6200),
+    ]
+    sentences = [
+        TranscriptSentence(i=0, paragraph_i=0, text="The Title", start_ms=0, end_ms=500, word_start=0, word_end=2, is_title=True),
+        TranscriptSentence(i=1, paragraph_i=0, text="Second sentence", start_ms=1000, end_ms=1700, word_start=2, word_end=4, is_title=False),
+        TranscriptSentence(i=2, paragraph_i=0, text="Third sentence", start_ms=2500, end_ms=3200, word_start=4, word_end=6, is_title=False),
+        TranscriptSentence(i=3, paragraph_i=0, text="Fourth sentence", start_ms=4000, end_ms=4700, word_start=6, word_end=8, is_title=False),
+        TranscriptSentence(i=4, paragraph_i=0, text="Fifth sentence", start_ms=5500, end_ms=6200, word_start=8, word_end=10, is_title=False),
+    ]
+    transcript = Transcript(
+        schema_version=1,
+        source="tts",
+        audio_path="test.wav",
+        duration_ms=7500,
+        words=words,
+        sentences=sentences,
+    )
+    beats = [
+        Beat(i=0, text="The Title", start_ms=0, end_ms=1000, word_start=0, word_end=2),
+        Beat(i=1, text="Second sentence", start_ms=1000, end_ms=2500, word_start=2, word_end=4),
+        Beat(i=2, text="Third sentence", start_ms=2500, end_ms=4000, word_start=4, word_end=6),
+        Beat(i=3, text="Fourth sentence", start_ms=4000, end_ms=5500, word_start=6, word_end=8),
+        Beat(i=4, text="Fifth sentence", start_ms=5500, end_ms=7000, word_start=8, word_end=10),
+    ]
+    scenes = [
+        TitleCardScene(
+            id="s000",
+            beat_i=0,
+            template="title_card",
+            props=TitleCardProps(title="The Title"),
+        ),
+        CharacterIntroScene(
+            id="s001",
+            beat_i=1,
+            template="character_intro",
+            props=CharacterIntroProps(cast_id="c1", descriptor="Hero"),
+        ),
+        KineticQuoteScene(
+            id="s002",
+            beat_i=2,
+            template="kinetic_quote",
+            props=KineticQuoteProps(text="Third sentence"),
+        ),
+        KineticQuoteScene(
+            id="s003",
+            beat_i=3,
+            template="kinetic_quote",
+            props=KineticQuoteProps(text="Fourth sentence"),
+        ),
+        CallbackScene(
+            id="s004",
+            beat_i=4,
+            template="callback",
+            props=CallbackProps(motif_id="m1", label="Key", icon="Key"),
+        ),
+    ]
+    storyboard = Storyboard(schema_version=1, aspect="9:16", scenes=scenes)
+
+    # 3 earlier scenes have motif_token m1
+    scene_overlays = {
+        1: [SceneOverlay(kind="motif_token", motif_id="m1", icon="Key", anchor="top_right")],
+        2: [SceneOverlay(kind="motif_token", motif_id="m1", icon="Key", anchor="top_right")],
+        3: [SceneOverlay(kind="motif_token", motif_id="m1", icon="Key", anchor="top_right")],
+    }
+
+    bible = _make_dummy_bible()
+    timeline = compile_timeline(
+        transcript, beats, bible, storyboard, plan_sha256="dummy", scene_overlays=scene_overlays
+    )
+    cb_scene = timeline.scenes[4]
+    cb_frames = cb_scene.end_frame - cb_scene.start_frame
+    expected_frames = item_frames(3, cb_frames, 0.4)
+    assert len(cb_scene.timing.item_frames) == 3
+    assert cb_scene.timing.item_frames == expected_frames
+
+    # With only 1 earlier token -> 1
+    scene_overlays_1 = {
+        1: [SceneOverlay(kind="motif_token", motif_id="m1", icon="Key", anchor="top_right")],
+    }
+    timeline_1 = compile_timeline(
+        transcript, beats, bible, storyboard, plan_sha256="dummy", scene_overlays=scene_overlays_1
+    )
+    cb_scene_1 = timeline_1.scenes[4]
+    cb_frames_1 = cb_scene_1.end_frame - cb_scene_1.start_frame
+    assert len(cb_scene_1.timing.item_frames) == 1
+    assert cb_scene_1.timing.item_frames == item_frames(1, cb_frames_1, 0.4)
+

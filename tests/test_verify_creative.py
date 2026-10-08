@@ -77,6 +77,7 @@ def test_verify_creative_passes_valid_job(tmp_path: Path) -> None:
                 "template": "callback",
                 "start_frame": 360,
                 "end_frame": 420,
+                "timing": {"item_frames": [20]},
                 "props": {"motif_id": "m1", "label": "Key found", "icon": "Key"},
                 "overlays": [],
             },
@@ -227,3 +228,99 @@ def test_falsification_unplanted_payoff_fails(tmp_path: Path) -> None:
     assert res["passed"] is False
     assert res["motifs_bar"] is False
     assert len(res["unplanted_payoffs"]) == 1
+
+
+def test_falsification_callback_dots_mismatch_fails(tmp_path: Path) -> None:
+    """A callback whose item_frames length does not equal earlier motif token count fails."""
+    job_dir = tmp_path / "dots_mismatch_job"
+    job_dir.mkdir()
+    preview_dir = job_dir / "preview"
+    preview_dir.mkdir()
+
+    # Timeline with 2 earlier tokens, but callback has empty item_frames (or mismatch)
+    timeline = {
+        "scenes": [
+            {
+                "id": "s000",
+                "template": "title_card",
+                "start_frame": 0,
+                "end_frame": 60,
+                "props": {"title": "Title"},
+                "overlays": [],
+            },
+            {
+                "id": "s001",
+                "template": "kinetic_quote",
+                "start_frame": 60,
+                "end_frame": 120,
+                "props": {"text": "Quote 1"},
+                "overlays": [
+                    {
+                        "kind": "motif_token",
+                        "motif_id": "m1",
+                        "anchor": "top_right",
+                        "icon": "Key",
+                    }
+                ],
+            },
+            {
+                "id": "s002",
+                "template": "metaphor",
+                "start_frame": 120,
+                "end_frame": 180,
+                "props": {"label": "Metaphor 1", "image_entity": "meta_1", "cast_ids": []},
+                "overlays": [],
+            },
+            {
+                "id": "s003",
+                "template": "kinetic_quote",
+                "start_frame": 180,
+                "end_frame": 240,
+                "props": {"text": "Quote 2"},
+                "overlays": [
+                    {
+                        "kind": "motif_token",
+                        "motif_id": "m1",
+                        "anchor": "top_right",
+                        "icon": "Key",
+                    }
+                ],
+            },
+            {
+                "id": "s004",
+                "template": "metaphor",
+                "start_frame": 240,
+                "end_frame": 300,
+                "props": {"label": "Metaphor 2", "image_entity": "meta_2", "cast_ids": []},
+                "overlays": [],
+            },
+            {
+                "id": "s005",
+                "template": "reveal",
+                "start_frame": 300,
+                "end_frame": 360,
+                "props": {"text": "A secret"},
+                "overlays": [
+                    {"kind": "thought", "text": "Hmm", "anchor": "top_right"},
+                    {"kind": "prop", "icon": "Coins", "anchor": "bottom_left"},
+                ],
+            },
+            {
+                "id": "s006",
+                "template": "callback",
+                "start_frame": 360,
+                "end_frame": 420,
+                "timing": {"item_frames": []},  # 0 items != 2 tokens
+                "props": {"motif_id": "m1", "label": "Key found", "icon": "Key"},
+                "overlays": [],
+            },
+        ]
+    }
+    (job_dir / "timeline.json").write_text(json.dumps(timeline), encoding="utf-8")
+
+    res = verify_job_creative(job_dir)
+    assert res["passed"] is False
+    assert res["motifs_bar"] is False
+    assert res["callback_dots_bar"] is False
+    assert len(res["callback_dots_violations"]) == 1
+

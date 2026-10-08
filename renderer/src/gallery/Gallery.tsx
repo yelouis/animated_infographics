@@ -5,6 +5,7 @@ import { RemotionSceneClock } from "../clock/remotion/RemotionSceneClock";
 import type {
   TimelineCastMember,
   TimelinePlace,
+  TimelineSceneTiming,
   TimelineSetPiece,
 } from "../generated/contracts";
 import { Background } from "../story/Background";
@@ -172,6 +173,7 @@ const GALLERY_SET_PIECES: Record<string, TimelineSetPiece> = {
 export const Gallery: React.FC<GalleryProps> = ({ template, variant }) => {
   const standardVariant = (variant === "worst" ? "typical" : variant) as "min" | "typical" | "max";
   let props: unknown = {};
+  let customTiming: TimelineSceneTiming | undefined;
   if (template === "kinetic_quote") {
     props = kineticQuoteFixtures[standardVariant] || kineticQuoteFixtures.typical;
   } else if (template === "avatar_sheet") {
@@ -210,7 +212,9 @@ export const Gallery: React.FC<GalleryProps> = ({ template, variant }) => {
   } else if (template === "metaphor") {
     props = metaphorFixtures[standardVariant] || metaphorFixtures.typical;
   } else if (template === "callback") {
-    props = callbackFixtures[standardVariant] || callbackFixtures.typical;
+    const fixture = callbackFixtures[standardVariant] || callbackFixtures.typical;
+    props = fixture.props;
+    customTiming = fixture.timing;
   } else if (template === "section_title") {
     props =
       sectionTitleFixtures[standardVariant] || sectionTitleFixtures.typical;
@@ -240,7 +244,7 @@ export const Gallery: React.FC<GalleryProps> = ({ template, variant }) => {
   }
 
   const actualTemplate = template === "overlays" ? variant : template;
-  const timing = getDefaultTiming(actualTemplate, props, 150);
+  const timing = customTiming ?? getDefaultTiming(actualTemplate, props, 150);
 
   const Component =
     template === "avatar_sheet"

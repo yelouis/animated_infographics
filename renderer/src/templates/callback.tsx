@@ -71,10 +71,7 @@ export const Callback: React.FC<CallbackTemplateProps> = ({
   });
 
   // "Seen before" dots row: 24 px dots centred at y 1140 with 16 px gaps
-  const itemFrames =
-    timing?.item_frames && timing.item_frames.length > 0
-      ? timing.item_frames
-      : [15, 27];
+  const itemFrames = timing?.item_frames ?? [];
   const dotCount = itemFrames.length;
 
   return (
@@ -191,50 +188,52 @@ export const Callback: React.FC<CallbackTemplateProps> = ({
       )}
 
       {/* "Seen before" dots row: 24 px dots centred at y 1140 with 16 px gaps */}
-      <div
-        style={{
-          position: "absolute",
-          left: 0,
-          top: 1128,
-          width: 1080,
-          height: 24,
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          gap: 16,
-          opacity: textOpacity,
-        }}
-      >
-        {Array.from({ length: dotCount }).map((_, idx) => {
-          const itemFrame = itemFrames[idx] ?? (15 + idx * 12);
-          const isFilled = clock.frame >= itemFrame;
-          const popProgress =
-            clock.frame < itemFrame
-              ? 0
-              : interpolate(clock.frame, [itemFrame, itemFrame + 4], [0, 1], {
-                  extrapolateRight: "clamp",
-                });
-          const popScale = 1.0 + 0.3 * Math.sin(popProgress * Math.PI);
+      {dotCount > 0 && (
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 1128,
+            width: 1080,
+            height: 24,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: 16,
+            opacity: textOpacity,
+          }}
+        >
+          {Array.from({ length: dotCount }).map((_, idx) => {
+            const itemFrame = itemFrames[idx] ?? (15 + idx * 12);
+            const isFilled = clock.frame >= itemFrame;
+            const popProgress =
+              clock.frame < itemFrame
+                ? 0
+                : interpolate(clock.frame, [itemFrame, itemFrame + 4], [0, 1], {
+                    extrapolateRight: "clamp",
+                  });
+            const popScale = 1.0 + 0.3 * Math.sin(popProgress * Math.PI);
 
-          return (
-            <div
-              key={idx}
-              style={{
-                width: 24,
-                height: 24,
-                borderRadius: "50%",
-                border: `3px solid ${palette.highlight}`,
-                backgroundColor: isFilled ? palette.highlight : "transparent",
-                boxSizing: "border-box",
-                transform: `scale(${popScale})`,
-                boxShadow: isFilled
-                  ? `0 0 10px ${palette.highlight}`
-                  : "none",
-              }}
-            />
-          );
-        })}
-      </div>
+            return (
+              <div
+                key={idx}
+                style={{
+                  width: 24,
+                  height: 24,
+                  borderRadius: "50%",
+                  border: `3px solid ${palette.highlight}`,
+                  backgroundColor: isFilled ? palette.highlight : "transparent",
+                  boxSizing: "border-box",
+                  transform: `scale(${popScale})`,
+                  boxShadow: isFilled
+                    ? `0 0 10px ${palette.highlight}`
+                    : "none",
+                }}
+              />
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
