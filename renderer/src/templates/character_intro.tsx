@@ -143,6 +143,7 @@ export const CharacterIntro: React.FC<CharacterIntroTemplateProps> = ({
         >
           <Avatar
             avatar={avatarConfig}
+            castId={props.cast_id}
             color={castColor}
             size={416}
             eyeScaleY={eyeScaleY}

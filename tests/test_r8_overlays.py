@@ -5,6 +5,7 @@ Per design_planner.md §4, design_styles.md §3.5, and design_testing_and_valida
 
 from pathlib import Path
 
+import pytest
 from PIL import Image
 
 from animated_infographics.compile import compute_scene_overlays
@@ -137,7 +138,7 @@ def test_graphic_words_counts_overlay_text() -> None:
 
     overlays = [
         SceneOverlay(kind="motif_token", icon="Key", anchor="top_right"),
-        SceneOverlay(kind="label", text="Old Relic", anchor="top_right"),
+        SceneOverlay(kind="label", text="Old Relic", anchor="top_left"),
     ]
     with_overlays = graphic_words("stat_callout", props, overlays=overlays)
     assert with_overlays == base_count + 2
@@ -504,3 +505,27 @@ def test_contact_sheet_badges_and_report_fates(tmp_path: Path) -> None:
     assert fates["motif_token_1"] == "rendered"
     assert fates["metaphor_5"] == "license_dropped"
     assert fates["thought_4"] == "overlay_dropped"
+
+
+def test_scene_overlay_anchor_validator() -> None:
+    """SceneOverlay rejects invalid anchor for each overlay kind."""
+    # motif_token requires top_right
+    SceneOverlay(kind="motif_token", icon="Sparkle", anchor="top_right", motif_id="m1")
+    with pytest.raises(ValueError, match="motif_token requires anchor 'top_right'"):
+        SceneOverlay(kind="motif_token", icon="Sparkle", anchor="top_left", motif_id="m1")
+
+    # thought requires top_left
+    SceneOverlay(kind="thought", text="Hmm", anchor="top_left")
+    with pytest.raises(ValueError, match="thought requires anchor 'top_left'"):
+        SceneOverlay(kind="thought", text="Hmm", anchor="top_right")
+
+    # label requires top_left
+    SceneOverlay(kind="label", text="Old Relic", anchor="top_left")
+    with pytest.raises(ValueError, match="label requires anchor 'top_left'"):
+        SceneOverlay(kind="label", text="Old Relic", anchor="top_right")
+
+    # prop requires bottom_left
+    SceneOverlay(kind="prop", icon="Coins", anchor="bottom_left")
+    with pytest.raises(ValueError, match="prop requires anchor 'bottom_left'"):
+        SceneOverlay(kind="prop", icon="Coins", anchor="top_left")
+

@@ -1,5 +1,5 @@
 import React from "react";
-import type { TimelineSceneTiming } from "../generated/contracts";
+import type { SceneOverlay, TimelineSceneTiming } from "../generated/contracts";
 import { Callback } from "./callback";
 import { CauseEffect } from "./cause_effect";
 import { CharacterIntro } from "./character_intro";
@@ -27,6 +27,7 @@ export interface TemplateComponentProps {
   timing?: TimelineSceneTiming;
   debug?: boolean;
   isGallery?: boolean;
+  overlays?: SceneOverlay[];
 }
 
 export const TEMPLATES: Record<string, React.FC<TemplateComponentProps>> = {

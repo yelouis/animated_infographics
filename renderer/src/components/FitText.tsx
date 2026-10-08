@@ -121,6 +121,7 @@ export const FitText: React.FC<FitTextProps> = ({
     <div
       ref={containerRef}
       data-overflow={overflow ? "true" : undefined}
+      data-slot={slotName}
       className={className}
       style={{
         width: slot.box_width,

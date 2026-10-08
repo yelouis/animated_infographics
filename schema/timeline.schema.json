@@ -1352,7 +1352,8 @@
         "anchor": {
           "enum": [
             "top_right",
-            "bottom_left"
+            "bottom_left",
+            "top_left"
           ],
           "title": "Anchor",
           "type": "string"

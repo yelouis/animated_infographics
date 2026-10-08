@@ -2,7 +2,7 @@ import React from "react";
 import { interpolate } from "remotion";
 import { useSceneClock } from "../clock/SceneClockContext";
 import { FitText, type FitTextSlot } from "../components/FitText";
-import type { RevealProps, TimelineSceneTiming } from "../generated/contracts";
+import type { RevealProps, SceneOverlay, TimelineSceneTiming } from "../generated/contracts";
 import { EASE_EXIT } from "../theme/motion";
 import { palette } from "../theme/palette";
 
@@ -30,6 +30,7 @@ export interface RevealTemplateProps {
   timing?: TimelineSceneTiming;
   debug?: boolean;
   isGallery?: boolean;
+  overlays?: SceneOverlay[];
 }
 
 export const Reveal: React.FC<RevealTemplateProps> = ({
@@ -37,8 +38,10 @@ export const Reveal: React.FC<RevealTemplateProps> = ({
   props,
   debug = false,
   isGallery = false,
+  overlays,
 }) => {
   const clock = useSceneClock();
+  const hasProp = overlays?.some((o) => o.kind === "prop");
 
   // Full-canvas ink flash at opacity 0.35 fading to 0 over frames 0-3
   const flashOpacity =
@@ -124,12 +127,12 @@ export const Reveal: React.FC<RevealTemplateProps> = ({
         />
       </div>
 
-      {/* Text block: centred at y 700 */}
+      {/* Text block: centred at y 700; lifts to top: 480 when prop overlay is present */}
       <div
         style={{
           position: "absolute",
           left: 80,
-          top: 560,
+          top: hasProp ? 480 : 560,
           width: 920,
           transformOrigin: "center center",
           transform: `scale(${zoom * holdScale}) translateX(${shakeX}px)`,

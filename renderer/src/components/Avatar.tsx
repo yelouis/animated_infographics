@@ -14,6 +14,7 @@ export type AvatarExpression =
 
 export interface AvatarProps {
   avatar: AvatarConfig;
+  castId?: string;
   colorSlot?: number;
   color?: string;
   expression?: AvatarExpression;
@@ -44,6 +45,7 @@ const HAIR_COLORS: Record<string, string> = {
 
 export const Avatar: React.FC<AvatarProps> = ({
   avatar,
+  castId,
   colorSlot = 0,
   color,
   expression = "neutral",
@@ -75,6 +77,7 @@ export const Avatar: React.FC<AvatarProps> = ({
       viewBox="0 0 200 200"
       width={size}
       height={size}
+      data-occupies={castId ? `avatar_${castId}` : "avatar"}
       className={className}
       style={{ display: "block", overflow: "visible", ...style }}
     >

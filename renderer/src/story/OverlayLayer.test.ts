@@ -4,83 +4,60 @@ import {
   ALLOWED_OVERLAY_TEMPLATES,
   FORBIDDEN_OVERLAY_TEMPLATES,
   OVERLAY_BOUNDS,
-  TEMPLATE_SLOT_BOUNDS,
   isRectDisjoint,
-  type Rect,
 } from "../theme/overlayLayout";
 
-describe("Overlay clearance and slot disjointness", () => {
-  it("covers all 10 allowed templates and asserts every overlay is disjoint from max layout slots", () => {
-    expect(ALLOWED_OVERLAY_TEMPLATES.length).toBe(10);
-
-    const overlayKinds = Object.keys(OVERLAY_BOUNDS) as Array<
-      keyof typeof OVERLAY_BOUNDS
-    >;
-
-    for (const template of ALLOWED_OVERLAY_TEMPLATES) {
-      const slots = TEMPLATE_SLOT_BOUNDS[template];
-      expect(
-        slots.length,
-        `Template ${template} must define at least one slot/element bound`
-      ).toBeGreaterThan(0);
-
-      for (const slot of slots) {
-        for (const kind of overlayKinds) {
-          const overlayRect = OVERLAY_BOUNDS[kind];
-          const disjoint = isRectDisjoint(overlayRect, slot);
-          expect(
-            disjoint,
-            `Overlay '${kind}' [${overlayRect.left}, ${overlayRect.top}, ${overlayRect.right}, ${overlayRect.bottom}] overlaps template '${template}' slot [${slot.left}, ${slot.top}, ${slot.right}, ${slot.bottom}]`
-          ).toBe(true);
-        }
-      }
-    }
-  });
-
-  it("falsification: moving motif token to (540, 240) collides with character_intro or kinetic_quote slots", () => {
-    // A 120 px circle centred at (540, 240) has bounds [480, 180, 600, 300]
-    const falsifiedMotifToken: Rect = {
-      left: 480,
+describe("Overlay bounds and clearance", () => {
+  it("defines the four OVERLAY_BOUNDS boxes equal to the specification", () => {
+    expect(OVERLAY_BOUNDS.motif_token).toEqual({
+      left: 840,
       top: 180,
-      right: 600,
+      right: 960,
       bottom: 300,
-    };
-
-    // 1. Collides with character_intro avatar element [320, 180, 760, 620]
-    const charIntroAvatarSlot: Rect = { left: 320, top: 180, right: 760, bottom: 620 };
-    const disjointCharIntro = isRectDisjoint(
-      falsifiedMotifToken,
-      charIntroAvatarSlot
-    );
-    expect(
-      disjointCharIntro,
-      "Falsified motif token at (540, 240) must collide with character_intro avatar slot"
-    ).toBe(false);
-
-    // 2. Collides with stat_callout icon slot [460, 250, 620, 410]
-    const statCalloutIconSlot = TEMPLATE_SLOT_BOUNDS.stat_callout[0];
-    const disjointStatCallout = isRectDisjoint(
-      falsifiedMotifToken,
-      statCalloutIconSlot
-    );
-    expect(
-      disjointStatCallout,
-      "Falsified motif token at (540, 240) must collide with stat_callout icon slot"
-    ).toBe(false);
-
-    // 3. Collides with kinetic_quote container [80, 240, 1000, 1080]
-    const kineticQuoteSlot: Rect = { left: 80, top: 240, right: 1000, bottom: 1080 };
-    const disjointKineticQuote = isRectDisjoint(
-      falsifiedMotifToken,
-      kineticQuoteSlot
-    );
-    expect(
-      disjointKineticQuote,
-      "Falsified motif token at (540, 240) must collide with kinetic_quote slot"
-    ).toBe(false);
+    });
+    expect(OVERLAY_BOUNDS.thought).toEqual({
+      left: 60,
+      top: 165,
+      right: 300,
+      bottom: 335,
+    });
+    expect(OVERLAY_BOUNDS.label).toEqual({
+      left: 60,
+      top: 200,
+      right: 300,
+      bottom: 302,
+    });
+    expect(OVERLAY_BOUNDS.prop).toEqual({
+      left: 100,
+      top: 1020,
+      right: 240,
+      bottom: 1160,
+    });
   });
 
-  it("allowed and forbidden overlay template partitions cover all 18 registry templates", () => {
+  it("asserts every pair drawn together is disjoint", () => {
+    // token × thought
+    expect(
+      isRectDisjoint(OVERLAY_BOUNDS.motif_token, OVERLAY_BOUNDS.thought)
+    ).toBe(true);
+
+    // token × label
+    expect(
+      isRectDisjoint(OVERLAY_BOUNDS.motif_token, OVERLAY_BOUNDS.label)
+    ).toBe(true);
+
+    // token × prop
+    expect(
+      isRectDisjoint(OVERLAY_BOUNDS.motif_token, OVERLAY_BOUNDS.prop)
+    ).toBe(true);
+
+    // thought × prop
+    expect(
+      isRectDisjoint(OVERLAY_BOUNDS.thought, OVERLAY_BOUNDS.prop)
+    ).toBe(true);
+  });
+
+  it("allowed and forbidden overlay template partitions cover all registry templates", () => {
     const registryTemplates = Object.keys(registry).filter(
       (k) => !k.startsWith("$")
     );

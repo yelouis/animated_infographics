@@ -4,7 +4,7 @@ Every model is frozen and extra="forbid". Every top-level model carries
 schema_version: Literal[1].
 """
 
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator
 
@@ -781,8 +781,24 @@ class SceneOverlay(BaseModel):
     kind: Literal["motif_token", "thought", "label", "prop"]
     icon: IconName | None = None
     text: str | None = None
-    anchor: Literal["top_right", "bottom_left"]
+    anchor: Literal["top_right", "bottom_left", "top_left"]
     motif_id: str | None = None
+
+    @model_validator(mode="after")
+    def validate_anchor(self) -> Self:
+        if self.kind == "motif_token" and self.anchor != "top_right":
+            raise ValueError(
+                f"motif_token requires anchor 'top_right', got '{self.anchor}'"
+            )
+        if self.kind in ("thought", "label") and self.anchor != "top_left":
+            raise ValueError(
+                f"{self.kind} requires anchor 'top_left', got '{self.anchor}'"
+            )
+        if self.kind == "prop" and self.anchor != "bottom_left":
+            raise ValueError(
+                f"prop requires anchor 'bottom_left', got '{self.anchor}'"
+            )
+        return self
 
 
 # Timeline Scenes (discriminated union on template)

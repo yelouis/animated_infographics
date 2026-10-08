@@ -112,6 +112,7 @@ export const CauseEffect: React.FC<CauseEffectTemplateProps> = ({
           <React.Fragment key={idx}>
             {/* Card: 840x150, radius 28, bgRaised, centred at x 540 */}
             <div
+              data-occupies={`card_${idx}`}
               style={{
                 position: "absolute",
                 left: 120,

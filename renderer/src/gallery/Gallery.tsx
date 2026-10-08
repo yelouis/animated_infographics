@@ -1,5 +1,5 @@
-import React, { useMemo } from "react";
-import { staticFile } from "remotion";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { continueRender, delayRender, staticFile } from "remotion";
 import { RemotionGlobalClock } from "../clock/remotion/RemotionGlobalClock";
 import { RemotionSceneClock } from "../clock/remotion/RemotionSceneClock";
 import type {
@@ -34,7 +34,7 @@ import { titleCardFixtures } from "./fixtures/title_card";
 import { metaphorFixtures } from "./fixtures/metaphor";
 import { callbackFixtures } from "./fixtures/callback";
 import { sectionTitleFixtures } from "./fixtures/section_title";
-import { overlaysFixtures } from "./fixtures/overlays";
+import { overlaysFixtures, overlaysLabelFixtures } from "./fixtures/overlays";
 import type { AllowedOverlayTemplate } from "../theme/overlayLayout";
 import { OverlayLayer } from "../story/OverlayLayer";
 import { Captions } from "../story/Captions";
@@ -223,6 +223,11 @@ export const Gallery: React.FC<GalleryProps> = ({ template, variant }) => {
       overlaysFixtures[variant as AllowedOverlayTemplate] ||
       overlaysFixtures.location;
     props = overlayFixture.props;
+  } else if (template === "overlays_label") {
+    const overlayFixture =
+      overlaysLabelFixtures[variant as AllowedOverlayTemplate] ||
+      overlaysLabelFixtures.location;
+    props = overlayFixture.props;
   }
 
   if (template === "captions") {
@@ -243,7 +248,10 @@ export const Gallery: React.FC<GalleryProps> = ({ template, variant }) => {
     );
   }
 
-  const actualTemplate = template === "overlays" ? variant : template;
+  const actualTemplate =
+    template === "overlays" || template === "overlays_label"
+      ? variant
+      : template;
   const timing = customTiming ?? getDefaultTiming(actualTemplate, props, 150);
 
   const Component =
@@ -264,7 +272,7 @@ export const Gallery: React.FC<GalleryProps> = ({ template, variant }) => {
     }
     if (
       variant === "typical" ||
-      (template === "overlays" && variant === "location")
+      ((template === "overlays" || template === "overlays_label") && variant === "location")
     ) {
       return {
         ...GALLERY_PLACES,
@@ -282,7 +290,7 @@ export const Gallery: React.FC<GalleryProps> = ({ template, variant }) => {
       (template === "set_piece" && variant === "typical") ||
       (template === "metaphor" && (variant === "typical" || variant === "max")) ||
       (template === "callback" && variant === "max") ||
-      (template === "overlays" && (variant === "set_piece" || variant === "metaphor"))
+      ((template === "overlays" || template === "overlays_label") && (variant === "set_piece" || variant === "metaphor"))
     ) {
       return {
         ...GALLERY_SET_PIECES,
@@ -300,6 +308,11 @@ export const Gallery: React.FC<GalleryProps> = ({ template, variant }) => {
       ? (
           overlaysFixtures[variant as AllowedOverlayTemplate] ||
           overlaysFixtures.location
+        ).overlays
+      : template === "overlays_label"
+      ? (
+          overlaysLabelFixtures[variant as AllowedOverlayTemplate] ||
+          overlaysLabelFixtures.location
         ).overlays
       : undefined;
 
@@ -332,6 +345,7 @@ export const Gallery: React.FC<GalleryProps> = ({ template, variant }) => {
               props={props}
               timing={timing}
               isGallery={true}
+              overlays={currentOverlays}
             />
             {currentOverlays && currentOverlays.length > 0 && (
               <OverlayLayer
@@ -339,9 +353,140 @@ export const Gallery: React.FC<GalleryProps> = ({ template, variant }) => {
                 sceneId={`gallery-${template}-${variant}`}
               />
             )}
+            <GalleryOverlapProbe fixtureId={`${template}__${variant}`} />
           </div>
         </RemotionSceneClock>
       </RemotionGlobalClock>
     </EntitiesProvider>
   );
+};
+
+interface GalleryOverlapProbeProps {
+  fixtureId: string;
+}
+
+const GalleryOverlapProbe: React.FC<GalleryOverlapProbeProps> = ({ fixtureId }) => {
+  const [fontsLoaded, setFontsLoaded] = useState<boolean>(false);
+  const [renderHandle] = useState<number | null>(() => {
+    if (typeof window !== "undefined" && typeof document !== "undefined") {
+      return delayRender(`GalleryOverlapProbe: ${fixtureId}`);
+    }
+    return null;
+  });
+  const hasContinuedRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    let mounted = true;
+    if (typeof document !== "undefined" && document.fonts) {
+      document.fonts.ready.then(() => {
+        if (mounted) {
+          setFontsLoaded(true);
+        }
+      });
+    } else {
+      setFontsLoaded(true);
+    }
+    return () => {
+      mounted = false;
+      if (renderHandle !== null && !hasContinuedRef.current) {
+        hasContinuedRef.current = true;
+        continueRender(renderHandle);
+      }
+    };
+  }, [renderHandle]);
+
+  useLayoutEffect(() => {
+    if (!fontsLoaded) return;
+
+    if (typeof document !== "undefined") {
+      const overlayEls = Array.from(
+        document.querySelectorAll<HTMLElement>("[data-overlay]")
+      );
+
+      if (overlayEls.length > 0) {
+        const candidateEls = Array.from(
+          document.querySelectorAll<HTMLElement>("[data-slot], [data-occupies]")
+        );
+        const otherEls = candidateEls.filter(
+          (el) =>
+            el.closest("[data-overlay]") === null &&
+            el.parentElement?.closest("[data-occupies]") === null
+        );
+
+        // 1. Overlay × Overlay pairs
+        for (let i = 0; i < overlayEls.length; i++) {
+          for (let j = i + 1; j < overlayEls.length; j++) {
+            const elA = overlayEls[i];
+            const elB = overlayEls[j];
+            const kindA = elA.getAttribute("data-overlay") || "";
+            const kindB = elB.getAttribute("data-overlay") || "";
+
+            const rectA = elA.getBoundingClientRect();
+            const rectB = elB.getBoundingClientRect();
+
+            const xOverlap = Math.max(
+              0,
+              Math.min(rectA.right, rectB.right) - Math.max(rectA.left, rectB.left)
+            );
+            const yOverlap = Math.max(
+              0,
+              Math.min(rectA.bottom, rectB.bottom) - Math.max(rectA.top, rectB.top)
+            );
+            const area = Math.round(xOverlap * yOverlap);
+
+            if (area > 0) {
+              let overlayKind = kindA;
+              let otherName = kindB;
+              if (kindA === "motif_token" && kindB !== "motif_token") {
+                overlayKind = kindB;
+                otherName = kindA;
+              }
+              console.error(
+                `OVERLAP fixture=${fixtureId} overlay=${overlayKind} other=${otherName} px=${area}`
+              );
+            }
+          }
+        }
+
+        // 2. Overlay × (data-slot or data-occupies) pairs
+        for (const overlayEl of overlayEls) {
+          const overlayKind = overlayEl.getAttribute("data-overlay") || "";
+          const overlayRect = overlayEl.getBoundingClientRect();
+
+          for (const otherEl of otherEls) {
+            const otherName =
+              otherEl.getAttribute("data-occupies") ||
+              otherEl.getAttribute("data-slot") ||
+              "";
+            const otherRect = otherEl.getBoundingClientRect();
+
+            const xOverlap = Math.max(
+              0,
+              Math.min(overlayRect.right, otherRect.right) -
+                Math.max(overlayRect.left, otherRect.left)
+            );
+            const yOverlap = Math.max(
+              0,
+              Math.min(overlayRect.bottom, otherRect.bottom) -
+                Math.max(overlayRect.top, otherRect.top)
+            );
+            const area = Math.round(xOverlap * yOverlap);
+
+            if (area > 0) {
+              console.error(
+                `OVERLAP fixture=${fixtureId} overlay=${overlayKind} other=${otherName} px=${area}`
+              );
+            }
+          }
+        }
+      }
+    }
+
+    if (renderHandle !== null && !hasContinuedRef.current) {
+      hasContinuedRef.current = true;
+      continueRender(renderHandle);
+    }
+  }, [fontsLoaded, fixtureId, renderHandle]);
+
+  return null;
 };

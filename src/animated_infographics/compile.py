@@ -215,8 +215,8 @@ def compute_scene_overlays(
         if candidates:
             best_beat = candidates[0]
             aside_scenes.add(best_beat)
-            anchor: Literal["top_right", "bottom_left"] = (
-                "bottom_left" if aside.kind == "prop" else "top_right"
+            anchor: Literal["top_left", "bottom_left"] = (
+                "bottom_left" if aside.kind == "prop" else "top_left"
             )
             aside_icon = aside.icon if aside.icon in ICON_NAMES else None
             overlay = SceneOverlay(

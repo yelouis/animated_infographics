@@ -202,7 +202,7 @@ export type PlanSha256 = string;
 export type EndFrame2 = number;
 export type HideCaptions = boolean;
 export type Id = string;
-export type Anchor = "top_right" | "bottom_left";
+export type Anchor = "top_right" | "bottom_left" | "top_left";
 export type Icon1 =
   | (
       | "Airplane"

@@ -4,7 +4,7 @@ import { useSceneClock } from "../clock/SceneClockContext";
 import { Avatar } from "../components/Avatar";
 import { FitText, type FitTextSlot } from "../components/FitText";
 import { ImageScrim } from "../components/ImageScrim";
-import type { MetaphorProps, TimelineSceneTiming } from "../generated/contracts";
+import type { MetaphorProps, SceneOverlay, TimelineSceneTiming } from "../generated/contracts";
 import { useCast, useSetPiece } from "../story/entities";
 import { EASE_ENTER, EASE_EXIT, SPRING_POP_CONFIG } from "../theme/motion";
 import { palette } from "../theme/palette";
@@ -33,6 +33,7 @@ export interface MetaphorTemplateProps {
   timing?: TimelineSceneTiming;
   debug?: boolean;
   isGallery?: boolean;
+  overlays?: SceneOverlay[];
 }
 
 export const Metaphor: React.FC<MetaphorTemplateProps> = ({
@@ -40,8 +41,10 @@ export const Metaphor: React.FC<MetaphorTemplateProps> = ({
   props,
   debug = false,
   isGallery = false,
+  overlays,
 }) => {
   const clock = useSceneClock();
+  const hasProp = overlays?.some((o) => o.kind === "prop");
   const setPiece = useSetPiece(props.image_entity);
 
   // Resolve image from set_pieces context or direct entity path
@@ -192,20 +195,20 @@ export const Metaphor: React.FC<MetaphorTemplateProps> = ({
               key={castId}
               castId={castId}
               xCenter={xCenter}
-              yCenter={1000}
+              yCenter={hasProp && idx === 0 ? 890 : 1000}
               springProgress={avatarSpring}
             />
           );
         })}
 
-      {/* Label in location name slot: bottom-aligned at y 1080, left x 100, width 880 (when image is present) */}
+      {/* Label in location name slot: bottom-aligned at y 1080; shifts to left: 260 when prop overlay is present */}
       {imageUrl && props.label && (
         <div
           style={{
             position: "absolute",
-            left: 100,
+            left: hasProp ? 260 : 100,
             top: 760,
-            width: 880,
+            width: hasProp ? 720 : 880,
             height: 320,
             display: "flex",
             flexDirection: "column",
@@ -215,7 +218,7 @@ export const Metaphor: React.FC<MetaphorTemplateProps> = ({
           }}
         >
           <FitText
-            slot={LABEL_SLOT}
+            slot={hasProp ? { ...LABEL_SLOT, box_width: 720 } : LABEL_SLOT}
             text={props.label}
             sceneId={sceneId}
             template="metaphor"

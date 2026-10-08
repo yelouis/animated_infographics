@@ -3,7 +3,7 @@ import { interpolate } from "remotion";
 import { useSceneClock } from "../clock/SceneClockContext";
 import { Avatar } from "../components/Avatar";
 import { FitText, type FitTextSlot } from "../components/FitText";
-import type { RelationshipMapProps, TimelineSceneTiming } from "../generated/contracts";
+import type { RelationshipMapProps, SceneOverlay, TimelineSceneTiming } from "../generated/contracts";
 import { useCast } from "../story/entities";
 import { EASE_ENTER, EASE_EXIT } from "../theme/motion";
 import { palette } from "../theme/palette";
@@ -32,6 +32,7 @@ export interface RelationshipMapTemplateProps {
   timing?: TimelineSceneTiming;
   debug?: boolean;
   isGallery?: boolean;
+  overlays?: SceneOverlay[];
 }
 
 interface NodePosition {
@@ -69,8 +70,10 @@ export const RelationshipMap: React.FC<RelationshipMapTemplateProps> = ({
   props,
   debug = false,
   isGallery = false,
+  overlays,
 }) => {
   const clock = useSceneClock();
+  const hasProp = overlays?.some((o) => o.kind === "prop");
 
   // Exit transforms
   const exitOpacity = interpolate(clock.exitProgress, [0, 1], [1, 0]);
@@ -283,6 +286,7 @@ export const RelationshipMap: React.FC<RelationshipMapTemplateProps> = ({
             scale={nodeScale}
             debug={debug}
             isGallery={isGallery}
+            hasProp={hasProp}
           />
         );
       })}
@@ -300,6 +304,7 @@ interface NodeItemProps {
   scale: number;
   debug?: boolean;
   isGallery?: boolean;
+  hasProp?: boolean;
 }
 
 const NodeItem: React.FC<NodeItemProps> = ({
@@ -312,6 +317,7 @@ const NodeItem: React.FC<NodeItemProps> = ({
   scale,
   debug,
   isGallery,
+  hasProp,
 }) => {
   const cast = useCast(castId);
   const castColor = cast?.color || palette.castSlots[index % palette.castSlots.length];
@@ -326,13 +332,18 @@ const NodeItem: React.FC<NodeItemProps> = ({
     skin: 1,
   };
 
+  const shiftForProp = hasProp && index === 3;
+  const itemWidth = shiftForProp ? 180 : 220;
+  const itemLeft = shiftForProp ? x - 90 : x - 110;
+
   return (
     <div
+      data-occupies={`node_${castId}`}
       style={{
         position: "absolute",
-        left: x - 110,
+        left: itemLeft,
         top: y - 90,
-        width: 220,
+        width: itemWidth,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -355,6 +366,7 @@ const NodeItem: React.FC<NodeItemProps> = ({
       >
         <Avatar
           avatar={avatarConfig}
+          castId={castId}
           color={castColor}
           size={168}
         />
@@ -364,13 +376,13 @@ const NodeItem: React.FC<NodeItemProps> = ({
       <div
         style={{
           marginTop: 12,
-          width: 220,
+          width: itemWidth,
           display: "flex",
           justifyContent: "center",
         }}
       >
         <FitText
-          slot={NAME_SLOT}
+          slot={shiftForProp ? { ...NAME_SLOT, box_width: 180 } : NAME_SLOT}
           text={castName}
           sceneId={sceneId}
           template="relationship_map"

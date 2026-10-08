@@ -56,6 +56,7 @@ export const SceneLayer: React.FC<SceneLayerProps> = ({
                 props={scene.props}
                 timing={scene.timing}
                 debug={debug}
+                overlays={scene.overlays}
               />
               {scene.overlays && scene.overlays.length > 0 && (
                 <OverlayLayer

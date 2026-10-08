@@ -4,7 +4,7 @@ import { useSceneClock } from "../clock/SceneClockContext";
 import { FitText, type FitTextSlot } from "../components/FitText";
 import { Icon } from "../components/Icon";
 import { ImageScrim } from "../components/ImageScrim";
-import type { SetPieceProps, TimelineSceneTiming } from "../generated/contracts";
+import type { SceneOverlay, SetPieceProps, TimelineSceneTiming } from "../generated/contracts";
 import { useSetPiece } from "../story/entities";
 import { EASE_ENTER, EASE_EXIT } from "../theme/motion";
 import { palette } from "../theme/palette";
@@ -24,6 +24,7 @@ export interface SetPieceTemplateProps {
   timing?: TimelineSceneTiming;
   debug?: boolean;
   isGallery?: boolean;
+  overlays?: SceneOverlay[];
 }
 
 export const SetPiece: React.FC<SetPieceTemplateProps> = ({
@@ -31,8 +32,10 @@ export const SetPiece: React.FC<SetPieceTemplateProps> = ({
   props,
   debug = false,
   isGallery = false,
+  overlays,
 }) => {
   const clock = useSceneClock();
+  const hasProp = overlays?.some((o) => o.kind === "prop");
   const setPiece = useSetPiece(props.set_piece_id);
 
   const name = setPiece?.name || "Unknown Object";
@@ -139,13 +142,13 @@ export const SetPiece: React.FC<SetPieceTemplateProps> = ({
         </div>
       )}
 
-      {/* name bottom-aligned at y 1080; no caption (removed in D1) */}
+      {/* name bottom-aligned at y 1080; shifts to left: 260 when prop overlay is present */}
       <div
         style={{
           position: "absolute",
-          left: 100,
+          left: hasProp ? 260 : 100,
           top: 760,
-          width: 880,
+          width: hasProp ? 720 : 880,
           height: 320,
           display: "flex",
           flexDirection: "column",
@@ -157,7 +160,7 @@ export const SetPiece: React.FC<SetPieceTemplateProps> = ({
 
         <div>
           <FitText
-            slot={NAME_SLOT}
+            slot={hasProp ? { ...NAME_SLOT, box_width: 720 } : NAME_SLOT}
             text={name}
             sceneId={sceneId}
             template="set_piece"

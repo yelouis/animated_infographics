@@ -16,7 +16,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT" || fail "Cannot cd to repo root"
 
 UPDATE_GOLDENS=false
-TEMPLATES="kinetic_quote,avatar_sheet,title_card,stat_callout,icon_list,reveal,cause_effect,comparison,character_intro,dialogue,text_thread,emotion_beat,relationship_map,location,set_piece,map_focus,timeline,captions,metaphor,callback,overlays,section_title"
+TEMPLATES="kinetic_quote,avatar_sheet,title_card,stat_callout,icon_list,reveal,cause_effect,comparison,character_intro,dialogue,text_thread,emotion_beat,relationship_map,location,set_piece,map_focus,timeline,captions,metaphor,callback,overlays,overlays_label,section_title"
 
 for arg in "$@"; do
   case "$arg" in
@@ -79,6 +79,34 @@ if [ "$OVERFLOW_COUNT" -gt 0 ]; then
 fi
 log "Overflow check passed: 0 overflows."
 
+# (b) Check overlap.json - must fail closed if missing or unparseable
+OVERLAP_FILE="$OUT_DIR/overlap.json"
+if [ ! -f "$OVERLAP_FILE" ]; then
+  fail "Missing overlap.json at $OVERLAP_FILE"
+fi
+
+OVERLAP_COUNT=$(python3 -c "
+import json, sys
+from pathlib import Path
+p = Path('$OVERLAP_FILE')
+try:
+    content = p.read_text().strip()
+    if not content:
+        raise ValueError('overlap.json is empty')
+    data = json.loads(content)
+    if not isinstance(data, list):
+        raise ValueError('overlap.json must contain a JSON array')
+    print(len(data))
+except Exception as e:
+    print(f'Invalid overlap.json: {e}', file=sys.stderr)
+    sys.exit(1)
+") || fail "Unparseable or invalid overlap.json at $OVERLAP_FILE"
+
+if [ "$OVERLAP_COUNT" -gt 0 ]; then
+  fail "Overlap detected in gallery fixtures: $OVERLAP_COUNT overlaps recorded in $OVERLAP_FILE"
+fi
+log "Overlap check passed: 0 overlaps."
+
 # If --update, copy to goldens directory
 if [ "$UPDATE_GOLDENS" = true ]; then
   mkdir -p "$GOLDENS_DIR"
@@ -110,7 +138,7 @@ errors = []
 for tmpl in templates:
     if tmpl == 'captions':
         tmpl_variants = ['long_active']
-    elif tmpl == 'overlays':
+    elif tmpl in ('overlays', 'overlays_label'):
         tmpl_variants = [
             'kinetic_quote',
             'stat_callout',
@@ -162,7 +190,7 @@ GOLDEN_CODE=$?
 [ "$GOLDEN_CODE" -eq 0 ] || fail "Golden diff check failed"
 
 # (c) Hold motion check: frames 60 and 105 of typical fixture differ in > 0.1% of pixels
-MOTION_TEMPLATES=$(python3 -c "print(','.join([t.strip() for t in '$TEMPLATES'.split(',') if t.strip() not in ('captions', 'overlays')]))")
+MOTION_TEMPLATES=$(python3 -c "print(','.join([t.strip() for t in '$TEMPLATES'.split(',') if t.strip() not in ('captions', 'overlays', 'overlays_label')]))")
 log "Rendering frame 105 for hold motion check..."
 npx --prefix renderer tsx renderer/scripts/render.ts gallery \
   --out-dir "$MOTION_DIR" \

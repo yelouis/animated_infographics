@@ -26,9 +26,9 @@ const LABEL_SLOT: FitTextSlot = {
   font: "body",
   weight: 700,
   size_max: 34,
-  size_min: 28,
-  max_lines: 1,
-  box_width: 280,
+  size_min: 26,
+  max_lines: 2,
+  box_width: 240,
 };
 
 export const OverlayLayer: React.FC<OverlayLayerProps> = ({
@@ -88,6 +88,7 @@ export const OverlayLayer: React.FC<OverlayLayerProps> = ({
           return (
             <div
               key={key}
+              data-overlay="motif_token"
               style={{
                 position: "absolute",
                 left: 840,
@@ -117,14 +118,15 @@ export const OverlayLayer: React.FC<OverlayLayerProps> = ({
         }
 
         if (overlay.kind === "thought") {
-          // Cloud 240x170 centred at (840, 260), fill ink at 0.92; 84 px navy icon or <=3 words in body 700 36->28
+          // Cloud 240x170 centred at (180, 250), fill ink at 0.92; 84 px navy icon or <=3 words in body 700 36->28
           return (
             <div
               key={key}
+              data-overlay="thought"
               style={{
                 position: "absolute",
-                left: 720,
-                top: 175,
+                left: 60,
+                top: 165,
                 width: 240,
                 height: 170,
                 borderRadius: 50,
@@ -166,23 +168,23 @@ export const OverlayLayer: React.FC<OverlayLayerProps> = ({
         }
 
         if (overlay.kind === "label") {
-          // Chip bgDeep / ink, body 700 34->28 * 1 line * 320 px, top-right at (1000, 200)
+          // Chip bgDeep / ink, body 700 34->26 * 2 lines * 240 px, within [60, 200, 300, 302]
           return (
             <div
               key={key}
+              data-overlay="label"
               style={{
                 position: "absolute",
-                left: 680,
+                left: 60,
                 top: 200,
-                width: 320,
-                height: 60,
-                borderRadius: 30,
+                width: 240,
+                height: 102,
+                borderRadius: 24,
                 backgroundColor: palette.bgDeep,
                 border: `2px solid ${palette.highlight}`,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                padding: "0 16px",
                 boxSizing: "border-box",
                 boxShadow: "0 8px 24px rgba(0, 0, 0, 0.35)",
                 transform: itemTransform,
@@ -200,6 +202,8 @@ export const OverlayLayer: React.FC<OverlayLayerProps> = ({
                   color: palette.ink,
                   textAlign: "center",
                   fontWeight: 700,
+                  padding: "0 8px",
+                  boxSizing: "border-box",
                 }}
               />
             </div>
@@ -211,6 +215,7 @@ export const OverlayLayer: React.FC<OverlayLayerProps> = ({
           return (
             <div
               key={key}
+              data-overlay="prop"
               style={{
                 position: "absolute",
                 left: 100,

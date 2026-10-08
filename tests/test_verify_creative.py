@@ -54,7 +54,7 @@ def test_verify_creative_passes_valid_job(tmp_path: Path) -> None:
                 "start_frame": 180,
                 "end_frame": 240,
                 "props": {"value": 5, "decimals": 0},
-                "overlays": [{"kind": "thought", "text": "Hmm", "anchor": "top_right"}],
+                "overlays": [{"kind": "thought", "text": "Hmm", "anchor": "top_left"}],
             },
             {
                 "id": "s004",
@@ -155,7 +155,7 @@ def test_falsification_no_motifs_fails(tmp_path: Path) -> None:
                 "end_frame": 240,
                 "props": {"text": "A secret"},
                 "overlays": [
-                    {"kind": "thought", "text": "Hmm", "anchor": "top_right"},
+                    {"kind": "thought", "text": "Hmm", "anchor": "top_left"},
                     {"kind": "prop", "icon": "Coins", "anchor": "bottom_left"},
                 ],
             },
@@ -208,7 +208,7 @@ def test_falsification_unplanted_payoff_fails(tmp_path: Path) -> None:
                 "end_frame": 240,
                 "props": {"text": "A secret"},
                 "overlays": [
-                    {"kind": "thought", "text": "Hmm", "anchor": "top_right"},
+                    {"kind": "thought", "text": "Hmm", "anchor": "top_left"},
                     {"kind": "prop", "icon": "Coins", "anchor": "bottom_left"},
                 ],
             },
@@ -301,7 +301,7 @@ def test_falsification_callback_dots_mismatch_fails(tmp_path: Path) -> None:
                 "end_frame": 360,
                 "props": {"text": "A secret"},
                 "overlays": [
-                    {"kind": "thought", "text": "Hmm", "anchor": "top_right"},
+                    {"kind": "thought", "text": "Hmm", "anchor": "top_left"},
                     {"kind": "prop", "icon": "Coins", "anchor": "bottom_left"},
                 ],
             },

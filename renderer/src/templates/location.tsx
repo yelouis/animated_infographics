@@ -4,7 +4,7 @@ import { useSceneClock } from "../clock/SceneClockContext";
 import { FitText, type FitTextSlot } from "../components/FitText";
 import { Icon } from "../components/Icon";
 import { ImageScrim } from "../components/ImageScrim";
-import type { LocationProps, TimelineSceneTiming } from "../generated/contracts";
+import type { LocationProps, SceneOverlay, TimelineSceneTiming } from "../generated/contracts";
 import { usePlace } from "../story/entities";
 import { EASE_ENTER, EASE_EXIT } from "../theme/motion";
 import { palette } from "../theme/palette";
@@ -33,6 +33,7 @@ export interface LocationTemplateProps {
   timing?: TimelineSceneTiming;
   debug?: boolean;
   isGallery?: boolean;
+  overlays?: SceneOverlay[];
 }
 
 export const Location: React.FC<LocationTemplateProps> = ({
@@ -40,8 +41,10 @@ export const Location: React.FC<LocationTemplateProps> = ({
   props,
   debug = false,
   isGallery = false,
+  overlays,
 }) => {
   const clock = useSceneClock();
+  const hasProp = overlays?.some((o) => o.kind === "prop");
   const place = usePlace(props.place_id);
 
   const placeName = place?.name || "Unknown Location";
@@ -205,13 +208,13 @@ export const Location: React.FC<LocationTemplateProps> = ({
         </div>
       )}
 
-      {/* place name bottom-aligned at y 1080; no caption (removed in D1) */}
+      {/* place name bottom-aligned at y 1080; shifts to left: 260 when prop overlay is present */}
       <div
         style={{
           position: "absolute",
-          left: 100,
+          left: hasProp ? 260 : 100,
           top: 760,
-          width: 880,
+          width: hasProp ? 720 : 880,
           height: 320,
           display: "flex",
           flexDirection: "column",
@@ -223,7 +226,7 @@ export const Location: React.FC<LocationTemplateProps> = ({
 
         <div>
           <FitText
-            slot={NAME_SLOT}
+            slot={hasProp ? { ...NAME_SLOT, box_width: 720 } : NAME_SLOT}
             text={placeName}
             sceneId={sceneId}
             template="location"

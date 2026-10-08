@@ -3,7 +3,7 @@ import { interpolate } from "remotion";
 import { useSceneClock } from "../clock/SceneClockContext";
 import { Avatar } from "../components/Avatar";
 import { FitText, type FitTextSlot } from "../components/FitText";
-import type { KineticQuoteProps } from "../generated/contracts";
+import type { KineticQuoteProps, SceneOverlay } from "../generated/contracts";
 import { useCast } from "../story/entities";
 import { EASE_ENTER, EASE_EXIT, ENTER_FRAMES } from "../theme/motion";
 import { palette } from "../theme/palette";
@@ -31,6 +31,7 @@ export interface KineticQuoteTemplateProps {
   props: KineticQuoteProps;
   debug?: boolean;
   isGallery?: boolean;
+  overlays?: SceneOverlay[];
 }
 
 export const KineticQuote: React.FC<KineticQuoteTemplateProps> = ({
@@ -38,8 +39,12 @@ export const KineticQuote: React.FC<KineticQuoteTemplateProps> = ({
   props,
   debug = false,
   isGallery = false,
+  overlays,
 }) => {
   const clock = useSceneClock();
+  const hasToken = overlays?.some((o) => o.kind === "motif_token");
+  const hasThought = overlays?.some((o) => o.kind === "thought");
+  const containerTop = hasThought ? 290 : hasToken ? 254 : 240;
   const cast = useCast(props.attribution_cast_id);
 
   // Entrance & Exit transforms
@@ -75,7 +80,7 @@ export const KineticQuote: React.FC<KineticQuoteTemplateProps> = ({
       style={{
         position: "absolute",
         left: 80,
-        top: 240,
+        top: containerTop,
         width: 920,
         height: 840,
         display: "flex",

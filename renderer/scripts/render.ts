@@ -17,6 +17,13 @@ interface OverflowEntry {
   slot: string;
 }
 
+interface OverlapEntry {
+  fixture: string;
+  overlay: string;
+  other: string;
+  px: number;
+}
+
 interface FrameEntry {
   scene_id: string;
   frame: number;
@@ -96,8 +103,10 @@ async function main() {
   fs.mkdirSync(logsDir, { recursive: true });
   const browserLogPath = path.join(logsDir, "render_browser.log");
   const overflowJsonPath = path.join(logsDir, "overflow.json");
+  const overlapJsonPath = path.join(logsDir, "overlap.json");
 
   const overflowMap = new Map<string, OverflowEntry>();
+  const overlapMap = new Map<string, OverlapEntry>();
 
   const onBrowserLog = (log: BrowserLog) => {
     fs.appendFileSync(browserLogPath, `[${log.type}] ${log.text}\n`);
@@ -112,6 +121,19 @@ async function main() {
       };
       const key = `${entry.scene_id}::${entry.template}::${entry.slot}`;
       overflowMap.set(key, entry);
+    }
+    const overlapMatch = log.text.match(
+      /^OVERLAP\s+fixture=(\S+)\s+overlay=(\S+)\s+other=(\S+)\s+px=(\d+)/
+    );
+    if (overlapMatch) {
+      const entry: OverlapEntry = {
+        fixture: overlapMatch[1],
+        overlay: overlapMatch[2],
+        other: overlapMatch[3],
+        px: parseInt(overlapMatch[4], 10),
+      };
+      const key = `${entry.fixture}::${entry.overlay}::${entry.other}`;
+      overlapMap.set(key, entry);
     }
   };
 
@@ -296,6 +318,8 @@ async function main() {
             "metaphor",
             "callback",
             "overlays",
+            "overlays_label",
+            "section_title",
           ];
       type GalleryVariant = "min" | "typical" | "max" | "worst" | "long_active" | string;
       const variants: GalleryVariant[] = options.variant
@@ -312,7 +336,7 @@ async function main() {
         if (tmpl === "captions") {
           tmplVariants = options.variant ? [options.variant as GalleryVariant] : ["long_active"];
         }
-        if (tmpl === "overlays") {
+        if (tmpl === "overlays" || tmpl === "overlays_label") {
           tmplVariants = options.variant
             ? [options.variant as GalleryVariant]
             : [
@@ -371,12 +395,28 @@ async function main() {
     const overflows = Array.from(overflowMap.values());
     fs.writeFileSync(overflowJsonPath, JSON.stringify(overflows, null, 2));
 
+    // Write overlap.json
+    const overlaps = Array.from(overlapMap.values());
+    fs.writeFileSync(overlapJsonPath, JSON.stringify(overlaps, null, 2));
+
     if (mode === "gallery" && options["out-dir"]) {
       const outDir = path.resolve(String(options["out-dir"]));
       fs.writeFileSync(
         path.join(outDir, "overflow.json"),
         JSON.stringify(overflows, null, 2)
       );
+      fs.writeFileSync(
+        path.join(outDir, "overlap.json"),
+        JSON.stringify(overlaps, null, 2)
+      );
+    }
+
+    if (mode === "gallery" && overlaps.length > 0) {
+      console.error(
+        `Overlap detected in gallery mode (${overlaps.length} overlaps):`,
+        overlaps
+      );
+      process.exit(1);
     }
 
     if (mode === "gallery" && overflows.length > 0) {

@@ -96,6 +96,7 @@ export const StatCallout: React.FC<StatCalloutTemplateProps> = ({
       {/* Icon: 160 px centred at (540, 330) */}
       {props.icon && (
         <div
+          data-occupies="icon"
           style={{
             position: "absolute",
             left: 460,
