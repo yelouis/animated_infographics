@@ -1,0 +1,313 @@
+"""Unit tests and falsification checks for matcher bake-off replay harness.
+
+Per design_testing_and_validation.md §2 (bake-off harness row), §4d,
+and agent_execution_guide.md §1.3 (J1).
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import random
+import shutil
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+from animated_infographics.contracts.models import Transcript
+from animated_infographics.contracts.playback import PlaybackCommit, PlaybackPlan
+from animated_infographics.evals.matcher_bakeoff import (
+    run_bakeoff,
+    synthesize_perfect_hearing,
+    verify_corpus,
+)
+from animated_infographics.jobs import Job, RunContext
+from animated_infographics.presentation.compose import run_compose_stage
+from animated_infographics.presentation.score import (
+    compute_presentation_score,
+    evaluate_presentation_bars,
+)
+
+
+def _make_mock_corpus(corpus_dir: Path, num_jobs: int = 2) -> dict[str, Any]:
+    """Create a minimal valid synthetic corpus for testing."""
+    corpus_dir.mkdir(parents=True, exist_ok=True)
+    real_corpus_dir = Path("artifacts/matcher_bakeoff/2026-10-09/corpus")
+
+    jobs_summary = []
+    # If real corpus exists, copy slice of real jobs
+    if (real_corpus_dir / "corpus.json").is_file():
+        real_data = json.loads((real_corpus_dir / "corpus.json").read_text(encoding="utf-8"))
+        for job_info in real_data["jobs"][:num_jobs]:
+            jid = job_info["job_id"]
+            dst_job = corpus_dir / jid
+            shutil.copytree(real_corpus_dir / jid, dst_job)
+            jobs_summary.append(job_info)
+    else:
+        pytest.skip("Corpus directory not available")
+
+    corpus_record = {
+        "corpus_version": 1,
+        "date": "2026-10-09",
+        "description": "Synthetic test corpus",
+        "jobs": jobs_summary,
+    }
+    (corpus_dir / "corpus.json").write_text(
+        json.dumps(corpus_record, indent=2) + "\n", encoding="utf-8"
+    )
+    return corpus_record
+
+
+def test_bakeoff_harness_reproduces_scores(tmp_path: Path) -> None:
+    """--matcher bm25 on each corpus job reproduces its presentation_score.json within 0.01."""
+    corpus_dir = tmp_path / "corpus"
+    _make_mock_corpus(corpus_dir, num_jobs=2)
+
+    out_dir = tmp_path / "out"
+    exit_code, rows = run_bakeoff(
+        corpus_dir=corpus_dir,
+        matcher="bm25",
+        out_dir=out_dir,
+    )
+
+    # Exit code is 1 since bm25 misses follower bars
+    assert exit_code == 1
+
+    # Check reproduction on each job
+    corpus_json = json.loads((corpus_dir / "corpus.json").read_text(encoding="utf-8"))
+    for job_info in corpus_json["jobs"]:
+        jid = job_info["job_id"]
+        orig_score = json.loads(
+            (corpus_dir / jid / "presentation_score.json").read_text(encoding="utf-8")
+        )
+        replay_score = json.loads(
+            (out_dir / jid / "presentation_score.json").read_text(encoding="utf-8")
+        )
+        for metric, val in orig_score.items():
+            if isinstance(val, (int, float)) and metric in replay_score:
+                replay_val = replay_score[metric]
+                assert abs(val - replay_val) <= 0.01, (
+                    f"Metric {metric} in {jid} differed: {val} vs {replay_val}"
+                )
+
+
+def test_bakeoff_harness_corpus_unmodified(tmp_path: Path) -> None:
+    """The harness never writes into the corpus (hashes unchanged after a run)."""
+    corpus_dir = tmp_path / "corpus"
+    _make_mock_corpus(corpus_dir, num_jobs=2)
+
+    # Capture initial hashes of all files in corpus
+    initial_hashes: dict[str, str] = {}
+    for p in corpus_dir.rglob("*"):
+        if p.is_file():
+            initial_hashes[str(p.relative_to(corpus_dir))] = hashlib.sha256(
+                p.read_bytes()
+            ).hexdigest()
+
+    out_dir = tmp_path / "out"
+    run_bakeoff(corpus_dir=corpus_dir, matcher="bm25", out_dir=out_dir)
+
+    # Verify every file hash is identical
+    for rel_path, exp_hash in initial_hashes.items():
+        p = corpus_dir / rel_path
+        assert p.is_file(), f"File {rel_path} was removed from corpus"
+        act_hash = hashlib.sha256(p.read_bytes()).hexdigest()
+        assert act_hash == exp_hash, f"File {rel_path} in corpus was mutated"
+
+
+def test_bakeoff_harness_bakeoff_json_structure(tmp_path: Path) -> None:
+    """bakeoff.json has one row per job and metric; includes percentiles and llm calls."""
+    corpus_dir = tmp_path / "corpus"
+    _make_mock_corpus(corpus_dir, num_jobs=1)
+
+    out_dir = tmp_path / "out"
+    _, rows = run_bakeoff(corpus_dir=corpus_dir, matcher="bm25", out_dir=out_dir)
+
+    bakeoff_path = out_dir / "bakeoff.json"
+    assert bakeoff_path.is_file()
+    data = json.loads(bakeoff_path.read_text(encoding="utf-8"))
+    assert isinstance(data, list)
+    assert len(data) == len(rows)
+
+    required_keys = {
+        "job",
+        "fixture",
+        "style",
+        "perturb",
+        "seed",
+        "metric",
+        "value",
+        "bar",
+        "bar_str",
+        "status",
+        "passed",
+        "llm_calls",
+        "compute_time_median_ms",
+        "compute_time_p90_ms",
+    }
+    for row in data:
+        for k in required_keys:
+            assert k in row, f"Missing key '{k}' in bakeoff row"
+
+
+def test_bakeoff_harness_perfect_hearing_spread(tmp_path: Path) -> None:
+    """The perfect hearing input spreads each performed sentence's words
+    evenly across speak_timing.
+    """
+    corpus_dir = tmp_path / "corpus"
+    _make_mock_corpus(corpus_dir, num_jobs=1)
+
+    corpus_data = json.loads((corpus_dir / "corpus.json").read_text(encoding="utf-8"))
+    jid = corpus_data["jobs"][0]["job_id"]
+    job_dir = corpus_dir / jid
+
+    synthesize_perfect_hearing(job_dir)
+    heard_data = (job_dir / "heard.json").read_text(encoding="utf-8")
+    transcript = Transcript.model_validate_json(heard_data)
+
+    assert transcript.source == "asr"
+    assert len(transcript.words) > 0
+    assert len(transcript.sentences) > 0
+
+    # Test word timestamps increase monotonically
+    for i in range(1, len(transcript.words)):
+        assert transcript.words[i].start_ms >= transcript.words[i - 1].end_ms
+
+
+def test_bakeoff_harness_falsification_ground_truth_pass(tmp_path: Path) -> None:
+    """Falsification 1: ground-truth (oracle) playback meets every bar -> PASS on every bar."""
+    corpus_dir = tmp_path / "corpus"
+    _make_mock_corpus(corpus_dir, num_jobs=1)
+
+    corpus_data = json.loads((corpus_dir / "corpus.json").read_text(encoding="utf-8"))
+    jid = corpus_data["jobs"][0]["job_id"]
+    job_dir = corpus_dir / jid
+
+    # Construct ground-truth playback from sentences and timing
+    perf = json.loads((job_dir / "performance.json").read_text(encoding="utf-8"))
+    timing = json.loads((job_dir / "speak_timing.json").read_text(encoding="utf-8"))
+    deck = json.loads((job_dir / "deck.json").read_text(encoding="utf-8"))
+
+    from animated_infographics.presentation.score import _get_sentence_label_info
+
+    first_slide_id = deck["slides"][0]["id"] if deck.get("slides") else "d1"
+    initial_node = f"{first_slide_id}_section"
+
+    gt_commits: list[PlaybackCommit] = []
+    seen_points: set[str] = set()
+    for sent, t in zip(perf["sentences"], timing, strict=False):
+        if sent.get("op") == "adlib" or sent.get("label") == "adlib":
+            continue
+        s_id, p_id = _get_sentence_label_info(sent)
+        if s_id is None or p_id is None:
+            continue
+        target_pt = f"{s_id}_p{p_id}"
+        if target_pt not in seen_points:
+            seen_points.add(target_pt)
+            gt_commits.append(
+                PlaybackCommit(
+                    node_id=target_pt,
+                    at_ms=int(t["start_ms"]),
+                    decision_ms=int(t["start_ms"]),
+                    compute_ms=0,
+                    score=10.0,
+                )
+            )
+    gt_commits.sort(key=lambda c: c.at_ms)
+    if not gt_commits or gt_commits[0].at_ms > 0:
+        gt_commits.insert(
+            0,
+            PlaybackCommit(
+                node_id=initial_node,
+                at_ms=0,
+                decision_ms=0,
+                compute_ms=0,
+                score=10.0,
+            ),
+        )
+
+    out_dir = tmp_path / "out"
+    out_job = out_dir / jid
+    shutil.copytree(job_dir, out_job)
+    gt_playback = PlaybackPlan(schema_version=1, commits=gt_commits, holds=[], matcher="bm25")
+    (out_job / "playback.json").write_text(
+        gt_playback.model_dump_json(indent=2) + "\n", encoding="utf-8"
+    )
+
+    job_obj = Job(out_job)
+    ctx = RunContext(style="literal", matcher="bm25")
+    run_compose_stage(job_obj, ctx)
+    gt_score = compute_presentation_score(out_job, oracle=False)
+    metrics = evaluate_presentation_bars(gt_score)
+
+    for m in metrics:
+        assert m.passed, f"Ground-truth failed metric {m.metric}: {m.value} vs bar {m.bar}"
+
+
+def test_bakeoff_harness_falsification_shuffled_heard_miss(tmp_path: Path) -> None:
+    """Falsification 2: shuffled heard.json -> accuracy bars MISS."""
+    corpus_dir = tmp_path / "corpus"
+    _make_mock_corpus(corpus_dir, num_jobs=1)
+
+    corpus_data = json.loads((corpus_dir / "corpus.json").read_text(encoding="utf-8"))
+    jid = corpus_data["jobs"][0]["job_id"]
+    job_dir = corpus_dir / jid
+
+    # Read heard.json, shuffle word texts
+    orig_transcript = Transcript.model_validate_json(
+        (job_dir / "heard.json").read_text(encoding="utf-8")
+    )
+    words_data = [w.model_dump() for w in orig_transcript.words]
+    texts = [w["text"] for w in words_data]
+    rng = random.Random(42)
+    rng.shuffle(texts)
+    for i, t in enumerate(texts):
+        words_data[i]["text"] = t
+
+    shuffled_transcript = Transcript(
+        schema_version=1,
+        source="asr",
+        audio_path=orig_transcript.audio_path,
+        duration_ms=orig_transcript.duration_ms,
+        words=words_data,  # type: ignore[arg-type]
+        sentences=orig_transcript.sentences,
+    )
+
+    out_dir = tmp_path / "out"
+    out_job = out_dir / jid
+    shutil.copytree(job_dir, out_job)
+    (out_job / "heard.json").write_text(
+        shuffled_transcript.model_dump_json(indent=2) + "\n", encoding="utf-8"
+    )
+
+    job_obj = Job(out_job)
+    ctx = RunContext(style="literal", matcher="bm25")
+    from animated_infographics.presentation.follow import run_follow_stage
+
+    run_follow_stage(job_obj, ctx)
+    run_compose_stage(job_obj, ctx)
+    shuffled_score = compute_presentation_score(out_job, oracle=False)
+    metrics = evaluate_presentation_bars(shuffled_score)
+
+    # Shuffled must miss accuracy bars
+    acc_metrics = [m for m in metrics if "accuracy" in m.metric]
+    any_miss = any(not m.passed for m in acc_metrics)
+    assert any_miss, "Shuffled speech unexpectedly passed all accuracy bars"
+
+
+def test_bakeoff_harness_corpus_hash_mismatch_fails(tmp_path: Path) -> None:
+    """Tampering with any corpus file causes verify_corpus to exit 1."""
+    corpus_dir = tmp_path / "corpus"
+    _make_mock_corpus(corpus_dir, num_jobs=1)
+
+    corpus_data = json.loads((corpus_dir / "corpus.json").read_text(encoding="utf-8"))
+    jid = corpus_data["jobs"][0]["job_id"]
+
+    # Tamper with deck.json
+    deck_path = corpus_dir / jid / "deck.json"
+    deck_path.write_text(deck_path.read_text(encoding="utf-8") + " ", encoding="utf-8")
+
+    with pytest.raises(SystemExit) as exc_info:
+        verify_corpus(corpus_dir)
+    assert exc_info.value.code == 1

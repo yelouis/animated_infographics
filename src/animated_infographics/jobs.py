@@ -114,6 +114,7 @@ class RunContext:
     perturb: str | None = None
     seed: int | None = None
     tiebreak: str | None = None
+    matcher: str = "bm25"
     now: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 

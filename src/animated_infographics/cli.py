@@ -274,6 +274,7 @@ def present_sim(
         str, typer.Option("--perturb", "-p", help="Perturbation level (mild | strong)")
     ] = "mild",
     seed: Annotated[int, typer.Option(help="Simulation seed")] = 7,
+    matcher: Annotated[str, typer.Option(help="Matcher mode: bm25, anticipate, llm")] = "bm25",
     tiebreak: Annotated[str, typer.Option(help="Tiebreak mode: none or llm")] = "none",
     voice: Annotated[
         str | None, typer.Option(help="Voice override: af_heart or am_michael")
@@ -300,8 +301,14 @@ def present_sim(
         if perturb not in {"mild", "strong"}:
             raise ValidationFailed(f"perturb must be one of mild, strong; got '{perturb}'")
 
+        if matcher not in {"bm25", "anticipate", "llm"}:
+            raise ValidationFailed(f"matcher must be one of bm25, anticipate, llm; got '{matcher}'")
+
         if tiebreak not in {"none", "llm"}:
             raise ValidationFailed(f"tiebreak must be one of none, llm; got '{tiebreak}'")
+
+        if tiebreak == "llm" and matcher != "bm25":
+            raise ValidationFailed("--tiebreak applies only to --matcher bm25")
 
         if voice is not None and voice not in {"af_heart", "am_michael"}:
             raise ValidationFailed(f"voice must be one of af_heart, am_michael; got '{voice}'")
@@ -336,6 +343,7 @@ def present_sim(
             style=style,
             perturb=perturb,
             seed=seed,
+            matcher=matcher,
             tiebreak=tiebreak,
             now=now,
         )
@@ -681,7 +689,21 @@ def rerun(
                     "preview",
                 }
             ]
-            ctx = RunContext(style=eff_style, no_llm_cache=no_llm_cache)
+            eff_matcher = "bm25"
+            eff_tiebreak = "none"
+            if ingest_path.is_file():
+                try:
+                    ingest_data = json.loads(ingest_path.read_text(encoding="utf-8"))
+                    eff_matcher = ingest_data.get("matcher", "bm25")
+                    eff_tiebreak = ingest_data.get("tiebreak", "none")
+                except Exception:
+                    pass
+            ctx = RunContext(
+                style=eff_style,
+                matcher=eff_matcher,
+                tiebreak=eff_tiebreak,
+                no_llm_cache=no_llm_cache,
+            )
             job.run(stages_to_run, STAGE_REGISTRY, ctx)
             plan_sha = job.plan_sha256()
             job.state["plan_sha256"] = plan_sha

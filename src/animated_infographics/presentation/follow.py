@@ -11,6 +11,7 @@ import time
 
 from animated_infographics.contracts.models import Transcript
 from animated_infographics.contracts.tree import TreePlan
+from animated_infographics.errors import ValidationFailed
 from animated_infographics.jobs import Job, RunContext
 from animated_infographics.planner.llm import OllamaBackend
 from animated_infographics.presentation.match import LiveMatcher
@@ -27,6 +28,14 @@ def run_follow_stage(job: Job, ctx: RunContext) -> None:
         raise FileNotFoundError(f"tree.json missing in job {job.job_id}")
     if not heard_path.is_file():
         raise FileNotFoundError(f"heard.json missing in job {job.job_id}")
+
+    matcher_name = ctx.matcher or "bm25"
+    if matcher_name not in {"bm25", "anticipate", "llm"}:
+        raise ValidationFailed(
+            f"matcher must be one of bm25, anticipate, llm; got '{matcher_name}'"
+        )
+    if matcher_name in {"anticipate", "llm"}:
+        raise ValidationFailed(f"matcher '{matcher_name}' is not built yet")
 
     tree = TreePlan.model_validate_json(tree_path.read_text(encoding="utf-8"))
     heard = Transcript.model_validate_json(heard_path.read_text(encoding="utf-8"))
@@ -46,5 +55,5 @@ def run_follow_stage(job: Job, ctx: RunContext) -> None:
     with open(log_file, "w", encoding="utf-8") as f:
         f.write(
             f"Follow: commits={len(playback.commits)}, holds={len(playback.holds)}, "
-            f"tiebreak={tiebreak}, elapsed_ms={elapsed_ms}\n"
+            f"tiebreak={tiebreak}, matcher={matcher_name}, elapsed_ms={elapsed_ms}\n"
         )

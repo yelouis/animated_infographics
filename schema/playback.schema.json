@@ -122,6 +122,16 @@
       "title": "Holds",
       "type": "array"
     },
+    "matcher": {
+      "default": "bm25",
+      "enum": [
+        "bm25",
+        "anticipate",
+        "llm"
+      ],
+      "title": "Matcher",
+      "type": "string"
+    },
     "schema_version": {
       "const": 1,
       "default": 1,

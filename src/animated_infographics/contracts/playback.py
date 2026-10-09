@@ -65,3 +65,4 @@ class PlaybackPlan(BaseModel):
     schema_version: Literal[1] = 1
     commits: list[PlaybackCommit]
     holds: list[PlaybackHold] = Field(default_factory=list)
+    matcher: Literal["bm25", "anticipate", "llm"] = "bm25"

@@ -142,6 +142,7 @@ class IngestRecord(BaseModel):
     perturb: Literal["mild", "strong"] | None = None
     seed: int | None = None
     tiebreak: Literal["none", "llm"] | None = None
+    matcher: Literal["bm25", "anticipate", "llm"] = "bm25"
 
 
 class SentenceOffset(BaseModel):

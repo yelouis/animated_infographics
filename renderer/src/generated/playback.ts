@@ -21,6 +21,7 @@ export type Reason = string;
 export type TopCandidateId = string;
 export type TopCandidateScore = number;
 export type Holds = PlaybackHold[];
+export type Matcher = "bm25" | "anticipate" | "llm";
 export type SchemaVersion = 1;
 
 /**
@@ -29,6 +30,7 @@ export type SchemaVersion = 1;
 export interface PlaybackPlan {
   commits: Commits;
   holds?: Holds;
+  matcher?: Matcher;
   schema_version?: SchemaVersion;
 }
 /**

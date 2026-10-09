@@ -42,6 +42,7 @@ def run_ingest_stage(job: Job, ctx: RunContext) -> None:
         perturb=ctx.perturb,  # type: ignore[arg-type]
         seed=ctx.seed,
         tiebreak=ctx.tiebreak,  # type: ignore[arg-type]
+        matcher=ctx.matcher,  # type: ignore[arg-type]
     )
 
     out_file = job.dir / "ingest.json"

@@ -43,6 +43,7 @@ def ingest(
     perturb: Literal["mild", "strong"] | None = None,
     seed: int | None = None,
     tiebreak: Literal["none", "llm"] | None = None,
+    matcher: Literal["bm25", "anticipate", "llm"] = "bm25",
 ) -> IngestRecord:
     """Ingest and validate an input text or audio file."""
     ext = input_path.suffix.lower()
@@ -61,6 +62,7 @@ def ingest(
             perturb=perturb,
             seed=seed,
             tiebreak=tiebreak,
+            matcher=matcher,
         )
 
     if ext != ".txt":
@@ -108,4 +110,5 @@ def ingest(
         perturb=perturb,
         seed=seed,
         tiebreak=tiebreak,
+        matcher=matcher,
     )
