@@ -10,6 +10,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+from animated_infographics.contracts.anticipation import AnticipationPlan
 from animated_infographics.contracts.deck import DeckPlan
 from animated_infographics.contracts.director import DirectorPlan
 from animated_infographics.contracts.icons import ICON_NAMES
@@ -110,6 +111,7 @@ def export_all(out_dir: Path, project_root: Path) -> None:
         "tree.schema.json": generate_schema(TreePlan),
         "performance.schema.json": generate_schema(PerformancePlan),
         "playback.schema.json": generate_schema(PlaybackPlan),
+        "anticipation.schema.json": generate_schema(AnticipationPlan),
     }
 
     for filename, schema in schemas.items():
@@ -163,6 +165,11 @@ def export_all(out_dir: Path, project_root: Path) -> None:
     playback_path = renderer_gen_dir / "playback.ts"
     playback_ts = generate_contracts_ts(schemas["playback.schema.json"], project_root)
     playback_path.write_text(playback_ts, encoding="utf-8")
+
+    # 12. Anticipation TS
+    anticipation_path = renderer_gen_dir / "anticipation.ts"
+    anticipation_ts = generate_contracts_ts(schemas["anticipation.schema.json"], project_root)
+    anticipation_path.write_text(anticipation_ts, encoding="utf-8")
 
 
 def main() -> None:

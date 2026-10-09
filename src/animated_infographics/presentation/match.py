@@ -216,14 +216,29 @@ class BM25Index:
     Document frequencies computed over all node texts of the tree.
     """
 
-    def __init__(self, tree: TreePlan, k1: float = 1.2, b: float = 0.75) -> None:
+    def __init__(
+        self,
+        tree: TreePlan,
+        k1: float = 1.2,
+        b: float = 0.75,
+        extra_text: dict[str, str] | None = None,
+    ) -> None:
         self.k1 = k1
         self.b = b
         self.nodes = tree.nodes
         self.node_ids = [n.id for n in tree.nodes]
         self.node_map = {n.id: n for n in tree.nodes}
 
-        self.doc_tokens: dict[str, list[str]] = {n.id: normalize_tokens(n.text) for n in tree.nodes}
+        doc_texts: dict[str, str] = {}
+        for n in tree.nodes:
+            t = n.text
+            if extra_text and n.id in extra_text and extra_text[n.id]:
+                t = f"{t} {extra_text[n.id]}"
+            doc_texts[n.id] = t
+
+        self.doc_tokens: dict[str, list[str]] = {
+            nid: normalize_tokens(t) for nid, t in doc_texts.items()
+        }
         self.doc_lens: dict[str, int] = {nid: len(toks) for nid, toks in self.doc_tokens.items()}
         self.n = len(self.node_ids)
         self.avgdl = sum(self.doc_lens.values()) / max(1, self.n)
@@ -484,3 +499,197 @@ class LiveMatcher:
                 prev_top_id = top_id
 
         return PlaybackPlan(schema_version=1, commits=commits, holds=holds)
+
+
+class AnticipateMatcher:
+    """Contestant A1: anticipated speech + forward tracker.
+
+    Per design_presentation_simulation.md §6.6.1.
+    """
+
+    def __init__(
+        self,
+        tree: TreePlan,
+        anticipations: dict[str, list[str]] | None = None,
+    ) -> None:
+        self.tree = tree
+        self.anticipations = anticipations or {}
+
+        extra_text: dict[str, str] = {}
+        for nid, sentences in self.anticipations.items():
+            if sentences:
+                extra_text[nid] = " ".join(sentences)
+
+        self.bm25 = BM25Index(tree, extra_text=extra_text)
+        self.node_ids = [n.id for n in tree.nodes]
+        self.node_map = {n.id: n for n in tree.nodes}
+        self.initial_node_id = self._find_initial_node_id()
+
+    def _find_initial_node_id(self) -> str:
+        for node in self.tree.nodes:
+            if node.kind == "section":
+                return node.id
+        return self.tree.nodes[0].id if self.tree.nodes else "d1_section"
+
+    def run(self, words: list[TranscriptWord]) -> PlaybackPlan:
+        """Run matcher over words in time order and generate PlaybackPlan."""
+        if not words:
+            return PlaybackPlan(
+                schema_version=1,
+                commits=[
+                    PlaybackCommit(
+                        node_id=self.initial_node_id,
+                        at_ms=0,
+                        decision_ms=0,
+                        compute_ms=0,
+                        score=0.0,
+                    )
+                ],
+                holds=[],
+                matcher="anticipate",
+            )
+
+        commits: list[PlaybackCommit] = [
+            PlaybackCommit(
+                node_id=self.initial_node_id,
+                at_ms=0,
+                decision_ms=0,
+                compute_ms=0,
+                score=0.0,
+            )
+        ]
+        holds: list[PlaybackHold] = []
+
+        current_node_id = self.initial_node_id
+        current_node_start_ms = 0
+        prev_top_id: str | None = None
+
+        dp_indices = find_decision_points(words)
+
+        for w_idx in dp_indices:
+            t0 = time.perf_counter()
+            dp_ms = words[w_idx].end_ms
+            ended_words = words[: w_idx + 1]
+
+            # Window: last 10 heard words (§6.6.1)
+            window = ended_words[-10:]
+            query_tokens = normalize_tokens(" ".join(w.text for w in window))
+
+            try:
+                c_idx = self.node_ids.index(current_node_id)
+            except ValueError:
+                c_idx = 0
+
+            # Eligible candidates and costs per §6.6.1:
+            # - current node c (cost 0.0)
+            # - forward set: next 3 nodes after c in deck order (section nodes included):
+            #   f1 (cost 0.0), f2 (cost 0.15), f3 (cost 0.30)
+            # - back set: every point node before c in deck order (cost 0.5)
+            candidates: list[tuple[str, float]] = [(current_node_id, 0.0)]
+
+            f1: str | None = None
+            if c_idx + 1 < len(self.node_ids):
+                f1 = self.node_ids[c_idx + 1]
+                candidates.append((f1, 0.0))
+            if c_idx + 2 < len(self.node_ids):
+                f2 = self.node_ids[c_idx + 2]
+                candidates.append((f2, 0.15))
+            if c_idx + 3 < len(self.node_ids):
+                f3 = self.node_ids[c_idx + 3]
+                candidates.append((f3, 0.30))
+
+            for k in range(c_idx):
+                b_node = self.tree.nodes[k]
+                if b_node.kind == "point":
+                    candidates.append((b_node.id, 0.5))
+
+            # Score candidates: BM25(window, doc) - cost
+            candidate_scores: list[tuple[str, float]] = []
+            for nid, cost in candidates:
+                raw_bm25 = self.bm25.score(query_tokens, nid)
+                candidate_scores.append((nid, raw_bm25 - cost))
+
+            # Sort descending by score
+            candidate_scores.sort(key=lambda item: item[1], reverse=True)
+            top_id, top_score = candidate_scores[0]
+
+            runner_up_id: str | None = None
+            runner_up_gap: float | None = None
+            if len(candidate_scores) > 1:
+                runner_up_id, runner_up_score = candidate_scores[1]
+                runner_up_gap = round(top_score - runner_up_score, 3)
+
+            current_score = next((s for nid, s in candidate_scores if nid == current_node_id), 0.0)
+            score_gap = top_score - current_score
+
+            dwell_ms = dp_ms - current_node_start_ms
+            dwell_met = dwell_ms >= 2000
+
+            compute_ms = max(0, int((time.perf_counter() - t0) * 1000))
+
+            # Commit conditions (§6.6.1):
+            # - Forward step: top candidate is f1, and score(f1) - score(c) >= 0.5,
+            #   at 1 decision point
+            # - Any other move (f2, f3, or back node): same node top at 2 consecutive
+            #   decision points, and score - score(c) >= 1.5
+            # - Dwell >= 2.0 s on c required in every case
+            is_f1 = f1 is not None and top_id == f1
+            is_different = top_id != current_node_id
+            is_other_move = is_different and not is_f1
+
+            forward_commit = is_f1 and (score_gap >= 0.5) and dwell_met
+            other_commit = (
+                is_other_move and (top_id == prev_top_id) and (score_gap >= 1.5) and dwell_met
+            )
+
+            if forward_commit or other_commit:
+                commit_at_ms = dp_ms + compute_ms
+                commits.append(
+                    PlaybackCommit(
+                        node_id=top_id,
+                        at_ms=commit_at_ms,
+                        decision_ms=dp_ms,
+                        compute_ms=compute_ms,
+                        score=round(top_score, 3),
+                        runner_up_id=runner_up_id,
+                        runner_up_gap=runner_up_gap,
+                        tiebreak_used=False,
+                    )
+                )
+                current_node_id = top_id
+                current_node_start_ms = commit_at_ms
+                prev_top_id = None
+            else:
+                reasons: list[str] = []
+                if not is_different:
+                    reasons.append("top_is_current")
+                elif is_f1:
+                    if not (score_gap >= 0.5):
+                        reasons.append(f"score_gap_{score_gap:.2f}_below_0.5")
+                    if not dwell_met:
+                        reasons.append(f"dwell_{dwell_ms}ms_below_2000ms")
+                else:
+                    if top_id != prev_top_id:
+                        reasons.append("consecutive_top_not_met")
+                    if not (score_gap >= 1.5):
+                        reasons.append(f"score_gap_{score_gap:.2f}_below_1.5")
+                    if not dwell_met:
+                        reasons.append(f"dwell_{dwell_ms}ms_below_2000ms")
+
+                holds.append(
+                    PlaybackHold(
+                        decision_ms=dp_ms,
+                        current_node_id=current_node_id,
+                        top_candidate_id=top_id,
+                        top_candidate_score=round(top_score, 3),
+                        reason="; ".join(reasons),
+                    )
+                )
+                prev_top_id = top_id
+
+        return PlaybackPlan(
+            schema_version=1,
+            commits=commits,
+            holds=holds,
+            matcher="anticipate",
+        )

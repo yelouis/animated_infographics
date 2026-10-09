@@ -242,6 +242,11 @@ def fake_stages() -> dict[str, Any]:
     def fake_compose(j: Job, ctx: RunContext) -> None:
         pass
 
+    def fake_anticipate(j: Job, ctx: RunContext) -> None:
+        (j.dir / "anticipation.json").write_text(
+            json.dumps({"schema_version": 1, "nodes": {}}), encoding="utf-8"
+        )
+
     registry = {
         "ingest": fake_ingest,
         "voice": fake_voice,
@@ -256,6 +261,7 @@ def fake_stages() -> dict[str, Any]:
         "deck": fake_deck,
         "deck_bible": fake_deck_bible,
         "tree": fake_tree,
+        "anticipate": fake_anticipate,
         "perform": fake_perform,
         "speak": fake_speak,
         "hear": fake_hear,

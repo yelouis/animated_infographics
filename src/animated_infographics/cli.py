@@ -39,6 +39,7 @@ from animated_infographics.jobs import (
     StageFn,
 )
 from animated_infographics.planner.validate import PlanContext, validate_plan
+from animated_infographics.presentation.anticipate import run_anticipate_stage
 from animated_infographics.presentation.compose import run_compose_stage
 from animated_infographics.presentation.deck import run_deck_stage, validate_deck
 from animated_infographics.presentation.deck_bible import run_deck_bible_stage
@@ -94,6 +95,7 @@ STAGE_REGISTRY["render"] = run_render_stage
 STAGE_REGISTRY["deck"] = run_deck_stage
 STAGE_REGISTRY["deck_bible"] = run_deck_bible_stage
 STAGE_REGISTRY["tree"] = run_tree_stage
+STAGE_REGISTRY["anticipate"] = run_anticipate_stage
 STAGE_REGISTRY["perform"] = run_perform_stage
 STAGE_REGISTRY["speak"] = run_speak_stage
 STAGE_REGISTRY["hear"] = run_hear_stage
@@ -354,6 +356,7 @@ def present_sim(
             "deck",
             "deck_bible",
             "tree",
+            "anticipate",
             "assets",
             "perform",
             "speak",
@@ -663,7 +666,7 @@ def rerun(
                     pass
 
         if job.kind == "presentation":
-            pres_allowed_stages = ("deck", "tree", "perform", "follow", "compose")
+            pres_allowed_stages = ("deck", "tree", "anticipate", "perform", "follow", "compose")
             if from_stage not in pres_allowed_stages:
                 raise ValidationFailed(
                     f"Invalid rerun stage '{from_stage}'. Allowed: {', '.join(pres_allowed_stages)}"
@@ -680,6 +683,7 @@ def rerun(
                     "deck",
                     "deck_bible",
                     "tree",
+                    "anticipate",
                     "assets",
                     "perform",
                     "speak",
