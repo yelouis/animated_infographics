@@ -223,3 +223,158 @@ Per `design_presentation_simulation.md` §6.6.4:
 Therefore, under §6.6.4:
 **A1 is NOT adopted. Proceed to J3 (Contestant A2: LLM point classifier).**
 
+---
+
+## 5. Contestant A2: LLM Point Classifier (`--matcher llm`)
+
+Contestant A2 queries `gemma4:26b` at every decision point (streamed every gap >= 300ms or 1.5s) with a 25-word window to classify which talking point the presenter is currently speaking on (§6.6.2).
+
+### 5.1 Decision Set (Seed 7)
+
+| Job ID | Configuration | Metric | Bar | ASR Hearing | Perfect Hearing | Status |
+|---|---|---|---|---|---|---|
+| `history-great-stink-20261009-074656` | literal / mild / seed 7 | slide_accuracy | >=0.90 | 0.3962 | 0.3654 | MISS |
+| `history-great-stink-20261009-074656` | literal / mild / seed 7 | point_accuracy | >=0.75 | 0.2859 | 0.2782 | MISS |
+| `history-great-stink-20261009-074656` | literal / mild / seed 7 | onset_lag_median_s | <=3.0 | 10.00 s | 10.00 s | MISS |
+| `history-great-stink-20261009-074656` | literal / mild / seed 7 | onset_lag_p90_s | <=6.0 | 128.17 s | 120.76 s | MISS |
+| `history-great-stink-20261009-074656` | literal / mild / seed 7 | false_switches_per_min | <=1.0 | 4.02 /min | 3.52 /min | MISS |
+| `history-great-stink-20261009-074656` | literal / mild / seed 7 | adlib_stability | >=0.80 | 0.3083 | 0.4105 | MISS |
+| `history-great-stink-20261009-074747` | creative / strong / seed 7 | slide_accuracy | >=0.80 | 0.3804 | 0.3805 | MISS |
+| `history-great-stink-20261009-074747` | creative / strong / seed 7 | point_accuracy | >=0.60 | 0.2322 | 0.2549 | MISS |
+| `history-great-stink-20261009-074747` | creative / strong / seed 7 | onset_lag_median_s | <=4.0 | 32.15 s | 10.00 s | MISS |
+| `history-great-stink-20261009-074747` | creative / strong / seed 7 | onset_lag_p90_s | <=8.0 | 174.19 s | 171.22 s | MISS |
+| `history-great-stink-20261009-074747` | creative / strong / seed 7 | false_switches_per_min | <=2.0 | 3.97 /min | 3.69 /min | MISS |
+| `history-great-stink-20261009-074747` | creative / strong / seed 7 | adlib_stability | >=0.70 | 0.6240 | 0.6402 | MISS |
+| `history-great-stink-20261009-074747` | creative / strong / seed 7 | skip_recovery_s | <=6.0 | 99.00 s | 99.00 s | MISS |
+| `story-overdue-book-20261009-074844` | literal / strong / seed 7 | slide_accuracy | >=0.80 | 0.3390 | 0.3233 | MISS |
+| `story-overdue-book-20261009-074844` | literal / strong / seed 7 | point_accuracy | >=0.60 | 0.2271 | 0.2255 | MISS |
+| `story-overdue-book-20261009-074844` | literal / strong / seed 7 | onset_lag_median_s | <=4.0 | 5.49 s | 5.28 s | MISS |
+| `story-overdue-book-20261009-074844` | literal / strong / seed 7 | onset_lag_p90_s | <=8.0 | 10.00 s | 10.00 s | MISS |
+| `story-overdue-book-20261009-074844` | literal / strong / seed 7 | false_switches_per_min | <=2.0 | 4.39 /min | 4.39 /min | MISS |
+| `story-overdue-book-20261009-074844` | literal / strong / seed 7 | adlib_stability | >=0.70 | 0.9955 | 0.9680 | PASS |
+| `story-overdue-book-20261009-074844` | literal / strong / seed 7 | skip_recovery_s | <=6.0 | 99.00 s | 99.00 s | MISS |
+| `story-overdue-book-20261009-074959` | creative / mild / seed 7 | slide_accuracy | >=0.90 | 0.3437 | 0.3399 | MISS |
+| `story-overdue-book-20261009-074959` | creative / mild / seed 7 | point_accuracy | >=0.75 | 0.2859 | 0.2647 | MISS |
+| `story-overdue-book-20261009-074959` | creative / mild / seed 7 | onset_lag_median_s | <=3.0 | 5.86 s | 6.56 s | MISS |
+| `story-overdue-book-20261009-074959` | creative / mild / seed 7 | onset_lag_p90_s | <=6.0 | 10.00 s | 10.00 s | MISS |
+| `story-overdue-book-20261009-074959` | creative / mild / seed 7 | false_switches_per_min | <=1.0 | 3.62 /min | 3.46 /min | MISS |
+| `story-overdue-book-20261009-074959` | creative / mild / seed 7 | adlib_stability | >=0.80 | 0.5508 | 0.6020 | MISS |
+
+### 5.2 Held-Out Set (Seed 11)
+
+| Job ID | Configuration | Metric | Bar | ASR Hearing | Perfect Hearing | Status |
+|---|---|---|---|---|---|---|
+| `history-great-stink-20261009-075108` | literal / mild / seed 11 | slide_accuracy | >=0.90 | 0.4186 | 0.3616 | MISS |
+| `history-great-stink-20261009-075108` | literal / mild / seed 11 | point_accuracy | >=0.75 | 0.2642 | 0.2649 | MISS |
+| `history-great-stink-20261009-075108` | literal / mild / seed 11 | onset_lag_median_s | <=3.0 | 10.00 s | 10.00 s | MISS |
+| `history-great-stink-20261009-075108` | literal / mild / seed 11 | onset_lag_p90_s | <=6.0 | 116.23 s | 114.12 s | MISS |
+| `history-great-stink-20261009-075108` | literal / mild / seed 11 | false_switches_per_min | <=1.0 | 4.34 /min | 3.68 /min | MISS |
+| `history-great-stink-20261009-075108` | literal / mild / seed 11 | adlib_stability | >=0.80 | 1.0000 | 1.0000 | PASS |
+| `history-great-stink-20261009-075201` | creative / strong / seed 11 | slide_accuracy | >=0.80 | 0.3641 | 0.3665 | MISS |
+| `history-great-stink-20261009-075201` | creative / strong / seed 11 | point_accuracy | >=0.60 | 0.2498 | 0.2660 | MISS |
+| `history-great-stink-20261009-075201` | creative / strong / seed 11 | onset_lag_median_s | <=4.0 | 10.00 s | 10.00 s | MISS |
+| `history-great-stink-20261009-075201` | creative / strong / seed 11 | onset_lag_p90_s | <=8.0 | 155.59 s | 157.09 s | MISS |
+| `history-great-stink-20261009-075201` | creative / strong / seed 11 | false_switches_per_min | <=2.0 | 3.77 /min | 4.07 /min | MISS |
+| `history-great-stink-20261009-075201` | creative / strong / seed 11 | adlib_stability | >=0.70 | 0.7029 | 1.0000 | PASS |
+| `history-great-stink-20261009-075201` | creative / strong / seed 11 | skip_recovery_s | <=6.0 | 10.57 s | 9.06 s | MISS |
+| `story-overdue-book-20261009-075301` | literal / strong / seed 11 | slide_accuracy | >=0.80 | 0.4471 | 0.6555 | MISS |
+| `story-overdue-book-20261009-075301` | literal / strong / seed 11 | point_accuracy | >=0.60 | 0.3464 | 0.4979 | MISS |
+| `story-overdue-book-20261009-075301` | literal / strong / seed 11 | onset_lag_median_s | <=4.0 | 5.51 s | 3.93 s | MISS |
+| `story-overdue-book-20261009-075301` | literal / strong / seed 11 | onset_lag_p90_s | <=8.0 | 10.00 s | 10.00 s | MISS |
+| `story-overdue-book-20261009-075301` | literal / strong / seed 11 | false_switches_per_min | <=2.0 | 2.24 /min | 1.04 /min | MISS |
+| `story-overdue-book-20261009-075301` | literal / strong / seed 11 | adlib_stability | >=0.70 | 1.0000 | 0.7827 | PASS |
+| `story-overdue-book-20261009-075301` | literal / strong / seed 11 | skip_recovery_s | <=6.0 | 2.93 s | 2.86 s | PASS |
+| `story-overdue-book-20261009-075415` | creative / mild / seed 11 | slide_accuracy | >=0.90 | 0.6426 | 0.6349 | MISS |
+| `story-overdue-book-20261009-075415` | creative / mild / seed 11 | point_accuracy | >=0.75 | 0.4672 | 0.4619 | MISS |
+| `story-overdue-book-20261009-075415` | creative / mild / seed 11 | onset_lag_median_s | <=3.0 | 5.06 s | 4.99 s | MISS |
+| `story-overdue-book-20261009-075415` | creative / mild / seed 11 | onset_lag_p90_s | <=6.0 | 9.76 s | 9.78 s | MISS |
+| `story-overdue-book-20261009-075415` | creative / mild / seed 11 | false_switches_per_min | <=1.0 | 1.75 /min | 1.05 /min | MISS |
+| `story-overdue-book-20261009-075415` | creative / mild / seed 11 | adlib_stability | >=0.80 | 1.0000 | 1.0000 | PASS |
+
+### 5.3 Sample Decisions and Error Analysis
+
+Ten decisions sampled across `history-great-stink-20261009-074656`:
+- **t = 0 ms:** Initial commit to `d1_section` (ground truth: `d1_p0`).
+- **t = 37,660 ms:** HOLD on `d1_p2` (LLM answer: `d2_p0`, ground truth: `d2_p0`, reason: `consecutive_top_not_met`). `d2_p0` is $f2$ (since `d2_section` is $f1$), so it required two consecutive decisions; on the next decision point it was held rather than repeated.
+- **t = 72,960 ms:** HOLD on `d2_p2` (LLM answer: `d2_p2`, ground truth: `d2_p2`, reason: `top_is_current`). Correctly identified current point and stayed.
+- **t = 109,060 ms:** HOLD on `d3_p1` (LLM answer: `d3_p1`, ground truth: `d3_p1`, reason: `top_is_current`). Correct.
+- **t = 146,400 ms:** HOLD on `d2_p1` (LLM answer: `d2_p1`, ground truth: `d4_p0`, reason: `top_is_current`). The follower had hopped back to D2 and the model, instructed to default to the current point when unsure, repeatedly reaffirmed `d2_p1`.
+- **t = 177,240 ms:** HOLD on `d1_p1` (LLM answer: `d1_p1`, ground truth: `d4_p1`, reason: `top_is_current`). Pinned on D1.
+- **t = 213,240 ms:** HOLD on `d1_p1` (LLM answer: `d1_p1`, ground truth: `d5_p0`, reason: `top_is_current`). Still pinned on D1.
+- **t = 247,700 ms:** HOLD on `d1_p1` (LLM answer: `d1_p1`, ground truth: `d6_p0`, reason: `top_is_current`). Still pinned on D1.
+- **t = 282,500 ms:** HOLD on `d3_p2` (LLM answer: `d3_p1`, ground truth: `d6_p2`, reason: `consecutive_top_not_met`).
+- **t = 314,100 ms:** HOLD on `d4_p2` (LLM answer: `d4_p2`, ground truth: `d7_p0`, reason: `top_is_current`).
+
+**Failure Modes:**
+1. **Current-node confirmation bias:** The prompt instructs the LLM: *"If they are between points, telling a side story, or you are unsure, answer the current point."* Once any backward jump or incorrect hold occurs, the model defaults to confirming $c$, causing the follower to freeze on stale nodes.
+2. **Intermediate section barriers:** Stepping from the last point of slide $k$ (`d1_p2`) to the first point of slide $k+1$ (`d2_p0`) treats `d2_section` as $f1$ and `d2_p0` as $f2$. Because $f2$ requires two consecutive identical decisions, transitions across slide boundaries frequently stumble or get delayed.
+
+### 5.4 Compute Time and Latency Profile
+
+- **Calls per talk:** 230 to 283 LLM calls per presentation talk.
+- **Total LLM calls in bake-off:** 1,992 calls across the 8 jobs.
+- **Total cold execution time:** ~15 minutes across 8 jobs (~1.8 min per talk).
+- **Latency per decision:**
+  - Median: 429.0 ms to 484.0 ms.
+  - P90: 486.0 ms to 598.0 ms (worst-case across all jobs: 598.0 ms).
+- **Live viability:** live-viable: yes (p90 598.0 ms vs 1.5 s bar). The model generates short single-token completions in ~0.5 s, easily within the 1.5 s cadence.
+
+### 5.5 Adoption Decision per §6.6.4
+
+Per `design_presentation_simulation.md` §6.6.4:
+> "If neither is adopted, file a new issue with both contestants' tables, the best result per metric, and the "perfect hearing" column, and stop. G16 stays at exit 3."
+
+**Outcome:** Contestant A2 missed all accuracy bars on the **4 decision-set jobs** (slide accuracy 0.3390–0.3962 vs bar 0.80–0.90; point accuracy 0.2271–0.2859 vs bar 0.60–0.75).
+Therefore:
+**Neither Contestant A1 nor Contestant A2 is adopted.**
+**Issue 9 is filed.**
+
+---
+
+## 6. Comprehensive Bake-Off Comparison & Verdict
+
+### 6.1 Decision Set (Seed 7): Baseline vs A1 vs A2
+
+| Job Configuration | Metric | Bar | BM25 Baseline | Contestant A1 | Contestant A2 | Best Result |
+|---|---|---|---|---|---|---|
+| `history-great-stink`, literal/mild | slide_accuracy | >=0.90 | **0.5542** | 0.1789 | 0.3962 | **0.5542** (BM25) |
+| `history-great-stink`, literal/mild | point_accuracy | >=0.75 | **0.3682** | 0.1412 | 0.2859 | **0.3682** (BM25) |
+| `history-great-stink`, literal/mild | onset_lag_median_s | <=3.0 | **7.38 s** | 10.00 s | 10.00 s | **7.38 s** (BM25) |
+| `history-great-stink`, literal/mild | onset_lag_p90_s | <=6.0 | **12.76 s** | 14.60 s | 128.17 s | **12.76 s** (BM25) |
+| `history-great-stink`, literal/mild | false_switches_per_min | <=1.0 | **3.01 /min** | 4.52 /min | 4.02 /min | **3.01 /min** (BM25) |
+| `history-great-stink`, literal/mild | adlib_stability | >=0.80 | **1.0000** | 0.0686 | 0.3083 | **1.0000** (BM25) |
+| `history-great-stink`, creative/strong | slide_accuracy | >=0.80 | 0.3348 | 0.2183 | **0.3804** | **0.3804** (A2) |
+| `history-great-stink`, creative/strong | point_accuracy | >=0.60 | 0.2224 | 0.1727 | **0.2322** | **0.2322** (A2) |
+| `history-great-stink`, creative/strong | onset_lag_median_s | <=4.0 | **10.00 s** | **10.00 s** | 32.15 s | **10.00 s** (BM25/A1) |
+| `history-great-stink`, creative/strong | onset_lag_p90_s | <=8.0 | **33.50 s** | 56.09 s | 174.19 s | **33.50 s** (BM25) |
+| `history-great-stink`, creative/strong | false_switches_per_min | <=2.0 | **3.26 /min** | 4.82 /min | 3.97 /min | **3.26 /min** (BM25) |
+| `history-great-stink`, creative/strong | adlib_stability | >=0.70 | 0.5571 | 0.1934 | **0.6240** | **0.6240** (A2) |
+| `history-great-stink`, creative/strong | skip_recovery_s | <=6.0 | 99.00 s | 99.00 s | 99.00 s | 99.00 s |
+| `story-overdue-book`, literal/strong | slide_accuracy | >=0.80 | **0.3634** | 0.2092 | 0.3390 | **0.3634** (BM25) |
+| `story-overdue-book`, literal/strong | point_accuracy | >=0.60 | 0.2039 | 0.1575 | **0.2271** | **0.2271** (A2) |
+| `story-overdue-book`, literal/strong | onset_lag_median_s | <=4.0 | 9.59 s | 10.00 s | **5.49 s** | **5.49 s** (A2) |
+| `story-overdue-book`, literal/strong | onset_lag_p90_s | <=8.0 | **10.00 s** | 17.02 s | **10.00 s** | **10.00 s** (BM25/A2) |
+| `story-overdue-book`, literal/strong | false_switches_per_min | <=2.0 | **4.07 /min** | 5.95 /min | 4.39 /min | **4.07 /min** (BM25) |
+| `story-overdue-book`, literal/strong | adlib_stability | >=0.70 | 0.6609 | 0.9757 | **0.9955** | **0.9955** (A2) |
+| `story-overdue-book`, literal/strong | skip_recovery_s | <=6.0 | 99.00 s | 99.00 s | 99.00 s | 99.00 s |
+| `story-overdue-book`, creative/mild | slide_accuracy | >=0.90 | 0.3176 | 0.2466 | **0.3437** | **0.3437** (A2) |
+| `story-overdue-book`, creative/mild | point_accuracy | >=0.75 | 0.1959 | 0.1946 | **0.2859** | **0.2859** (A2) |
+| `story-overdue-book`, creative/mild | onset_lag_median_s | <=3.0 | 10.00 s | 10.00 s | **5.86 s** | **5.86 s** (A2) |
+| `story-overdue-book`, creative/mild | onset_lag_p90_s | <=6.0 | 11.51 s | 16.08 s | **10.00 s** | **10.00 s** (A2) |
+| `story-overdue-book`, creative/mild | false_switches_per_min | <=1.0 | 5.00 /min | 5.87 /min | **3.62 /min** | **3.62 /min** (A2) |
+| `story-overdue-book`, creative/mild | adlib_stability | >=0.80 | **0.7399** | 0.2545 | 0.5508 | **0.7399** (BM25) |
+
+### 6.2 Perfect Hearing Diagnostic Comparison
+
+| Job Configuration | BM25 Perfect | A1 Perfect | A2 Perfect |
+|---|---|---|---|
+| `history-great-stink`, literal/mild | 0.5573 / 0.3687 | 0.2186 / 0.1845 | 0.3654 / 0.2782 |
+| `history-great-stink`, creative/strong | 0.3348 / 0.2224 | 0.1839 / 0.1436 | 0.3805 / 0.2549 |
+| `story-overdue-book`, literal/strong | 0.3634 / 0.2039 | 0.2089 / 0.1446 | 0.3233 / 0.2255 |
+| `story-overdue-book`, creative/mild | 0.3176 / 0.1959 | 0.1854 / 0.1410 | 0.3399 / 0.2647 |
+
+*(Format: Slide Accuracy / Point Accuracy)*
+
+**Conclusion:** Perfect hearing provides almost zero gain across all contestants. The tracking bottlenecks are algorithmic and structural, not acoustic or phonetic.
+
+

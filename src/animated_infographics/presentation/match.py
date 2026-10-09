@@ -20,7 +20,7 @@ from animated_infographics.contracts.playback import (
     PlaybackPlan,
 )
 from animated_infographics.contracts.templates import WORD_CAPS
-from animated_infographics.contracts.tree import TreePlan
+from animated_infographics.contracts.tree import TreeNode, TreePlan
 from animated_infographics.planner.llm import LLMBackend
 from animated_infographics.planner.words import field_values
 
@@ -692,4 +692,266 @@ class AnticipateMatcher:
             commits=commits,
             holds=holds,
             matcher="anticipate",
+        )
+
+
+class ClassifierMatcher:
+    """Contestant A2: LLM point classifier.
+
+    Per design_presentation_simulation.md §6.6.2 and agent_execution_guide.md §1.3 (J3).
+    """
+
+    def __init__(
+        self,
+        tree: TreePlan,
+        backend: LLMBackend,
+        deck: dict[str, Any] | None = None,
+    ) -> None:
+        self.tree = tree
+        self.backend = backend
+        self.deck = deck
+        self.node_ids = [n.id for n in tree.nodes]
+        self.node_map = {n.id: n for n in tree.nodes}
+        self.slides_by_id = {s.get("id"): s for s in (deck.get("slides", []) if deck else [])}
+        self.initial_node_id = self._find_initial_node_id()
+
+    def _find_initial_node_id(self) -> str:
+        for node in self.tree.nodes:
+            if node.kind == "section":
+                return node.id
+        return self.tree.nodes[0].id if self.tree.nodes else "d1_section"
+
+    def format_node_desc(self, node: TreeNode) -> str:
+        """Format candidate line per §6.6.2.
+
+        A section node is listed as <id> — <slide title>: (start of this slide).
+        A point node is listed as <id> — <slide title>: <point text>.
+        """
+        slide = self.slides_by_id.get(node.slide, {})
+        slide_title = slide.get("title", "")
+        if not slide_title and getattr(node, "scene", None) and getattr(node.scene, "props", None):
+            slide_title = getattr(node.scene.props, "title", "")
+        if not slide_title:
+            slide_title = node.slide
+
+        if node.kind == "section":
+            return f"{node.id} — {slide_title}: (start of this slide)"
+
+        # Point node
+        point_text = ""
+        if node.point_i is not None and 0 <= node.point_i < len(slide.get("points", [])):
+            pt = slide["points"][node.point_i]
+            point_text = pt.get("text", "") if isinstance(pt, dict) else getattr(pt, "text", "")
+        if not point_text:
+            point_text = node.text
+        return f"{node.id} — {slide_title}: {point_text}"
+
+    def build_prompt(
+        self,
+        current_node: TreeNode,
+        candidates: list[TreeNode],
+        last_words: str,
+    ) -> str:
+        """Build user prompt verbatim per §6.6.2."""
+        lines = [
+            "You are following a live talk against its slide deck. "
+            "You hear only the last few seconds of speech.",
+            f"The speaker is currently on: {self.format_node_desc(current_node)}",
+            "Candidates:",
+        ]
+        for cand in candidates:
+            lines.append(self.format_node_desc(cand))
+        lines.append(f'Last words heard: "{last_words}"')
+        lines.append(
+            "Which point is the speaker on now? If they are between points, telling a side story, "
+            "or you are unsure, answer the current point. Answer one id."
+        )
+        return "\n".join(lines)
+
+    def run(self, words: list[TranscriptWord]) -> PlaybackPlan:
+        """Run classifier matcher over words in time order and generate PlaybackPlan."""
+        if not words:
+            return PlaybackPlan(
+                schema_version=1,
+                commits=[
+                    PlaybackCommit(
+                        node_id=self.initial_node_id,
+                        at_ms=0,
+                        decision_ms=0,
+                        compute_ms=0,
+                        score=0.0,
+                    )
+                ],
+                holds=[],
+                matcher="llm",
+            )
+
+        commits: list[PlaybackCommit] = [
+            PlaybackCommit(
+                node_id=self.initial_node_id,
+                at_ms=0,
+                decision_ms=0,
+                compute_ms=0,
+                score=0.0,
+            )
+        ]
+        holds: list[PlaybackHold] = []
+
+        current_node_id = self.initial_node_id
+        current_node_start_ms = 0
+        prev_top_id: str | None = None
+
+        dp_indices = find_decision_points(words)
+
+        for w_idx in dp_indices:
+            t0 = time.perf_counter()
+            dp_ms = words[w_idx].end_ms
+            ended_words = words[: w_idx + 1]
+
+            # Window: last 25 heard words (§6.6.2)
+            window = ended_words[-25:]
+            last_words = " ".join(w.text for w in window)
+
+            try:
+                c_idx = self.node_ids.index(current_node_id)
+            except ValueError:
+                c_idx = 0
+            current_node = self.tree.nodes[c_idx]
+
+            # Candidates per §6.6.2:
+            # - the current node c;
+            # - the next 3 nodes after c in deck order;
+            # - every point node before c.
+            candidates: list[TreeNode] = [current_node]
+
+            f1: str | None = None
+            if c_idx + 1 < len(self.tree.nodes):
+                f1_node = self.tree.nodes[c_idx + 1]
+                f1 = f1_node.id
+                candidates.append(f1_node)
+            if c_idx + 2 < len(self.tree.nodes):
+                candidates.append(self.tree.nodes[c_idx + 2])
+            if c_idx + 3 < len(self.tree.nodes):
+                candidates.append(self.tree.nodes[c_idx + 3])
+
+            for k in range(c_idx):
+                b_node = self.tree.nodes[k]
+                if b_node.kind == "point":
+                    candidates.append(b_node)
+
+            candidate_ids = [cand.id for cand in candidates]
+            prompt = self.build_prompt(current_node, candidates, last_words)
+            schema = {
+                "type": "object",
+                "properties": {
+                    "node": {
+                        "type": "string",
+                        "enum": candidate_ids,
+                    }
+                },
+                "required": ["node"],
+                "additionalProperties": False,
+            }
+
+            t_before_llm = time.perf_counter()
+            resp: dict[str, Any] | None = None
+            llm_error = False
+            try:
+                resp = self.backend.generate_json(
+                    stage="follow_llm",
+                    messages=[{"role": "user", "content": prompt}],
+                    schema=schema,
+                    attempt=0,
+                    temperature=0.0,
+                    num_predict=32,
+                )
+            except Exception as exc:
+                logger.warning("follow_llm call failed at dp %d: %s", dp_ms, exc)
+                llm_error = True
+
+            t_after_llm = time.perf_counter()
+            llm_elapsed = getattr(
+                self.backend, "last_elapsed_ms", int((t_after_llm - t_before_llm) * 1000)
+            )
+            non_llm_elapsed = int(
+                ((t_before_llm - t0) + (time.perf_counter() - t_after_llm)) * 1000
+            )
+            compute_ms = max(0, llm_elapsed + non_llm_elapsed)
+
+            ans_node_id: str | None = None
+            if not llm_error and resp is not None and isinstance(resp, dict):
+                raw_node = resp.get("node")
+                if isinstance(raw_node, str) and raw_node.strip() in candidate_ids:
+                    ans_node_id = raw_node.strip()
+
+            if ans_node_id is None:
+                # Failed or invalid answer holds with reason llm_error (§6.6.2)
+                holds.append(
+                    PlaybackHold(
+                        decision_ms=dp_ms,
+                        current_node_id=current_node_id,
+                        top_candidate_id=current_node_id,
+                        top_candidate_score=0.0,
+                        reason="llm_error",
+                    )
+                )
+                prev_top_id = None
+                continue
+
+            dwell_ms = dp_ms - current_node_start_ms
+            dwell_met = dwell_ms >= 2000
+
+            is_f1 = f1 is not None and ans_node_id == f1
+            is_different = ans_node_id != current_node_id
+            is_other_move = is_different and not is_f1
+
+            forward_commit = is_f1 and dwell_met
+            other_commit = is_other_move and (ans_node_id == prev_top_id) and dwell_met
+
+            if forward_commit or other_commit:
+                commit_at_ms = dp_ms + compute_ms
+                commits.append(
+                    PlaybackCommit(
+                        node_id=ans_node_id,
+                        at_ms=commit_at_ms,
+                        decision_ms=dp_ms,
+                        compute_ms=compute_ms,
+                        score=1.0,
+                        runner_up_id=None,
+                        runner_up_gap=None,
+                        tiebreak_used=False,
+                    )
+                )
+                current_node_id = ans_node_id
+                current_node_start_ms = commit_at_ms
+                prev_top_id = None
+            else:
+                reasons: list[str] = []
+                if not is_different:
+                    reasons.append("top_is_current")
+                elif is_f1:
+                    if not dwell_met:
+                        reasons.append(f"dwell_{dwell_ms}ms_below_2000ms")
+                else:
+                    if ans_node_id != prev_top_id:
+                        reasons.append("consecutive_top_not_met")
+                    if not dwell_met:
+                        reasons.append(f"dwell_{dwell_ms}ms_below_2000ms")
+
+                holds.append(
+                    PlaybackHold(
+                        decision_ms=dp_ms,
+                        current_node_id=current_node_id,
+                        top_candidate_id=ans_node_id,
+                        top_candidate_score=1.0,
+                        reason="; ".join(reasons),
+                    )
+                )
+                prev_top_id = ans_node_id
+
+        return PlaybackPlan(
+            schema_version=1,
+            commits=commits,
+            holds=holds,
+            matcher="llm",
         )

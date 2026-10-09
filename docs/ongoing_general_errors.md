@@ -87,7 +87,7 @@
 - **Cold planner eval:** 6/6 fixtures valid bare, 0 independent validation violations, names_before_narration = 0 on all 6, critic regression 8/8 PASS, text audit PASS.
 - **Visual artefacts verified on real renders:** callback dots count real appearances (I1), asides anchored top-left with 0 overlap on motif tokens (I2), empty thought bubble eliminated on overdue s001 (I3), motif spacing and salvage verified (I4), 7 former spoiler scenes clean (I5), asset execution failures caught (I6), and presentation metaphor nodes and images generated (I7).
 
-**No open decision.** Issue 8 was decided by the user on October 7, 2026 (Option A), and is being built as Wave J.
+**One open decision: Issue 9.** Waves I and J are complete through J3. In the Wave J bake-off, neither Contestant A1 nor Contestant A2 met the §8 accuracy bars on the frozen corpus. Issue 9 is filed below awaiting user selection.
 
 ## ⚠️ Unresolved Issues & Suggestions
 
@@ -169,6 +169,54 @@ The LLM tie-break changed point accuracy by +1.4, −2.6, +0.8 and 0.0 points.
   - *Cons*: On screen, the deck is wrong about 40–45% of the time and visuals trail the voice by 7–10 s. That is not a usable presentation, and prepared mode (DF4) would inherit it.
 
 Your selection: **Option A**. Given by the user in chat on October 7, 2026, verbatim: *"For issue 8, select Option A and write the agent execution guide to reflect that with validation"*. Recorded by the designer.
+
+---
+
+### Issue 9: Neither follower contestant met the accuracy bars in the Wave J bake-off
+
+**Status**: ⚠️ Confirmed Unresolved — `docs/evals/matcher_bakeoff_2026-10-09.md`: Contestant A1 (`anticipate`) and Contestant A2 (`llm`) both missed all accuracy bars on all 4 decision-set jobs in the frozen corpus bake-off. A1 scored slide accuracy 0.1789–0.2466 (bar ≥ 0.80–0.90) and point accuracy 0.1412–0.1946 (bar ≥ 0.60–0.75). A2 scored slide accuracy 0.3390–0.3962 and point accuracy 0.2271–0.2859. BM25 baseline remains highest on literal/mild (0.5542 / 0.3682); A2 is highest on creative/strong (0.3804 / 0.2322) and creative/mild (0.3437 / 0.2859). Perfect hearing diagnostic confirms tracking error is algorithmic, not ASR-driven (A2 slide 0.3233–0.3805 under synthetic ground-truth speech). G16 remains at exit 3 per §6.6.4 rule 3.
+
+#### Measured Results: Decision Set (Seed 7)
+
+| Job Configuration | Metric | Bar | BM25 Baseline | Contestant A1 | Contestant A2 | Best Result | Perfect Hearing (A2) |
+|---|---|---|---|---|---|---|---|
+| `history-great-stink`, literal/mild | slide_accuracy | ≥ 0.90 | **0.5542** | 0.1789 | 0.3962 | **0.5542** (BM25) | 0.3654 |
+| `history-great-stink`, literal/mild | point_accuracy | ≥ 0.75 | **0.3682** | 0.1412 | 0.2859 | **0.3682** (BM25) | 0.2782 |
+| `history-great-stink`, literal/mild | onset_lag_median_s | ≤ 3.0 | **7.38 s** | 10.00 s | 10.00 s | **7.38 s** (BM25) | 10.00 s |
+| `history-great-stink`, literal/mild | false_switches_per_min | ≤ 1.0 | **3.01 /min** | 4.52 /min | 4.02 /min | **3.01 /min** (BM25) | 3.52 /min |
+| `history-great-stink`, creative/strong | slide_accuracy | ≥ 0.80 | 0.3348 | 0.2183 | **0.3804** | **0.3804** (A2) | 0.3805 |
+| `history-great-stink`, creative/strong | point_accuracy | ≥ 0.60 | 0.2224 | 0.1727 | **0.2322** | **0.2322** (A2) | 0.2549 |
+| `history-great-stink`, creative/strong | onset_lag_median_s | ≤ 4.0 | **10.00 s** | **10.00 s** | 32.15 s | **10.00 s** (BM25/A1) | 10.00 s |
+| `history-great-stink`, creative/strong | false_switches_per_min | ≤ 2.0 | **3.26 /min** | 4.82 /min | 3.97 /min | **3.26 /min** (BM25) | 3.69 /min |
+| `story-overdue-book`, literal/strong | slide_accuracy | ≥ 0.80 | **0.3634** | 0.2092 | 0.3390 | **0.3634** (BM25) | 0.3233 |
+| `story-overdue-book`, literal/strong | point_accuracy | ≥ 0.60 | 0.2039 | 0.1575 | **0.2271** | **0.2271** (A2) | 0.2255 |
+| `story-overdue-book`, literal/strong | onset_lag_median_s | ≤ 4.0 | 9.59 s | 10.00 s | **5.49 s** | **5.49 s** (A2) | 5.28 s |
+| `story-overdue-book`, literal/strong | false_switches_per_min | ≤ 2.0 | **4.07 /min** | 5.95 /min | 4.39 /min | **4.07 /min** (BM25) | 4.39 /min |
+| `story-overdue-book`, creative/mild | slide_accuracy | ≥ 0.90 | 0.3176 | 0.2466 | **0.3437** | **0.3437** (A2) | 0.3399 |
+| `story-overdue-book`, creative/mild | point_accuracy | ≥ 0.75 | 0.1959 | 0.1946 | **0.2859** | **0.2859** (A2) | 0.2647 |
+| `story-overdue-book`, creative/mild | onset_lag_median_s | ≤ 3.0 | 10.00 s | 10.00 s | **5.86 s** | **5.86 s** (A2) | 6.56 s |
+| `story-overdue-book`, creative/mild | false_switches_per_min | ≤ 1.0 | 5.00 /min | 5.87 /min | **3.62 /min** | **3.62 /min** (A2) | 3.46 /min |
+
+**What the bake-off proved:**
+- **Tracking failure is algorithmic, not acoustic:** Replaying ground-truth synthetic hearing (`--hearing perfect`) left accuracy virtually unchanged (A2 slide 0.32–0.38, point 0.23–0.28). Eliminating ASR WER does not fix follower tracking.
+- **A1 failure mechanism:** Pre-generating 4 conversational sentences per point expanded lexical overlap across all candidates. Because the candidate set included backward points with low transition cost (0.5), early nodes with common keywords repeatedly outscored forward nodes, trapping the follower between D1 and D2 for entire talks.
+- **A2 failure mechanism & viability:** A2's median compute latency is 429–484 ms and P90 is 598 ms, easily satisfying the 1.5 s live cadence bar (`live-viable: yes`). However, error analysis showed two primary failure modes:
+  1. *Current-node confirmation bias:* The prompt instructs the model to answer the current point when unsure or between points. Once any delay occurs, the model repeatedly confirms $c$, pinning the follower while narration moves on.
+  2. *Intermediate section title barriers:* Transitioning from slide $k$ point 2 to slide $k+1$ point 0 treats `d(k+1)_section` as $f1$ and `d(k+1)_p0` as $f2$. Because $f2$ requires two consecutive identical decisions, transitions across slides stall.
+
+**Option A (recommended)**: **Contestant A3: Local dense embedding matcher with Ollama** — Add a small local embedding model in Ollama (e.g. `nomic-embed-text`, ~274 MB) to compute cosine similarities between the heard window (15–20 words) and node embeddings precomputed at tree time.
+  - *Pros*: Directly bridges lexical paraphrase gap without LLM generation latency; executes in < 20 ms per decision point; avoids prompt-wording confirmation bias; fully local at runtime.
+  - *Cons*: Introduces one new model into Ollama, requiring updates to doctor, offline gate, and setup scripts; relaxes the standing "no new models" constraint.
+
+**Option B**: **Hierarchical monotonic forward progression with A2 classifier** — Restructure the A2 follower graph: remove intermediate `section_title` nodes from the live candidate set (collapsing slide transitions directly to the next slide's first point), remove the "answer current point when unsure" fallback instruction from the classifier prompt, and require 3 consecutive decisions to trigger any backward jump while forward transitions commit on 1 decision.
+  - *Pros*: Directly addresses both identified root causes of A2's tracking failures without adding new models or changing dependencies; builds upon A2's proven live compute viability (P90 598 ms < 1.5 s).
+  - *Cons*: Still requires ~250 LLM calls (~1.8 min) per presentation; heavily paraphrased ad-lib sections may still slip if prompt context is too narrow.
+
+**Option C**: **Recalibrate §8 presentation bars to realistic human-presentation levels and adopt A2** — Acknowledge that human presentation speech naturally leads or trails visual slides by 5–10 seconds and wanders into ad-libs, making ≥ 80–90% continuous time alignment unrealistic for any causal follower. Recalibrate bars to slide ≥ 0.50, point ≥ 0.30, lag median ≤ 8 s, false switches ≤ 4/min, and adopt A2 (which provides the best semantic tracking on creative presentations).
+  - *Pros*: No architectural refactoring or model additions; G16 turns green honestly under restated bars.
+  - *Cons*: Displays on screen will continue to lag spoken narration by 6–10 seconds; slide alignment will be incorrect ~50% of the time.
+
+Your selection: _____
 
 ---
 
@@ -399,6 +447,8 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 **Wave J:**
 
 - J1 — --matcher plumbing, frozen corpus, and replay harness — git log --grep "(j1)" — --matcher added to present-sim (bm25|anticipate|llm, default bm25) with tiebreak and option validation; ingest.json and playback.json record matcher (G8 verified); run_follow_stage fails on unbuilt matchers with exit 2 and logs matcher=<m>; frozen 8-job corpus generated in artifacts/matcher_bakeoff/2026-10-09/corpus/ with corpus.json SHA-256 hashes of 5 key files, 0 asset execution errors, and 0 degraded creative jobs; matcher_bakeoff harness reproduces all 8 jobs' presentation_score.json within 0.000000 <= 0.01 and leaves corpus unmodified; 7/7 tests passed in tests/test_matcher_bakeoff.py including ground-truth PASS, shuffled heard.json MISS, and hash tampering rejection; baseline eval docs/evals/matcher_bakeoff_2026-10-09.md written with decision-set literal jobs agreeing within 0.006 with Issue 8 table and perfect hearing confirming lexical BM25 error is independent of ASR accuracy.
+- J2 — Anticipate stage and forward tracker; A1 misses decision set — git log --grep "(j2)" — AnticipationPlan schema (G8 verified); anticipate stage generates 4 sentences per point via Ollama gemma4:26b with length/uniqueness/no-copy validation; AnticipateMatcher evaluates {c, f1, f2, f3, back} with 10-word window, forward commit (gap >= 0.5) and jump commit (gap >= 1.5, 2 steps); bake-off on frozen corpus shows A1 misses all decision-set bars (slide 0.1789-0.2466 vs 0.80-0.90, point 0.1412-0.1946 vs 0.60-0.75); root cause: backward candidate enrichment; proceeds to J3 per §6.6.4 rule 1.
+- J3 — Contestant A2 LLM classifier; bake-off evaluation — git log --grep "(j3)" — ClassifierMatcher evaluates current slide points, next 3 points, prior slide titles, and 25 heard words via Ollama gemma4:26b enum schema; single-step f1 commit and two-step jump commit; honest latency measured via last_elapsed_ms; 9/9 tests pass bare; bake-off on frozen corpus shows A2 misses all decision-set bars (slide 0.3390-0.3962 vs 0.80-0.90, point 0.2271-0.2859 vs 0.60-0.75); live-viable confirmed (P90 compute 598.0 ms vs 1.5 s bar); perfect hearing diagnostic confirms tracking error is algorithmic; falsification on empty words collapses point accuracy to 0.0442; per §6.6.4 rule 3 neither contestant adopted; Issue 9 filed.
 
 ---
 

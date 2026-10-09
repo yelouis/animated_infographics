@@ -32,6 +32,7 @@ class LLMBackend(Protocol):
 
     calls: int
     cache_hits: int
+    last_elapsed_ms: int = 0
 
     def generate_json(
         self,
@@ -106,6 +107,7 @@ class OllamaBackend:
         self.client = client
         self.calls: int = 0
         self.cache_hits: int = 0
+        self.last_elapsed_ms: int = 0
 
     def _canonical_cache_key(
         self,
@@ -191,6 +193,7 @@ class OllamaBackend:
                     entry = json.load(f)
                     self.cache_hits += 1
                     cached_resp: dict[str, Any] = entry["response"]
+                    self.last_elapsed_ms = int(entry.get("elapsed_ms", 0))
                     return cached_resp
             except Exception:
                 # Corrupt cache file, proceed with fresh generation
@@ -250,6 +253,7 @@ class OllamaBackend:
             raise LLMResponseError(f"Ollama returned HTTP {resp.status_code}: {resp.text}")
 
         elapsed_ms = int((time.time() - t0) * 1000)
+        self.last_elapsed_ms = elapsed_ms
         data = resp.json()
 
         # Parse message content

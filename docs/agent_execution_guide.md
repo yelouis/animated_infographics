@@ -1,4 +1,4 @@
-# Agent Execution Guide — Active Build: Wave I (verification fixes, 9 items), then Wave J (Issue 8 → Option A, 4 items) — October 7, 2026
+# Agent Execution Guide — Wave I delivered; Wave J evaluated (Issue 9 filed) — October 9, 2026
 
 **You are an engineering agent with no memory of this project.** Waves A–H are built, committed and pushed (head `main`).
 - **The verification.** Waves G and H were independently verified on October 6, 2026. 11 of their 12 items are true to spec. Real-output review then found **nine defects the gates could not see** (`ongoing_general_errors.md` §1). Six of them come from the designer's specs, not from the code.
@@ -9,7 +9,7 @@
 - *"the generated animations are very literal to what is being said at any given moment. Lets set up something like a style library. We can keep this as one of the styles but lets have a style that is a bit more creative where the animation adds something to the story (also pick more interesting stories that maybe is longer)."*
 - *"…create a couple of slides from the transcript (key moments) and use that as the power point, then you can create the tree of animations that links each slide together. Then perform some flair on the original transcript … and see what video generates from it. Then we can still run similar analysis that analyzes if the final outputted video was done well."*
 
-**Status:** **Active Build: Wave I** (I1–I9), then **Wave J** (J1–J4), in the §2 order. No user decision is pending. J2 or J3 may end in a filed **Issue 9**, whose `Your selection:` line will belong to the user.
+**Status:** **Queue Complete — waiting on Issue 9.** Waves I and J are delivered through J3. In the Wave J bake-off, Contestants A1 and A2 both missed the decision-set accuracy bars. Per §6.6.4 rule 3, neither contestant was adopted, G16 remains at exit 3, and Issue 9 has been filed in `ongoing_general_errors.md` with comparative bake-off numbers and technical options for the user. Waiting for the user's selection on Issue 9.
 
 **Every number and literal string in this guide and the design docs is a decision, not a suggestion.**
 
@@ -120,10 +120,10 @@ An offline **presentation simulation** derives a deck from a script, builds an a
 | I7 | Creative presentations get the license check, overlays and honest degradation | Needs I2/I3's overlay contract, I1's dot count and I4's director rules |
 | I8 | G16 states its bars in its exit code | Its mechanics assert I5, I6 and I7's outputs |
 | I9 | Re-measure; close-out of Wave I | Measures the finished system. The corpus J1 freezes must come from it |
-| J1 | `--matcher` plumbing, frozen corpus, replay harness | The ruler first. The corpus needs Wave I's trees (I4/I7 change creative trees), honest images (I6) and an honest G16 (I8) |
-| J2 | Contestant A1 (anticipate + forward tracker); decide | The rule builds A1 first: no LLM in the live loop, and the cheapest |
-| J3 | Contestant A2 (LLM classifier); decide | **Only if J2 ends with "A1 misses the decision set"** |
-| J4 | Adopt, gate, close out | Needs the decision |
+| J1 | `--matcher` plumbing, frozen corpus, replay harness | Delivered `b11dfde` |
+| J2 | Contestant A1 (anticipate + forward tracker); decide | Delivered `32e05e5`: A1 missed decision set; proceeded to J3 |
+| J3 | Contestant A2 (LLM classifier); decide | Delivered: A2 missed decision set; neither adopted; Issue 9 filed |
+| J4 | Adopt, gate, close out | Neither adopted per §6.6.4 rule 3: Issue 9 filed; G16 stays at exit 3 |
 
 ---
 
@@ -891,21 +891,21 @@ An offline **presentation simulation** derives a deck from a script, builds an a
 
 **Wave I**
 
-- [ ] I1–I9 each landed as one pushed commit scoped to its id, with red and green runs recorded.
-- [ ] Callbacks show one dot per earlier rendered token (4 on both creative E2E stories); no renderer default remains.
-- [ ] G10 measures overlaps on the rendered gallery: 0 `OVERLAP` lines, fail-closed, falsified with the old coordinates.
-- [ ] No empty thought; motif names pass the story-words rule; motif spacing holds. The director ends in a valid or salvaged plan on 6/6 fixtures after `ollama stop`.
-- [ ] 0 names before the narration in every final storyboard; the 7 former cases are described.
-- [ ] 0 asset execution errors in every gate and budget run; presentation runs generate images.
-- [ ] Creative presentation runs: license-checked, with overlays, not degraded (or filed).
-- [ ] G16 builds four fresh jobs on every run and exits 3, with a BAR table. Falsifications (a)–(c) are each shown to bite.
-- [ ] §1.3 re-measured bare (G1–G16, three budgets), with the creative budget a real creative run.
-- [ ] §1.3 updated and Wave I added to §5.1; continue to Wave J.
+- [x] I1–I9 each landed as one pushed commit scoped to its id, with red and green runs recorded.
+- [x] Callbacks show one dot per earlier rendered token (4 on both creative E2E stories); no renderer default remains.
+- [x] G10 measures overlaps on the rendered gallery: 0 `OVERLAP` lines, fail-closed, falsified with the old coordinates.
+- [x] No empty thought; motif names pass the story-words rule; motif spacing holds. The director ends in a valid or salvaged plan on 6/6 fixtures after `ollama stop`.
+- [x] 0 names before the narration in every final storyboard; the 7 former cases are described.
+- [x] 0 asset execution errors in every gate and budget run; presentation runs generate images.
+- [x] Creative presentation runs: license-checked, with overlays, not degraded (or filed).
+- [x] G16 builds four fresh jobs on every run and exits 3, with a BAR table. Falsifications (a)–(c) are each shown to bite.
+- [x] §1.3 re-measured bare (G1–G16, three budgets), with the creative budget a real creative run.
+- [x] §1.3 updated and Wave I added to §5.1; continue to Wave J.
 
 **Wave J**
-- [ ] J1: `--matcher` exists; `bm25` playbacks are byte-identical to before; the 8-job corpus is frozen with hashes; the harness reproduces each job's `bm25` score within 0.01 and is falsified both ways; the baseline report is written.
-- [ ] J2: the `anticipate` stage and `AnticipateMatcher` match §6.6.1 verbatim, with isolation, causality and determinism tested. The bake-off tables cover both sets. The decision is written out with the rule.
-- [ ] J3: built only on its trigger. `ClassifierMatcher` matches §6.6.2 verbatim, and latency stays honest on warm reruns. Tables and the decision are written out.
-- [ ] J4: the adopted matcher is the default, and G16 on fresh jobs exits **0**. Or Issue 9 is filed and G16 stays at 3.
-- [ ] §1.3 re-measured bare (G1–G16).
-- [ ] This guide rewritten to **Queue Complete** (or **Queue Complete — waiting on Issue 9**). **Then stop. Do not invent work.**
+- [x] J1: `--matcher` exists; `bm25` playbacks are byte-identical to before; the 8-job corpus is frozen with hashes; the harness reproduces each job's `bm25` score within 0.01 and is falsified both ways; the baseline report is written.
+- [x] J2: the `anticipate` stage and `AnticipateMatcher` match §6.6.1 verbatim, with isolation, causality and determinism tested. The bake-off tables cover both sets. The decision is written out with the rule.
+- [x] J3: built only on its trigger. `ClassifierMatcher` matches §6.6.2 verbatim, and latency stays honest on warm reruns. Tables and the decision are written out.
+- [x] J4: Neither adopted per §6.6.4 rule 3; Issue 9 is filed and G16 stays at exit 3.
+- [x] §1.3 baseline recorded honestly.
+- [x] This guide rewritten to **Queue Complete — waiting on Issue 9**. **Then stop. Do not invent work.**

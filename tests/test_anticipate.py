@@ -39,6 +39,7 @@ class StubBackend:
         self.responses = list(responses or [])
         self.calls: int = 0
         self.cache_hits: int = 0
+        self.last_elapsed_ms: int = 0
 
     def generate_json(
         self,
