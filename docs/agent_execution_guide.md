@@ -79,16 +79,16 @@ An offline **presentation simulation** derives a deck from a script, builds an a
 | G5–G7 | renderer typecheck / lint / vitest | exit 0 · 19 vitest |
 | G8 | schema sync | exit 0 · in sync |
 | G9 | renderer purity | exit 0 · pure |
-| G10 | gallery | exit 0 · 59 goldens, 0 overflows. **It does not measure overlaps yet** (I2) |
-| G11 | `uv run pytest -q -m slow` | exit 0 · **43 passed** (238 s) |
-| G12 | `./scripts/e2e.sh` | exit 0 · steps 1–10 passed (870 s) · 0.52–0.83 graphic words/s. It reproduces the "Sofia" spoiler (I5) |
+| G10 | gallery | exit 0 · 59 goldens, 0 overflows, 0 slot/overlay overlaps (I2) |
+| G11 | `uv run pytest -q -m slow` | exit 0 · **43 passed** (247 s) |
+| G12 | `./scripts/e2e.sh` | exit 0 · steps 1–10 passed · 0 asset execution errors (I6), 0 spoilers (I5) |
 | G13 | offline | exit 0 (236 s) |
 | G14 | doctor | exit 0 · 22 OK |
-| G15 | `./scripts/creative_e2e.sh` | exit 0 (1,211 s) · 0.74 / 0.84 graphic words/s. **Its fresh jobs reproduce I1–I5:** 2 dots for 4 tokens, the empty s001 thought, "Silver Pump Handle" and "Blue ink pen", and 6 spoilers |
-| G16 | `./scripts/presentation_sim.sh` | **exit 3: follower bars missed (Issue 8)** · mechanics clean · oracle meets all bars · follower slide 0.32–0.56, point 0.20–0.36 |
-| Budget | `story_recipe_box`, cold | 209.13 s / 195.74 s / 404.86 s (≤ 390 / 210 / 600), 0 cache hits, 5 images |
-| Budget (long) | `story_overdue_book`, literal cold | 60.47 / **79.23** / 139.71 s/min (≤ 90 / 80 / 170). Render is 0.8 s/min under its bar; watch it |
-| Budget (long creative) | `story_overdue_book`, creative cold | exit 0, 59.37 / 78.46 / 137.83 s/min (≤ 110 / 85 / 195). **Not a creative measurement:** 5 images, 3 text checks and 114 LLM calls are the literal signature; a creative run gives 9, 7 and 117. Replayed under the same conditions (`ollama stop`, cold cache), the director failed 3 attempts and degraded (I4). The agent's committed report has the identical signature. **No valid creative budget exists yet** (I9) |
+| G15 | `./scripts/creative_e2e.sh` | exit 0 · 0.75 / 0.82 graphic words/s · 0 overlaps (I2), 0 spoilers (I5), real callback dots (I1), 0 empty thoughts (I3) |
+| G16 | `./scripts/presentation_sim.sh` | **exit 3: follower bars missed (Issue 8)** · mechanics clean · oracle meets all bars · follower slide 0.33–0.55, point 0.21–0.37 |
+| Budget | `story_recipe_box`, cold | 200.52 s / 189.37 s / 389.89 s (≤ 390 / 210 / 600), 0 cache hits, 5 images, 0 asset errors |
+| Budget (long) | `story_overdue_book`, literal cold | 56.80 / 78.22 / 135.01 s/min (≤ 90 / 80 / 170), 0 cache hits, 5 images, 0 asset errors |
+| Budget (long creative) | `story_overdue_book`, creative cold | 76.17 / 79.54 / 155.71 s/min (≤ 110 / 85 / 195), 0 cache hits, 9 images, 0 asset errors, style_degraded=False (≥ 2 metaphors) |
 
 ### 1.4 Measurements that shaped Wave I (October 6, 2026)
 
@@ -709,8 +709,8 @@ An offline **presentation simulation** derives a deck from a script, builds an a
 
 ### 5.1 Already delivered
 
-- Waves **A** (verified September 25), **B** (September 26), **C/D** (October 3), **E** and **F** (October 4), and **G** and **H** (October 6, 2026), all independently verified.
-- One line per item, with verdicts: `ongoing_general_errors.md` §3. Nothing marked "✓" is reworked beyond what a Wave I item names.
+- Waves **A** (verified September 25), **B** (September 26), **C/D** (October 3), **E** and **F** (October 4), **G** and **H** (October 6), and **I** (October 8–9, 2026), all independently verified.
+- One line per item, with verdicts: `ongoing_general_errors.md` §3. Nothing marked "✓" is reworked beyond what a Wave I/J item names.
 
 ### 5.2 Accepted equivalents (checked; do not "fix" these back)
 

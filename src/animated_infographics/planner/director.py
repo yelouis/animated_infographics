@@ -245,6 +245,16 @@ def validate_director_plan(
         icon = motif.get("icon")
         appearances = motif.get("appearances", [])
 
+        # Normalize set_piece_id or icon if model populated motif.id with an entity ID
+        if sp_id is None and icon is None:
+            raw_id = motif.get("id")
+            if raw_id in valid_set_piece_ids:
+                sp_id = raw_id
+                motif["set_piece_id"] = sp_id
+            elif raw_id in valid_icon_names:
+                icon = raw_id
+                motif["icon"] = icon
+
         # Validator 5: motif name checks
         if not isinstance(m_name, str) or not m_name.strip():
             errors.append(f"motifs[{m_idx}].name: name is required")

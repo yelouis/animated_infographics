@@ -104,19 +104,17 @@ The first step toward live presentations, in prepared mode. The pipeline runs in
 
 Slide import and real-time playback stay deferred. Contract: `design_presentation_simulation.md`.
 
-## Wave I: verification fixes for Waves G and H (specced October 6, 2026)
-Waves G and H were delivered and independently verified: 11 of 12 items true to spec. Real-output review found defects the gates could not see:
-- callback dots that never counted;
-- asides drawn over the motif token and the avatar;
-- empty thought bubbles;
-- motif names the story never says;
-- names on screen before the narration reveals them;
-- image generation failing wholesale behind green gates;
-- a director that loses the whole creative style to one repeated metaphor, so the creative budget measured a literal video;
-- creative presentations without the license check or overlays;
-- a presentation gate (G16) that exits 0 on failed bars and re-scores old jobs instead of running.
-
-Wave I (I1–I9) fixes them and re-measures. **Issue 8 is open:** the presentation follower misses its accuracy bars, while the oracle meets them, so the deck and the tree are sound and the matcher is not. It awaits the user's selection.
+## Wave I: verification fixes for Waves G and H (delivered October 9, 2026)
+Wave I (I1–I9) was delivered and independently verified:
+- callback dots that count real rendered appearances (I1);
+- asides anchored top-left with 0 overlap on motif tokens (I2);
+- complete thought asides without empty bubbles (I3);
+- motif names grounded in narration and spaced; director salvage recovers stuck plans (I4);
+- no name on screen before the narration reveals it (I5);
+- asset execution failures strictly failing gates (I6);
+- creative presentations with license check, overlays, and honest degradation (I7);
+- G16 stating its bars in its exit code (exit 3 on follower misses, fresh jobs default) (I8);
+- re-measured full battery (G1–G15 exit 0, G16 exit 3), 3 cold budgets passing with 0 cache hits and 0 asset execution errors, cold planner eval 6/6 valid bare (I9).
 
 ## Wave J: the presentation follower bake-off (Issue 8 → Option A, selected October 7, 2026)
 Two followers are built from deck-only knowledge with the existing models:

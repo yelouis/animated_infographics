@@ -42,6 +42,7 @@ Important: Plants show only the object, never its meaning.
 6. Metaphor image: at most 25 words, no quotation marks. Metaphor images must not show anything that carries writing. Never use these words in an image: {rule_6_words}.
 7. Valid entities:
    - set_piece_id and cast_ids must exist in the Story Bible below.
+   - Each motif requires an icon from the allowed icons or a set_piece_id from the Story Bible.
    - A 'thought' aside requires a valid cast_id and an icon or text.
    - A 'prop' aside requires an icon from the allowed icons.
    - A 'label' aside requires text.

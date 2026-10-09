@@ -15,50 +15,50 @@ Evaluation of the presentation simulation pipeline per `design_presentation_simu
 
 | Job | Style | Level | Final MP4 (SHA-256) | Oracle MP4 (SHA-256) |
 |---|---|---|---|---|
-| history-great-stink-20261008-233911 | literal | mild | `8835c554303f1d06...` | `0dee6ec799c84023...` |
-| history-great-stink-20261008-235203 | creative | strong | `3db89bd536e613ef...` | `79f5a2630f15d5d4...` |
-| story-overdue-book-20261009-000719 | literal | strong | `27582f9050275f42...` | `0cf358d10d064a91...` |
-| story-overdue-book-20261009-002032 | creative | mild | `4f9805bc45d6030c...` | `ac9f385017a62add...` |
+| history-great-stink-20261009-052829 | literal | mild | `d953d0d4f212689f...` | `7d6b0050f1ec9fcc...` |
+| history-great-stink-20261009-054053 | creative | strong | `46ef6e198e390302...` | `fa3a70f1d5b5ffbc...` |
+| story-overdue-book-20261009-055822 | literal | strong | `e5ab239f6f3f5532...` | `3c3c885778c29a81...` |
+| story-overdue-book-20261009-061154 | creative | mild | `e52edd7ec5abad80...` | `6350652c0f73bf9a...` |
 
 ## Follower Presentation Bars
 
 | Run | Metric | Value | Bar | Status |
 |---|---|---|---|---|
-| history_literal_mild | slide_accuracy | 0.5609 | >=0.90 | MISS |
-| history_literal_mild | point_accuracy | 0.3577 | >=0.75 | MISS |
+| history_literal_mild | slide_accuracy | 0.5542 | >=0.90 | MISS |
+| history_literal_mild | point_accuracy | 0.3682 | >=0.75 | MISS |
 | history_literal_mild | onset_lag_median_s | 7.38 | <=3.0 | MISS |
 | history_literal_mild | onset_lag_p90_s | 12.76 | <=6.0 | MISS |
-| history_literal_mild | false_switches_per_min | 3.35 | <=1.0 | MISS |
+| history_literal_mild | false_switches_per_min | 3.01 | <=1.0 | MISS |
 | history_literal_mild | adlib_stability | 1.0000 | >=0.80 | PASS |
-| history_creative_strong | slide_accuracy | 0.4920 | >=0.80 | MISS |
-| history_creative_strong | point_accuracy | 0.3106 | >=0.60 | MISS |
+| history_creative_strong | slide_accuracy | 0.3348 | >=0.80 | MISS |
+| history_creative_strong | point_accuracy | 0.2224 | >=0.60 | MISS |
 | history_creative_strong | onset_lag_median_s | 10.00 | <=4.0 | MISS |
-| history_creative_strong | onset_lag_p90_s | 21.41 | <=8.0 | MISS |
+| history_creative_strong | onset_lag_p90_s | 33.50 | <=8.0 | MISS |
 | history_creative_strong | false_switches_per_min | 3.26 | <=2.0 | MISS |
 | history_creative_strong | adlib_stability | 0.5571 | >=0.70 | MISS |
 | history_creative_strong | skip_recovery_s | 99.00 | <=6.0 | MISS |
-| story_literal_strong | slide_accuracy | 0.3644 | >=0.80 | MISS |
-| story_literal_strong | point_accuracy | 0.2049 | >=0.60 | MISS |
+| story_literal_strong | slide_accuracy | 0.3670 | >=0.80 | MISS |
+| story_literal_strong | point_accuracy | 0.2075 | >=0.60 | MISS |
 | story_literal_strong | onset_lag_median_s | 9.48 | <=4.0 | MISS |
 | story_literal_strong | onset_lag_p90_s | 10.00 | <=8.0 | MISS |
 | story_literal_strong | false_switches_per_min | 4.07 | <=2.0 | MISS |
-| story_literal_strong | adlib_stability | 0.6609 | >=0.70 | MISS |
+| story_literal_strong | adlib_stability | 0.6600 | >=0.70 | MISS |
 | story_literal_strong | skip_recovery_s | 99.00 | <=6.0 | MISS |
-| story_creative_mild | slide_accuracy | 0.3054 | >=0.90 | MISS |
-| story_creative_mild | point_accuracy | 0.1816 | >=0.75 | MISS |
+| story_creative_mild | slide_accuracy | 0.3749 | >=0.90 | MISS |
+| story_creative_mild | point_accuracy | 0.2136 | >=0.75 | MISS |
 | story_creative_mild | onset_lag_median_s | 10.00 | <=3.0 | MISS |
-| story_creative_mild | onset_lag_p90_s | 11.50 | <=6.0 | MISS |
-| story_creative_mild | false_switches_per_min | 5.18 | <=1.0 | MISS |
-| story_creative_mild | adlib_stability | 0.7399 | >=0.80 | MISS |
+| story_creative_mild | onset_lag_p90_s | 34.02 | <=6.0 | MISS |
+| story_creative_mild | false_switches_per_min | 4.66 | <=1.0 | MISS |
+| story_creative_mild | adlib_stability | 1.0000 | >=0.80 | PASS |
 
 ## Presentation Simulation Metrics (§8)
 
 | Run / Job | Style | Level | Slide Acc (Bar) | Point Acc (Bar) | Onset Lag Med/P90 (Bar) | False Switches (Bar) | Ad-lib Stab (Bar) | Skip Recovery (Bar) | Status |
 |---|---|---|---|---|---|---|---|---|---|
-| history-great-stink-20261008-233911 | literal | mild | 0.5609 (>=0.9) | 0.3577 (>=0.75) | 7.38s / 12.76s (<=3.0/6.0s) | 3.35/min (<=1.0) | 1.0000 (>=0.8) | N/A | FAIL (Filed) |
-| history-great-stink-20261008-235203 | creative | strong | 0.4920 (>=0.8) | 0.3106 (>=0.6) | 10.0s / 21.41s (<=4.0/8.0s) | 3.26/min (<=2.0) | 0.5571 (>=0.7) | 99.00s (<= 6.0s) | FAIL (Filed) |
-| story-overdue-book-20261009-000719 | literal | strong | 0.3644 (>=0.8) | 0.2049 (>=0.6) | 9.48s / 10.0s (<=4.0/8.0s) | 4.07/min (<=2.0) | 0.6609 (>=0.7) | 99.00s (<= 6.0s) | FAIL (Filed) |
-| story-overdue-book-20261009-002032 | creative | mild | 0.3054 (>=0.9) | 0.1816 (>=0.75) | 10.0s / 11.5s (<=3.0/6.0s) | 5.18/min (<=1.0) | 0.7399 (>=0.8) | N/A | FAIL (Filed) |
+| history-great-stink-20261009-052829 | literal | mild | 0.5542 (>=0.9) | 0.3682 (>=0.75) | 7.38s / 12.76s (<=3.0/6.0s) | 3.01/min (<=1.0) | 1.0000 (>=0.8) | N/A | FAIL (Filed) |
+| history-great-stink-20261009-054053 | creative | strong | 0.3348 (>=0.8) | 0.2224 (>=0.6) | 10.0s / 33.5s (<=4.0/8.0s) | 3.26/min (<=2.0) | 0.5571 (>=0.7) | 99.00s (<= 6.0s) | FAIL (Filed) |
+| story-overdue-book-20261009-055822 | literal | strong | 0.3670 (>=0.8) | 0.2075 (>=0.6) | 9.48s / 10.0s (<=4.0/8.0s) | 4.07/min (<=2.0) | 0.6600 (>=0.7) | 99.00s (<= 6.0s) | FAIL (Filed) |
+| story-overdue-book-20261009-061154 | creative | mild | 0.3749 (>=0.9) | 0.2136 (>=0.75) | 10.0s / 34.02s (<=3.0/6.0s) | 4.66/min (<=1.0) | 1.0000 (>=0.8) | N/A | FAIL (Filed) |
 
 ## Oracle Baseline Comparison
 
@@ -66,10 +66,10 @@ The oracle baseline isolates matcher tracking error from presentation tree desig
 
 | Job | Matcher Slide Acc | Oracle Slide Acc | Matcher Point Acc | Oracle Point Acc | Matcher Median Lag | Oracle Median Lag |
 |---|---|---|---|---|---|---|
-| history-great-stink-20261008-233911 | 0.5609 | 1.0000 | 0.3577 | 1.0000 | 7.38s | 0.0s |
-| history-great-stink-20261008-235203 | 0.4920 | 0.9835 | 0.3106 | 0.9835 | 10.0s | 0.0s |
-| story-overdue-book-20261009-000719 | 0.3644 | 0.9820 | 0.2049 | 0.9820 | 9.48s | 0.0s |
-| story-overdue-book-20261009-002032 | 0.3054 | 1.0000 | 0.1816 | 1.0000 | 10.0s | 0.0s |
+| history-great-stink-20261009-052829 | 0.5542 | 1.0000 | 0.3682 | 1.0000 | 7.38s | 0.0s |
+| history-great-stink-20261009-054053 | 0.3348 | 0.9835 | 0.2224 | 0.9835 | 10.0s | 0.0s |
+| story-overdue-book-20261009-055822 | 0.3670 | 0.9820 | 0.2075 | 0.9820 | 9.48s | 0.0s |
+| story-overdue-book-20261009-061154 | 0.3749 | 1.0000 | 0.2136 | 1.0000 | 10.0s | 0.0s |
 
 ### Finding from Oracle Comparison
 The Oracle achieves **100% (1.0000) Slide and Point Accuracy** across all runs with **0.0s onset lag** and **0 false switches**. This proves conclusively that:
@@ -82,10 +82,10 @@ Per §6.4: *"The tie-break becomes default only if, on all fixtures and both per
 
 | Job | Level | Baseline Point Acc | Tie-break Point Acc | Δ Point Acc (%) | Baseline Median Lag | Tie-break Median Lag |
 |---|---|---|---|---|---|---|
-| history-great-stink-20261008-233911 | mild | 0.3577 | 0.3591 | +0.14% | 7.38s | 7.38s |
-| history-great-stink-20261008-235203 | strong | 0.3106 | 0.2887 | -2.19% | 10.0s | 10.0s |
-| story-overdue-book-20261009-000719 | strong | 0.2049 | 0.2937 | +8.88% | 9.48s | 7.64s |
-| story-overdue-book-20261009-002032 | mild | 0.1816 | 0.2062 | +2.46% | 10.0s | 10.0s |
+| history-great-stink-20261009-052829 | mild | 0.3682 | 0.3700 | +0.18% | 7.38s | 7.38s |
+| history-great-stink-20261009-054053 | strong | 0.2224 | 0.1961 | -2.63% | 10.0s | 11.86s |
+| story-overdue-book-20261009-055822 | strong | 0.2075 | 0.2711 | +6.36% | 9.48s | 7.8s |
+| story-overdue-book-20261009-061154 | mild | 0.2136 | 0.1928 | -2.08% | 10.0s | 10.0s |
 
 ### Tie-break Decision
 - **Rule Requirement**: Must raise point accuracy by ≥ 5.0% across **all fixtures** and keep median lag within the bar.

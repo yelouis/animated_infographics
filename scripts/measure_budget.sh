@@ -226,13 +226,13 @@ image_count = len(list(images_dir.glob('*.png'))) if images_dir.exists() else 0
 from animated_infographics.evals.asset_health import execution_errors
 asset_errors = execution_errors(job_dir)
 asset_execution_error_count = len(asset_errors)
-assert asset_execution_error_count == 0, f"Expected 0 asset execution errors, got {asset_execution_error_count}: {asset_errors}"
+assert asset_execution_error_count == 0, f'Expected 0 asset execution errors, got {asset_execution_error_count}: {asset_errors}'
 
 if style == 'creative':
     style_degraded = plan_report.get('style_degraded', False)
-    assert not style_degraded, "Creative budget failed: plan_report.style_degraded is True"
+    assert not style_degraded, 'Creative budget failed: plan_report.style_degraded is True'
     metaphor_images = len(list(images_dir.glob('metaphor_*.png')))
-    assert metaphor_images >= 2, f"Creative budget failed: expected >= 2 metaphor images in assets/images, got {metaphor_images}"
+    assert metaphor_images >= 2, f'Creative budget failed: expected >= 2 metaphor images in assets/images, got {metaphor_images}'
 
 if not is_long:
     new_pass = 'PASS' if span_new <= 390.0 else 'FAIL'

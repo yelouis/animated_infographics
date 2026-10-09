@@ -79,21 +79,47 @@ def test_word_caps_live_cases(case_index: int) -> None:
     bible = Bible.model_validate(case["bible"])
     transcript = _make_transcript_from_sentences(case["sentences"])
 
+    current_words = case["beats"]["current"].split()
+    b_start, b_end = 0, len(transcript.words)
+    for i in range(len(transcript.words) - len(current_words) + 1):
+        if all(
+            transcript.words[i + k].text.casefold().strip("\",.:;!?'")
+            == current_words[k].casefold().strip("\",.:;!?'")
+            for k in range(min(3, len(current_words)))
+        ):
+            b_start = i
+            b_end = i + len(current_words)
+            break
+
     prev_beat = (
-        Beat(i=0, word_start=0, word_end=1, start_ms=0, end_ms=1000, text=case["beats"]["previous"])
+        Beat(
+            i=0,
+            word_start=max(0, b_start - 10),
+            word_end=b_start,
+            start_ms=0,
+            end_ms=1000,
+            text=case["beats"]["previous"],
+        )
         if case["beats"].get("previous")
         else None
     )
     beat = Beat(
         i=1,
-        word_start=1,
-        word_end=2,
+        word_start=b_start,
+        word_end=b_end,
         start_ms=1000,
         end_ms=2000,
         text=case["beats"]["current"],
     )
     next_beat = (
-        Beat(i=2, word_start=2, word_end=3, start_ms=2000, end_ms=3000, text=case["beats"]["next"])
+        Beat(
+            i=2,
+            word_start=b_end,
+            word_end=min(len(transcript.words), b_end + 10),
+            start_ms=2000,
+            end_ms=3000,
+            text=case["beats"]["next"],
+        )
         if case["beats"].get("next")
         else None
     )
