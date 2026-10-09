@@ -366,6 +366,7 @@ def present_sim(
         print(f"preview/contact_sheet.png: {job.dir / 'preview' / 'contact_sheet.png'}")
         print(f"preview/storyboard.md: {job.dir / 'preview' / 'storyboard.md'}")
         print(f"deck.json: {job.dir / 'deck.json'}")
+        print(f"job_id: {job.job_id}")
 
 
 @app.command("preview")

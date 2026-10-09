@@ -54,6 +54,12 @@ run_gate() {
     esac
   fi
 
+  if [ "$gate" = "G16" ] && [ -n "${PRESENTATION_REUSE_JOBS:-}" ]; then
+    printf "%-4s | %-4s | REFUSED (PRESENTATION_REUSE_JOBS set)\n" "$gate" "1"
+    failed=1
+    return 0
+  fi
+
   local log_file="artifacts/battery/${gate}.log"
   eval "$cmd" > "$log_file" 2>&1
   local code=$?
@@ -109,7 +115,12 @@ run_gate() {
       match=$(grep -o "[0-9]\+ overflows" "$log_file" 2>/dev/null | tail -n 1 || true)
       [ -n "$match" ] && key_num="$match"
       ;;
-    G12|G13|G15|G16)
+    G12|G13|G15)
+      if [ "$code" -eq 0 ]; then
+        key_num="passed"
+      fi
+      ;;
+    G16)
       if [ "$code" -eq 0 ]; then
         key_num="passed"
       fi

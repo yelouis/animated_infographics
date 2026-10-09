@@ -415,56 +415,34 @@ def generate_strip_chart(
     img.save(out_path)
 
 
-def compute_presentation_score(job_dir: Path, oracle: bool = False) -> PresentationScore:
-    """Compute presentation simulation metrics against §8 bars."""
-    perf_path = job_dir / "performance.json"
-    timing_path = job_dir / "speak_timing.json"
-    playback_path = job_dir / "playback.json"
-    deck_path = job_dir / "deck.json"
-    tree_path = job_dir / "tree.json"
-    heard_path = job_dir / "heard.json"
-    timeline_path = job_dir / "timeline.json"
-    ingest_path = job_dir / "ingest.json"
-
-    if not perf_path.is_file():
-        raise FileNotFoundError(f"performance.json missing in {job_dir}")
-    if not timing_path.is_file():
-        raise FileNotFoundError(f"speak_timing.json missing in {job_dir}")
-    if not playback_path.is_file():
-        raise FileNotFoundError(f"playback.json missing in {job_dir}")
-    if not deck_path.is_file():
-        raise FileNotFoundError(f"deck.json missing in {job_dir}")
-    if not tree_path.is_file():
-        raise FileNotFoundError(f"tree.json missing in {job_dir}")
-    if not timeline_path.is_file():
-        raise FileNotFoundError(f"timeline.json missing in {job_dir}")
-
-    perf_data = json.loads(perf_path.read_text(encoding="utf-8"))
-    timing_data = json.loads(timing_path.read_text(encoding="utf-8"))
-    playback_data = json.loads(playback_path.read_text(encoding="utf-8"))
-    deck_data = json.loads(deck_path.read_text(encoding="utf-8"))
-    tree_data = json.loads(tree_path.read_text(encoding="utf-8"))
-    timeline_data = json.loads(timeline_path.read_text(encoding="utf-8"))
-
-    level = perf_data.get("level", "mild")
-    sentences = perf_data.get("sentences", [])
-    commits = playback_data.get("commits", [])
-    total_dur_ms = int(timeline_data.get("duration_frames", 0)) * 1000 // 30
-
-    ingest_data = (
-        json.loads(ingest_path.read_text(encoding="utf-8")) if ingest_path.is_file() else {}
-    )
-    style = ingest_data.get("style", "literal")
-
-    # Metrics computation
-    slide_acc = calculate_slide_accuracy(sentences, timing_data, commits)
-    point_acc = calculate_point_accuracy(sentences, timing_data, commits)
-    median_lag, p90_lag = calculate_onset_lag(sentences, timing_data, commits)
-    false_switches = calculate_false_switches(
-        sentences, timing_data, commits, deck_data, total_dur_ms
-    )
-    adlib_stab = calculate_adlib_stability(sentences, timing_data, commits)
-    skip_rec = calculate_skip_recovery(sentences, timing_data, commits, deck_data)
+def evaluate_presentation_bars(
+    score_data: PresentationScore | dict[str, Any],
+) -> list[PresentationMetricResult]:
+    """Evaluate presentation metrics against §8 bars for a score object or dict."""
+    if isinstance(score_data, PresentationScore):
+        level = score_data.level
+        slide_acc = score_data.slide_accuracy
+        point_acc = score_data.point_accuracy
+        median_lag = score_data.onset_lag_median_s
+        p90_lag = score_data.onset_lag_p90_s
+        false_switches = score_data.false_switches_per_min
+        adlib_stab = score_data.adlib_stability
+        skip_rec = score_data.skip_recovery_s
+    else:
+        level = score_data.get("level", "mild")
+        slide_acc = float(score_data.get("slide_accuracy", 0.0))
+        point_acc = float(score_data.get("point_accuracy", 0.0))
+        median_lag = score_data.get("onset_lag_median_s")
+        if median_lag is not None:
+            median_lag = float(median_lag)
+        p90_lag = score_data.get("onset_lag_p90_s")
+        if p90_lag is not None:
+            p90_lag = float(p90_lag)
+        false_switches = float(score_data.get("false_switches_per_min", 0.0))
+        adlib_stab = float(score_data.get("adlib_stability", 0.0))
+        skip_rec = score_data.get("skip_recovery_s")
+        if skip_rec is not None:
+            skip_rec = float(skip_rec)
 
     # Bars definition per §8
     slide_bar = 0.90 if level == "mild" else 0.80
@@ -524,6 +502,83 @@ def compute_presentation_score(job_dir: Path, oracle: bool = False) -> Presentat
             )
         )
 
+    return metrics
+
+
+def format_bar_str(metric: str, bar: float | str | None) -> str:
+    """Format metric bar condition as string, e.g. '>=0.90' or '<=3.0'."""
+    if bar is None:
+        return ""
+    if isinstance(bar, str) and (bar.startswith(">=") or bar.startswith("<=")):
+        return bar
+    if metric in ("slide_accuracy", "point_accuracy", "adlib_stability"):
+        return f">={float(bar):.2f}"
+    return f"<={float(bar):.1f}"
+
+
+def compute_presentation_score(job_dir: Path, oracle: bool = False) -> PresentationScore:
+    """Compute presentation simulation metrics against §8 bars."""
+    perf_path = job_dir / "performance.json"
+    timing_path = job_dir / "speak_timing.json"
+    playback_path = job_dir / "playback.json"
+    deck_path = job_dir / "deck.json"
+    tree_path = job_dir / "tree.json"
+    heard_path = job_dir / "heard.json"
+    timeline_path = job_dir / "timeline.json"
+    ingest_path = job_dir / "ingest.json"
+
+    if not perf_path.is_file():
+        raise FileNotFoundError(f"performance.json missing in {job_dir}")
+    if not timing_path.is_file():
+        raise FileNotFoundError(f"speak_timing.json missing in {job_dir}")
+    if not playback_path.is_file():
+        raise FileNotFoundError(f"playback.json missing in {job_dir}")
+    if not deck_path.is_file():
+        raise FileNotFoundError(f"deck.json missing in {job_dir}")
+    if not tree_path.is_file():
+        raise FileNotFoundError(f"tree.json missing in {job_dir}")
+    if not timeline_path.is_file():
+        raise FileNotFoundError(f"timeline.json missing in {job_dir}")
+
+    perf_data = json.loads(perf_path.read_text(encoding="utf-8"))
+    timing_data = json.loads(timing_path.read_text(encoding="utf-8"))
+    playback_data = json.loads(playback_path.read_text(encoding="utf-8"))
+    deck_data = json.loads(deck_path.read_text(encoding="utf-8"))
+    tree_data = json.loads(tree_path.read_text(encoding="utf-8"))
+    timeline_data = json.loads(timeline_path.read_text(encoding="utf-8"))
+
+    level = perf_data.get("level", "mild")
+    sentences = perf_data.get("sentences", [])
+    commits = playback_data.get("commits", [])
+    total_dur_ms = int(timeline_data.get("duration_frames", 0)) * 1000 // 30
+
+    ingest_data = (
+        json.loads(ingest_path.read_text(encoding="utf-8")) if ingest_path.is_file() else {}
+    )
+    style = ingest_data.get("style", "literal")
+
+    # Metrics computation
+    slide_acc = calculate_slide_accuracy(sentences, timing_data, commits)
+    point_acc = calculate_point_accuracy(sentences, timing_data, commits)
+    median_lag, p90_lag = calculate_onset_lag(sentences, timing_data, commits)
+    false_switches = calculate_false_switches(
+        sentences, timing_data, commits, deck_data, total_dur_ms
+    )
+    adlib_stab = calculate_adlib_stability(sentences, timing_data, commits)
+    skip_rec = calculate_skip_recovery(sentences, timing_data, commits, deck_data)
+
+    metrics = evaluate_presentation_bars(
+        {
+            "level": level,
+            "slide_accuracy": slide_acc,
+            "point_accuracy": point_acc,
+            "onset_lag_median_s": median_lag,
+            "onset_lag_p90_s": p90_lag,
+            "false_switches_per_min": false_switches,
+            "adlib_stability": adlib_stab,
+            "skip_recovery_s": skip_rec,
+        }
+    )
     all_passed = all(m.passed for m in metrics)
 
     # Inherited checks: word density and scene criteria
@@ -687,7 +742,21 @@ def _run_oracle_baseline(
     )
     adlib_stab = calculate_adlib_stability(sentences, timing, oracle_commits_dicts)
 
-    return PresentationScore(
+    oracle_metrics = evaluate_presentation_bars(
+        {
+            "level": level,
+            "slide_accuracy": slide_acc,
+            "point_accuracy": point_acc,
+            "onset_lag_median_s": median_lag,
+            "onset_lag_p90_s": p90_lag,
+            "false_switches_per_min": false_switches,
+            "adlib_stability": adlib_stab,
+            "skip_recovery_s": 0.0 if level == "strong" else None,
+        }
+    )
+    oracle_all_passed = all(m.passed for m in oracle_metrics)
+
+    oracle_score = PresentationScore(
         schema_version=1,
         job_id=f"{job_dir.name}_oracle",
         level=level,
@@ -698,6 +767,8 @@ def _run_oracle_baseline(
         onset_lag_p90_s=p90_lag,
         false_switches_per_min=false_switches,
         adlib_stability=adlib_stab,
-        skip_recovery_s=0.0,
-        all_passed=True,
+        skip_recovery_s=0.0 if level == "strong" else None,
+        all_passed=oracle_all_passed,
+        metrics=oracle_metrics,
     )
+    return oracle_score
