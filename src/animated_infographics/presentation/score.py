@@ -35,8 +35,8 @@ def _get_sentence_label_info(sent: dict[str, Any]) -> tuple[str | None, int | No
 
 def _get_shown_node_at_time(commits: list[dict[str, Any]], t_ms: int) -> str:
     """Find the active node_id from commits at time t_ms."""
-    if not commits:
-        return "d1_section"
+    if not commits or commits[0]["at_ms"] > t_ms:
+        return ""
     cur = commits[0]["node_id"]
     for c in commits:
         if c["at_ms"] <= t_ms:
@@ -119,39 +119,91 @@ def calculate_onset_lag(
     timing: list[dict[str, Any]],
     commits: list[dict[str, Any]],
 ) -> tuple[float | None, float | None]:
-    """Onset lag: time from first spoken word of a point to its node's start_ms."""
-    point_first_spoken: dict[str, int] = {}
-    for sent, t in zip(sentences, timing, strict=False):
-        if sent.get("op") == "adlib" or sent.get("label") == "adlib":
-            continue
-        gt_slide, gt_pt = _get_sentence_label_info(sent)
-        if gt_slide is None or gt_pt is None:
-            continue
-        pt_id = f"{gt_slide}_p{gt_pt}"
-        if pt_id not in point_first_spoken:
-            point_first_spoken[pt_id] = int(t["start_ms"])
+    """Onset lag: time from first spoken word of a point to its node's display.
 
-    if not point_first_spoken:
+    Per design_presentation_simulation.md §8 (revised October 9, 2026, Wave K):
+    - Per point, with t0 the start of its first spoken sentence:
+      * t_end is the start of the first later sentence whose label is not this
+        point (ad-libs and back-references included), or the end of the talk.
+      * The valid nodes are the point's node and, for point 0, its slide's section node.
+    - The lag:
+      * if a valid node is on screen at t0, the lag is 0;
+      * otherwise, the first commit to a valid node in (t0, t_end), minus t0;
+      * otherwise, the point is missed and scores max(10.0, (t_end - t0) / 1000).
+    - Median and p90.
+    """
+    if not sentences or not timing:
+        return None, None
+
+    talk_end_ms = (
+        int(timing[-1]["end_ms"]) if "end_ms" in timing[-1] else int(timing[-1]["start_ms"])
+    )
+
+    def _get_point_id(sent: dict[str, Any]) -> str | None:
+        if sent.get("op") in ("adlib", "back_ref") or sent.get("label") == "adlib":
+            return None
+        lbl = sent.get("label")
+        if not isinstance(lbl, dict) or "back_ref" in lbl:
+            return None
+        s_id = lbl.get("slide")
+        p_id = lbl.get("point")
+        if s_id is not None and p_id is not None:
+            return f"{s_id}_p{p_id}"
+        return None
+
+    # Identify first spoken sentence for each unique point
+    seen_points: set[str] = set()
+    point_runs: list[tuple[str, int, int]] = []  # (pt_id, t0, t_end)
+
+    n_sentences = min(len(sentences), len(timing))
+    for i in range(n_sentences):
+        sent = sentences[i]
+        pt_id = _get_point_id(sent)
+        if pt_id is None or pt_id in seen_points:
+            continue
+        seen_points.add(pt_id)
+        t0 = int(timing[i]["start_ms"])
+
+        # Find t_end: start of first later sentence whose label is not this point,
+        # or the end of the talk
+        t_end = talk_end_ms
+        for j in range(i + 1, n_sentences):
+            later_sent = sentences[j]
+            later_pt = _get_point_id(later_sent)
+            if later_pt != pt_id:
+                t_end = int(timing[j]["start_ms"])
+                break
+
+        point_runs.append((pt_id, t0, t_end))
+
+    if not point_runs:
         return None, None
 
     lags: list[float] = []
-    for pt_id, first_t in point_first_spoken.items():
+    for pt_id, t0, t_end in point_runs:
         slide_prefix = pt_id.split("_")[0]
-        # Valid nodes for point 0 include both section and point
         valid_nodes = {pt_id}
         if pt_id.endswith("_p0"):
             valid_nodes.add(f"{slide_prefix}_section")
 
+        # 1. If a valid node is on screen at t0, lag is 0
+        shown_at_t0 = _get_shown_node_at_time(commits, t0)
+        if shown_at_t0 in valid_nodes:
+            lags.append(0.0)
+            continue
+
+        # 2. Otherwise, first commit to a valid node in (t0, t_end), minus t0
         matching_commit = next(
-            (c for c in commits if c["node_id"] in valid_nodes and c["at_ms"] >= first_t - 500),
+            (c for c in commits if c["node_id"] in valid_nodes and t0 < c["at_ms"] < t_end),
             None,
         )
-        if matching_commit:
-            lag_s = max(0.0, (matching_commit["at_ms"] - first_t) / 1000.0)
+        if matching_commit is not None:
+            lag_s = max(0.0, (matching_commit["at_ms"] - t0) / 1000.0)
             lags.append(lag_s)
         else:
-            # Point was missed / never committed -> apply 10s penalty
-            lags.append(10.0)
+            # 3. Otherwise, missed: max(10.0, (t_end - t0) / 1000)
+            miss_penalty = max(10.0, (t_end - t0) / 1000.0)
+            lags.append(miss_penalty)
 
     if not lags:
         return None, None
@@ -607,6 +659,7 @@ def compute_presentation_score(job_dir: Path, oracle: bool = False) -> Presentat
     strip_chart_path = job_dir / "strip_chart.png"
     generate_strip_chart(sentences, timing_data, commits, deck_data, total_dur_ms, strip_chart_path)
 
+    out_score_json = job_dir / "presentation_score.json"
     oracle_score_obj: PresentationScore | None = None
     if oracle:
         oracle_score_obj = _run_oracle_baseline(
@@ -620,6 +673,13 @@ def compute_presentation_score(job_dir: Path, oracle: bool = False) -> Presentat
             level,
             style,
         )
+    elif out_score_json.is_file():
+        try:
+            prev = json.loads(out_score_json.read_text(encoding="utf-8"))
+            if prev.get("oracle"):
+                oracle_score_obj = PresentationScore.model_validate(prev["oracle"])
+        except Exception:
+            pass
 
     score_result = PresentationScore(
         schema_version=1,

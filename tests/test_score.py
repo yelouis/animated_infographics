@@ -113,6 +113,95 @@ def test_calculate_onset_lag_synthetic() -> None:
     assert p90 == 1.4
 
 
+def test_calculate_onset_lag_already_on_screen() -> None:
+    # Node already on screen at first spoken word -> lag 0
+    sentences = [
+        {"label": {"slide": "d1", "point": 0}, "op": "verbatim"},
+        {"label": {"slide": "d1", "point": 1}, "op": "verbatim"},
+    ]
+    timing = [
+        {"start_ms": 0, "end_ms": 5000},
+        {"start_ms": 5000, "end_ms": 10000},
+    ]
+    # d1_p1 committed at 3000ms (shown early, 2.0s before first word at 5000ms)
+    commits = [
+        {"node_id": "d1_p0", "at_ms": 0},
+        {"node_id": "d1_p1", "at_ms": 3000},
+    ]
+    med, p90 = calculate_onset_lag(sentences, timing, commits)
+    # d1_p0 lag is 0 (on screen at 0), d1_p1 lag is 0 (on screen at 5000)
+    assert med == 0.0
+    assert p90 == 0.0
+
+
+def test_calculate_onset_lag_synthetic_scenarios() -> None:
+    # Test cases from design_testing_and_validation.md §2:
+    # - a commit 2.0 s after first word -> 2.0
+    # - never on screen during a 14 s first run -> 14.0
+    # - during a 6 s run -> 10.0
+    # - a commit during a later revisit of the point is ignored
+    # 0 to 10s: commit at 2s -> lag 2.0
+    # 10 to 24s (14s run): never on screen -> 14.0
+    # 24 to 30s (6s run): never on screen, revisit at 50s ignored -> 10.0
+    # 30 to 45s: d2_p0
+    # 45 to 60s: revisit of d1_p2
+    sentences = [
+        {"label": {"slide": "d1", "point": 0}, "op": "verbatim"},
+        {"label": {"slide": "d1", "point": 1}, "op": "verbatim"},
+        {"label": {"slide": "d1", "point": 2}, "op": "verbatim"},
+        {"label": {"slide": "d2", "point": 0}, "op": "verbatim"},
+        {"label": {"slide": "d1", "point": 2}, "op": "verbatim"},
+    ]
+    timing = [
+        {"start_ms": 0, "end_ms": 10000},
+        {"start_ms": 10000, "end_ms": 24000},
+        {"start_ms": 24000, "end_ms": 30000},
+        {"start_ms": 30000, "end_ms": 45000},
+        {"start_ms": 45000, "end_ms": 60000},
+    ]
+    commits = [
+        {"node_id": "d1_section", "at_ms": 0},
+        {"node_id": "d1_p0", "at_ms": 2000},  # commit 2.0s after first word (0s) -> lag 2.0
+        # d1_p1 is never committed
+        # d1_p2 is committed at 50s during revisit -> should be ignored for first run
+        {"node_id": "d1_p2", "at_ms": 50000},
+    ]
+    # Points present in performance: d1_p0, d1_p1, d1_p2, d2_p0
+    # d1_p0: 2.0
+    # d1_p1: 14s run -> max(10.0, 14.0) = 14.0
+    # d1_p2: 6s run -> max(10.0, 6.0) = 10.0 (revisit commit at 50s ignored)
+    # d2_p0: never committed, 15s run (30 to 45s) -> max(10.0, 15.0) = 15.0
+    # Lags: [2.0, 10.0, 14.0, 15.0]
+    # Median = (10.0 + 14.0)/2 = 12.0
+    med, p90 = calculate_onset_lag(sentences, timing, commits)
+    assert med == 12.0
+
+
+def test_calculate_onset_lag_oracle_scores_zero() -> None:
+    # The oracle playback must score 0.0 on every point
+    sentences = [
+        {"label": {"slide": "d1", "point": 0}, "op": "verbatim"},
+        {"label": {"slide": "d1", "point": 1}, "op": "verbatim"},
+        {"label": {"slide": "d2", "point": 0}, "op": "verbatim"},
+    ]
+    timing = [
+        {"start_ms": 0, "end_ms": 3000},
+        {"start_ms": 3000, "end_ms": 6000},
+        {"start_ms": 6000, "end_ms": 9000},
+    ]
+    # Oracle commits each point at its first spoken word
+    commits = [
+        {"node_id": "d1_section", "at_ms": 0},
+        {"node_id": "d1_p0", "at_ms": 0},
+        {"node_id": "d1_p1", "at_ms": 3000},
+        {"node_id": "d2_section", "at_ms": 6000},
+        {"node_id": "d2_p0", "at_ms": 6000},
+    ]
+    med, p90 = calculate_onset_lag(sentences, timing, commits)
+    assert med == 0.0
+    assert p90 == 0.0
+
+
 def test_calculate_false_switches_synthetic() -> None:
     deck = _make_dummy_deck()
     sentences = [

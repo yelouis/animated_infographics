@@ -553,6 +553,7 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 **Wave K:**
 
 - K1 — The budget script's exit code states its bars — git log --grep "(k1)" — budget_verdict implemented returning 0 when all spans <= bars and 3 on miss; measure_budget.sh propagates verdict exit code and prints BUDGET/WATCH lines; long runs judged on total only (bars <= 170 s/min literal, <= 195 creative) with new/render as watch numbers; unit cases verified bare and falsified (assert 0 == 3); real cold long literal run exited 3 on total 189.05 s/min (watch: new 106.22, render 82.83 s/min) writing exit 3 to budget report.
+- K2 — Onset lag measured as §8 defines it — git log --grep "(k2)" — calculate_onset_lag updated per §8 (0 if on screen at t0, first commit in (t0, t_end) minus t0, else max(10, (t_end - t0)/1000)); unit tests passed including early-shown -> 0, 14s run -> 14, 6s run -> 10, revisit ignored, oracle -> 0.0; falsified bare by restoring -500 window (assert 5.0 == 0.0 red); 8 frozen corpus jobs and bake-off jobs re-scored; bm25 harness reproduces re-scored corpus within 0.000 <= 0.01; corpus hashes intact.
 
 ---
 
