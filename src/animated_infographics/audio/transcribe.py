@@ -16,6 +16,7 @@ from animated_infographics.contracts.models import (
     TranscriptSentence,
     TranscriptWord,
 )
+from animated_infographics.memguard import guard, release_in_process_models
 
 ABBREVIATIONS: Final[frozenset[str]] = frozenset(
     {
@@ -202,14 +203,18 @@ def transcribe(audio_path: Path, out_dir: Path) -> Transcript:
         )
 
     # Step 2: Transcribe normalized audio with mlx_whisper
-    res = mlx_whisper.transcribe(
-        str(narration_wav),
-        path_or_hf_repo="mlx-community/whisper-large-v3-turbo",
-        word_timestamps=True,
-        language="en",
-        temperature=0.0,
-        condition_on_previous_text=False,
-    )
+    try:
+        with guard("whisper"):
+            res = mlx_whisper.transcribe(
+                str(narration_wav),
+                path_or_hf_repo="mlx-community/whisper-large-v3-turbo",
+                word_timestamps=True,
+                language="en",
+                temperature=0.0,
+                condition_on_previous_text=False,
+            )
+    finally:
+        release_in_process_models()
 
     audio_data, sr = sf.read(str(narration_wav))
     if audio_data.ndim > 1:

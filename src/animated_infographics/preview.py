@@ -17,6 +17,7 @@ from animated_infographics.contracts.models import (
     Timeline,
     VoiceDecision,
 )
+from animated_infographics.memguard import guard, watch
 
 ENTER_FRAMES: int = 12
 
@@ -99,7 +100,12 @@ def render_stills(
         str(scale),
     ]
 
-    subprocess.run(cmd, cwd=renderer_dir, check=True)
+    with guard("render"):
+        proc = subprocess.Popen(cmd, cwd=renderer_dir)
+        with watch("render", proc):
+            ret = proc.wait()
+            if ret != 0:
+                raise subprocess.CalledProcessError(ret, cmd)
 
     overflow_path = job_dir / "logs" / "overflow.json"
     if overflow_path.is_file():
@@ -135,7 +141,12 @@ def render_preview_video(job_dir: Path) -> Path:
         "28",
     ]
 
-    subprocess.run(cmd, cwd=renderer_dir, check=True)
+    with guard("render"):
+        proc = subprocess.Popen(cmd, cwd=renderer_dir)
+        with watch("render", proc):
+            ret = proc.wait()
+            if ret != 0:
+                raise subprocess.CalledProcessError(ret, cmd)
     return out_mp4
 
 

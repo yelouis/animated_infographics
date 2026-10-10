@@ -90,7 +90,15 @@ def run_preview_stage(job: Job, ctx: RunContext) -> None:
         elapsed_ms = int((time.perf_counter() - t0) * 1000)
         log_file = job.dir / "logs" / "preview.log"
         log_file.parent.mkdir(parents=True, exist_ok=True)
-        log_file.write_text(f"llm_calls=0 cache_hits=0 elapsed_ms={elapsed_ms}\n", encoding="utf-8")
+        existing_memguard = ""
+        if log_file.is_file():
+            existing_memguard = "".join(
+                line
+                for line in log_file.read_text(encoding="utf-8").splitlines(keepends=True)
+                if line.startswith("memguard ")
+            )
+        summary_line = f"llm_calls=0 cache_hits=0 elapsed_ms={elapsed_ms}\n"
+        log_file.write_text(existing_memguard + summary_line, encoding="utf-8")
         return
 
     timeline_path = job.dir / "timeline.json"
@@ -186,4 +194,12 @@ def run_preview_stage(job: Job, ctx: RunContext) -> None:
     elapsed_ms = int((time.perf_counter() - t0) * 1000)
     log_file = job.dir / "logs" / "preview.log"
     log_file.parent.mkdir(parents=True, exist_ok=True)
-    log_file.write_text(f"llm_calls=0 cache_hits=0 elapsed_ms={elapsed_ms}\n", encoding="utf-8")
+    existing_memguard = ""
+    if log_file.is_file():
+        existing_memguard = "".join(
+            line
+            for line in log_file.read_text(encoding="utf-8").splitlines(keepends=True)
+            if line.startswith("memguard ")
+        )
+    summary_line = f"llm_calls=0 cache_hits=0 elapsed_ms={elapsed_ms}\n"
+    log_file.write_text(existing_memguard + summary_line, encoding="utf-8")

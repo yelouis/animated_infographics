@@ -38,6 +38,7 @@ from animated_infographics.jobs import (
     RunContext,
     StageFn,
 )
+from animated_infographics.memguard import ResourceUnavailable
 from animated_infographics.planner.validate import PlanContext, validate_plan
 from animated_infographics.presentation.anticipate import run_anticipate_stage
 from animated_infographics.presentation.compose import run_compose_stage
@@ -123,6 +124,9 @@ def handle_errors() -> Iterator[None]:
     except DependencyMissing as e:
         print(f"Error (dependency missing): {e}", file=sys.stderr)
         sys.exit(4)
+    except ResourceUnavailable as e:
+        print(f"Error (not enough memory): {e}", file=sys.stderr)
+        sys.exit(5)
     except SystemExit:
         raise
     except NotImplementedError as e:

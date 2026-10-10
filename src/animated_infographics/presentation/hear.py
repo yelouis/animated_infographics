@@ -28,7 +28,12 @@ def run_hear_stage(job: Job, ctx: RunContext) -> None:
     elapsed_ms = int((time.perf_counter() - t0) * 1000)
     log_file = job.dir / "logs" / "hear.log"
     log_file.parent.mkdir(parents=True, exist_ok=True)
+    existing_log = ""
+    if log_file.is_file():
+        existing_log = log_file.read_text(encoding="utf-8")
     with open(log_file, "w", encoding="utf-8") as f:
+        if existing_log:
+            f.write(existing_log)
         f.write(
             f"Hear: words={len(heard_transcript.words)}, "
             f"sentences={len(heard_transcript.sentences)}, "

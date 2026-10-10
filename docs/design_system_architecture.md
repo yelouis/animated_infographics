@@ -316,10 +316,10 @@ Wired memory reached 16 GB, and macOS killed its own services for lack of compre
 
 | Step | Where it runs | How | Declared peak |
 |---|---|---|---|
-| `flux` | `assets`: illustrations, metaphor images, text-check regenerations | the `mflux-generate-flux2` subprocess | **32 GB.** Measured 27.4 GB lifetime peak (jetsam, October 9), × 1.15, rounded up. Re-measured in M1 |
-| `whisper` | `transcribe`, `hear` | in-process `mlx-whisper` | measured in M1 |
-| `kokoro` | `narrate`, `speak` | in-process | measured in M1 |
-| `render` | `preview` stills, `render`, the oracle render, the gallery | Remotion (node + headless Chrome) subprocess, at the concurrency it actually uses | measured in M1 |
+| `flux` | `assets`: illustrations, metaphor images, text-check regenerations | the `mflux-generate-flux2` subprocess | **32 GB.** Measured 27.54 GB (October 10, 2026), 0.5% off 27.4 GB evidence, × 1.15, rounded up |
+| `whisper` | `transcribe`, `hear` | in-process `mlx-whisper` | **5 GB.** Measured 4.27 GB (October 10, 2026), × 1.15, rounded up |
+| `kokoro` | `narrate`, `speak` | in-process | **3 GB.** Measured 2.42 GB (October 10, 2026), × 1.15, rounded up |
+| `render` | `preview` stills, `render`, the oracle render, the gallery | Remotion (node + headless Chrome) subprocess, at the concurrency it actually uses | **6 GB.** Measured 5.16 GB (October 10, 2026), × 1.15, rounded up |
 | `llm_load` | the first LLM call of a stage while `gemma4:26b` is not loaded | Ollama | **12 GB.** `llama-server` 10.5 GB resident, × 1.15 |
 
 - **How a peak is measured:** run the step alone, as a subprocess, under `/usr/bin/time -l` on the longest fixture, and read "peak memory footprint". The declared peak is the measurement × 1.15, rounded up to a whole GB.

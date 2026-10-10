@@ -124,6 +124,17 @@ Outputs:
 - `jobs/<job_id>/strip_chart.png`: Visual strip chart (Pillow) showing ground truth vs shown slide progression.
 - `jobs/<job_id>/out/oracle.mp4` (with `--oracle`): Ground-truth baseline video achieving 100% accuracy and 0.0s lag, proving tree and template correctness.
 
+### 8. CLI Exit Codes
+
+| Code | Meaning |
+|---|---|
+| 0 | Success |
+| 1 | Unexpected error (traceback written to `logs/<stage>.log`) |
+| 2 | Validation error: bad input file, bad option combination, invalid edited plan |
+| 3 | Gate refusal: wrong state, plan hash mismatch, or concurrent gate |
+| 4 | Missing dependency: failed `doctor` check or missing tool |
+| 5 | **Not enough memory**: memory guard waited its limit or stopped a running step. The job remains resumable: `infographics rerun <job> --from <stage>` |
+
 ---
 
 ## Automatic checks

@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from animated_infographics.errors import ValidationFailed
+from animated_infographics.memguard import stage_log_context
 
 VIDEO_STAGES = (
     "ingest",
@@ -330,17 +331,19 @@ class Job:
             # Invalidate downstream
             self.invalidate_after(stage)
 
+            stage_log = self.dir / "logs" / f"{stage}.log"
             start_time = time.time()
             try:
-                stage_fn(self, ctx)
+                with stage_log_context(stage_log):
+                    stage_fn(self, ctx)
             except Exception as exc:
                 self.state["failed_stage"] = stage
                 self.state["state"] = "failed"
                 self.save_state()
 
-                # Write traceback to logs/<stage>.log
-                log_file = self.dir / "logs" / f"{stage}.log"
-                with open(log_file, "w", encoding="utf-8") as f:
+                # Write traceback to logs/<stage>.log (append to preserve memguard lines)
+                stage_log.parent.mkdir(parents=True, exist_ok=True)
+                with open(stage_log, "a", encoding="utf-8") as f:
                     traceback.print_exc(file=f)
 
                 raise exc

@@ -55,7 +55,12 @@ def run_speak_stage(job: Job, ctx: RunContext) -> None:
     elapsed_ms = int((time.perf_counter() - t0) * 1000)
     log_file = job.dir / "logs" / "speak.log"
     log_file.parent.mkdir(parents=True, exist_ok=True)
+    existing_log = ""
+    if log_file.is_file():
+        existing_log = log_file.read_text(encoding="utf-8")
     with open(log_file, "w", encoding="utf-8") as f:
+        if existing_log:
+            f.write(existing_log)
         f.write(
             f"Speak: sentences={len(sentence_specs)}, voice={voice.voice}, "
             f"llm_calls=0 cache_hits=0 elapsed_ms={elapsed_ms}\n"

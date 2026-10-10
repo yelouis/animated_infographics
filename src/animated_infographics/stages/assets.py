@@ -49,4 +49,11 @@ def run_assets_stage(job: Job, ctx: RunContext) -> None:
 
     log_file = job.dir / "logs" / "assets.log"
     log_file.parent.mkdir(parents=True, exist_ok=True)
-    log_file.write_text("".join(failed_lines) + summary_line, encoding="utf-8")
+    existing_memguard = ""
+    if log_file.is_file():
+        existing_memguard = "".join(
+            line
+            for line in log_file.read_text(encoding="utf-8").splitlines(keepends=True)
+            if line.startswith("memguard ")
+        )
+    log_file.write_text(existing_memguard + "".join(failed_lines) + summary_line, encoding="utf-8")

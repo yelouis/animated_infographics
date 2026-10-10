@@ -45,9 +45,11 @@ mkdir -p "$OUT_DIR"
 mkdir -p "$MOTION_DIR"
 
 log "Rendering gallery hold frames (frame 60) for: $TEMPLATES..."
-npx --prefix renderer tsx renderer/scripts/render.ts gallery \
-  --out-dir "$OUT_DIR" \
-  --template "$TEMPLATES"
+uv run python -c "
+from pathlib import Path
+from animated_infographics.render import render_gallery
+render_gallery(Path('$OUT_DIR'), '$TEMPLATES')
+"
 RENDER_CODE=$?
 [ "$RENDER_CODE" -eq 0 ] || fail "Gallery render failed with exit code $RENDER_CODE"
 

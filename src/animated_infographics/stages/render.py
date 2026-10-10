@@ -27,7 +27,15 @@ def run_render_stage(job: Job, ctx: RunContext) -> None:
     elapsed_ms = int((time.perf_counter() - t0) * 1000)
     logs_dir = job.dir / "logs"
     logs_dir.mkdir(parents=True, exist_ok=True)
-    (logs_dir / "render.log").write_text(
-        f"llm_calls=0 cache_hits=0 elapsed_ms={elapsed_ms}\n",
+    render_log = logs_dir / "render.log"
+    existing_memguard = ""
+    if render_log.is_file():
+        existing_memguard = "".join(
+            line
+            for line in render_log.read_text(encoding="utf-8").splitlines(keepends=True)
+            if line.startswith("memguard ")
+        )
+    render_log.write_text(
+        existing_memguard + f"llm_calls=0 cache_hits=0 elapsed_ms={elapsed_ms}\n",
         encoding="utf-8",
     )

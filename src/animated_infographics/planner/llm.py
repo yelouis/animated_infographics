@@ -108,6 +108,7 @@ class OllamaBackend:
         self.calls: int = 0
         self.cache_hits: int = 0
         self.last_elapsed_ms: int = 0
+        self._checked_stages: set[str] = set()
 
     def _canonical_cache_key(
         self,
@@ -217,18 +218,37 @@ class OllamaBackend:
 
         t0 = time.time()
         timeout = STAGE_TIMEOUTS.get(stage, self.timeout_s)
-        client = self.client or httpx.Client(timeout=timeout)
-        try:
-            resp = client.post(self.endpoint, json=payload)
-        except (httpx.ConnectError, httpx.ConnectTimeout) as exc:
-            raise DependencyMissing(
-                f"Ollama server is not running on {self.endpoint}: {exc}"
-            ) from exc
-        except httpx.HTTPError as exc:
-            raise DependencyMissing(f"Ollama request failed: {exc}") from exc
-        finally:
-            if client is not self.client:
-                client.close()
+
+        need_guard = False
+        if stage not in self._checked_stages:
+            self._checked_stages.add(stage)
+            from animated_infographics.memguard import is_ollama_model_loaded
+
+            base_url = self.endpoint.rsplit("/api/", 1)[0]
+            if not is_ollama_model_loaded(self.model, endpoint=base_url):
+                need_guard = True
+
+        def _do_post() -> httpx.Response:
+            client = self.client or httpx.Client(timeout=timeout)
+            try:
+                return client.post(self.endpoint, json=payload)
+            except (httpx.ConnectError, httpx.ConnectTimeout) as exc:
+                raise DependencyMissing(
+                    f"Ollama server is not running on {self.endpoint}: {exc}"
+                ) from exc
+            except httpx.HTTPError as exc:
+                raise DependencyMissing(f"Ollama request failed: {exc}") from exc
+            finally:
+                if client is not self.client:
+                    client.close()
+
+        if need_guard:
+            from animated_infographics.memguard import guard
+
+            with guard("llm_load"):
+                resp = _do_post()
+        else:
+            resp = _do_post()
 
         if resp.status_code == 404:
             raise DependencyMissing(

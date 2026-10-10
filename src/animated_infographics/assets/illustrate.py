@@ -20,6 +20,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from animated_infographics.assets.text_check import check_image_for_text
 from animated_infographics.contracts.models import Bible
 from animated_infographics.jobs import Job
+from animated_infographics.memguard import ResourceUnavailable, guard, watch
 from animated_infographics.planner.llm import LLMBackend, OllamaBackend
 
 # ---------------------------------------------------------------------------
@@ -339,18 +340,21 @@ def generate(
     ]
 
     try:
-        proc = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=timeout_s,
-            check=False,
-        )
+        with guard("flux"):
+            proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            with watch("flux", proc):
+                stdout_str, stderr_str = proc.communicate(timeout=timeout_s)
+
         if proc.returncode != 0:
             if temp_file.is_file():
                 temp_file.unlink(missing_ok=True)
             elapsed_ms = int((time.perf_counter() - t0) * 1000)
-            err_msg = proc.stderr.strip() or f"Process exited with {proc.returncode}"
+            err_msg = stderr_str.strip() or f"Process exited with {proc.returncode}"
             return ImageResult(
                 ok=False,
                 path=None,
@@ -407,6 +411,10 @@ def generate(
             cache_key=key,
         )
 
+    except ResourceUnavailable:
+        if temp_file.is_file():
+            temp_file.unlink(missing_ok=True)
+        raise
     except subprocess.TimeoutExpired:
         if temp_file.is_file():
             temp_file.unlink(missing_ok=True)

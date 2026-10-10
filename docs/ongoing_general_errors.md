@@ -565,6 +565,11 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 - K2 — Onset lag measured as §8 defines it — git log --grep "(k2)" — calculate_onset_lag updated per §8 (0 if on screen at t0, first commit in (t0, t_end) minus t0, else max(10, (t_end - t0)/1000)); unit tests passed including early-shown -> 0, 14s run -> 14, 6s run -> 10, revisit ignored, oracle -> 0.0; falsified bare by restoring -500 window (assert 5.0 == 0.0 red); 8 frozen corpus jobs and bake-off jobs re-scored; bm25 harness reproduces re-scored corpus within 0.000 <= 0.01; corpus hashes intact.
 - K3 — Compute time recorded and reported per decision — git log --grep "(k3)" — compute_ms added to PlaybackHold (G8 schema sync verified across 27 files); matchers pass compute_ms to holds; compute_decision_percentiles implemented taking median and p90 over all decisions (holds + post-initial commits, excluding initial t=0 commit); unit tests passed and falsified; re-ran harness with --matcher llm on frozen corpus (warm cache) measuring per-decision medians (438.0–497.5 ms) and p90s (503.0–594.0 ms, max 594.0 ms <= 1500 ms live bar); Section 7 Addendum appended to bake-off report.
 
+**Wave M:**
+
+- M1 — The memory guard — git log --grep "(m1)" — HEAVY_STEPS peaks measured (flux 32 GB, whisper 5 GB, kokoro 3 GB, render 6 GB, llm_load 12 GB; flux 27.54 GB within 0.5% of Jetsam evidence); read_memory agrees with system memory free percentage within 1%; Ollama gemma4:26b unloaded when needed; ResourceUnavailable maps to exit 5 and keeps failed_stage; unit tests (a)–(f) green bare; slow test serialises two real processes in 40 s; one-off validation of two cold jobs at once maintains min available 16.64 GB (>= 7 GB) with 0 new Jetsam events; 3 falsifications pass.
+
+
 
 ---
 

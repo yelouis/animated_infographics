@@ -11,6 +11,7 @@ from typing import Any
 import numpy as np
 
 from animated_infographics.contracts.models import Timeline
+from animated_infographics.memguard import guard, watch
 
 
 def render_video(
@@ -51,11 +52,42 @@ def render_video(
     if timeline_path:
         cmd.extend(["--timeline", str(timeline_path)])
 
-    subprocess.run(cmd, cwd=renderer_dir, check=True)
+    with guard("render"):
+        proc = subprocess.Popen(cmd, cwd=renderer_dir)
+        with watch("render", proc):
+            ret = proc.wait()
+            if ret != 0:
+                raise subprocess.CalledProcessError(ret, cmd)
+
     if not out_file.is_file():
         raise FileNotFoundError(f"Render completed but output file not found: {out_file}")
 
     return out_file
+
+
+def render_gallery(out_dir: Path, templates: str) -> None:
+    """Invoke Remotion render.ts gallery under guard('render') and watch."""
+    repo_root = Path(__file__).resolve().parents[2]
+    renderer_dir = repo_root / "renderer"
+    render_script = renderer_dir / "scripts" / "render.ts"
+
+    cmd = [
+        "npx",
+        "tsx",
+        str(render_script),
+        "gallery",
+        "--out-dir",
+        str(out_dir),
+        "--template",
+        templates,
+    ]
+
+    with guard("render"):
+        proc = subprocess.Popen(cmd, cwd=renderer_dir)
+        with watch("render", proc):
+            ret = proc.wait()
+            if ret != 0:
+                raise subprocess.CalledProcessError(ret, cmd)
 
 
 def verify_render(mp4_path: Path, timeline: Timeline) -> dict[str, Any]:

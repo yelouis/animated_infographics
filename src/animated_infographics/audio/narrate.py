@@ -25,6 +25,7 @@ from animated_infographics.contracts.models import (
     TranscriptWord,
     VoiceDecision,
 )
+from animated_infographics.memguard import guard, release_in_process_models
 
 KOKORO_SAMPLE_RATE = 24000
 OPENING_PUNCTUATION = frozenset({'"', "'", "“", "‘", "(", "[", "{", "$", "£", "€"})
@@ -225,11 +226,8 @@ def synthesize_narration(
     final_wav_path: Path,
 ) -> tuple[Transcript, NarrationOffsets]:
     """Synthesize audio from sentence specs with Kokoro, perform loudnorm,
-
     and return transcript and offsets.
     """
-    pipeline = KPipeline(lang_code="a", repo_id="hexgrad/Kokoro-82M", device="cpu")
-
     audio_chunks: list[np.ndarray] = []
     current_sample = 0
 
@@ -240,99 +238,111 @@ def synthesize_narration(
 
     num_sentences = len(sentence_specs)
 
-    for idx, (sentence_text, p_idx, is_title) in enumerate(sentence_specs):
-        sentence_start_sample = current_sample
-        sentence_audio_parts: list[np.ndarray] = []
-        sentence_tokens: list[tuple[str, float | None, float | None]] = []
+    try:
+        with guard("kokoro"):
+            pipeline = KPipeline(lang_code="a", repo_id="hexgrad/Kokoro-82M", device="cpu")
 
-        generator = pipeline(sentence_text, voice=voice.voice, speed=1.0)
-        sentence_samples_emitted = 0
+            for idx, (sentence_text, p_idx, is_title) in enumerate(sentence_specs):
+                sentence_start_sample = current_sample
+                sentence_audio_parts: list[np.ndarray] = []
+                sentence_tokens: list[tuple[str, float | None, float | None]] = []
 
-        for res in generator:
-            audio_np = res.audio.numpy() if hasattr(res.audio, "numpy") else np.array(res.audio)
-            sentence_audio_parts.append(audio_np)
+                generator = pipeline(sentence_text, voice=voice.voice, speed=1.0)
+                sentence_samples_emitted = 0
 
-            res_offset_sec = sentence_samples_emitted / float(KOKORO_SAMPLE_RATE)
-            if hasattr(res, "tokens") and res.tokens:
-                for tok in res.tokens:
-                    s_ts = res_offset_sec + tok.start_ts if tok.start_ts is not None else None
-                    e_ts = res_offset_sec + tok.end_ts if tok.end_ts is not None else None
-                    sentence_tokens.append((tok.text, s_ts, e_ts))
+                for res in generator:
+                    audio_np = (
+                        res.audio.numpy() if hasattr(res.audio, "numpy") else np.array(res.audio)
+                    )
+                    sentence_audio_parts.append(audio_np)
 
-            sentence_samples_emitted += len(audio_np)
+                    res_offset_sec = sentence_samples_emitted / float(KOKORO_SAMPLE_RATE)
+                    if hasattr(res, "tokens") and res.tokens:
+                        for tok in res.tokens:
+                            s_ts = (
+                                res_offset_sec + tok.start_ts if tok.start_ts is not None else None
+                            )
+                            e_ts = res_offset_sec + tok.end_ts if tok.end_ts is not None else None
+                            sentence_tokens.append((tok.text, s_ts, e_ts))
 
-        if sentence_audio_parts:
-            combined_audio = np.concatenate(sentence_audio_parts)
-        else:
-            combined_audio = np.zeros(0, dtype=np.float32)
+                    sentence_samples_emitted += len(audio_np)
 
-        # Pad sentence audio to multiple of 24 samples (1 ms) so sample math is exact
-        pad_len = (24 - (len(combined_audio) % 24)) % 24
-        if pad_len > 0:
-            combined_audio = np.pad(combined_audio, (0, pad_len))
+                if sentence_audio_parts:
+                    combined_audio = np.concatenate(sentence_audio_parts)
+                else:
+                    combined_audio = np.zeros(0, dtype=np.float32)
 
-        sentence_samples = len(combined_audio)
-        audio_chunks.append(combined_audio)
+                # Pad sentence audio to multiple of 24 samples (1 ms) so sample math is exact
+                pad_len = (24 - (len(combined_audio) % 24)) % 24
+                if pad_len > 0:
+                    combined_audio = np.pad(combined_audio, (0, pad_len))
 
-        sentence_end_sample = sentence_start_sample + sentence_samples
-        current_sample = sentence_end_sample
+                sentence_samples = len(combined_audio)
+                audio_chunks.append(combined_audio)
 
-        # Offsets in ms
-        sent_start_ms = sentence_start_sample // 24
-        sent_end_ms = sentence_end_sample // 24
+                sentence_end_sample = sentence_start_sample + sentence_samples
+                current_sample = sentence_end_sample
 
-        sentence_offsets.append(
-            SentenceOffset(
-                i=idx,
-                start_ms=sent_start_ms,
-                end_ms=sent_end_ms,
-            )
-        )
+                # Offsets in ms
+                sent_start_ms = sentence_start_sample // 24
+                sent_end_ms = sentence_end_sample // 24
 
-        # Process words for this sentence
-        sentence_start_sec = sentence_start_sample / float(KOKORO_SAMPLE_RATE)
-        sentence_duration_sec = sentence_samples / float(KOKORO_SAMPLE_RATE)
-        sent_words = process_sentence_tokens(
-            tokens=sentence_tokens,
-            sentence_start_sec=sentence_start_sec,
-            sentence_duration_sec=sentence_duration_sec,
-            sentence_i=idx,
-            word_start_i=word_counter,
-        )
+                sentence_offsets.append(
+                    SentenceOffset(
+                        i=idx,
+                        start_ms=sent_start_ms,
+                        end_ms=sent_end_ms,
+                    )
+                )
 
-        word_start_idx = word_counter
-        word_end_idx = word_counter + len(sent_words)
-        word_counter = word_end_idx
-        all_words.extend(sent_words)
+                # Process words for this sentence
+                sentence_start_sec = sentence_start_sample / float(KOKORO_SAMPLE_RATE)
+                sentence_duration_sec = sentence_samples / float(KOKORO_SAMPLE_RATE)
+                sent_words = process_sentence_tokens(
+                    tokens=sentence_tokens,
+                    sentence_start_sec=sentence_start_sec,
+                    sentence_duration_sec=sentence_duration_sec,
+                    sentence_i=idx,
+                    word_start_i=word_counter,
+                )
 
-        transcript_sentences.append(
-            TranscriptSentence(
-                i=idx,
-                text=sentence_text,
-                start_ms=sent_start_ms,
-                end_ms=sent_end_ms,
-                word_start=word_start_idx,
-                word_end=word_end_idx,
-                paragraph_i=p_idx,
-                is_title=is_title,
-            )
-        )
+                word_start_idx = word_counter
+                word_end_idx = word_counter + len(sent_words)
+                word_counter = word_end_idx
+                all_words.extend(sent_words)
 
-        # Insert pause after sentence
-        is_last = idx == num_sentences - 1
-        if is_last:
-            pause_ms = TAIL_SILENCE_MS
-        elif is_title:
-            pause_ms = PAUSE_AFTER_TITLE_MS
-        elif sentence_specs[idx + 1][1] != p_idx:
-            pause_ms = PAUSE_BETWEEN_PARAGRAPHS_MS
-        else:
-            pause_ms = PAUSE_BETWEEN_SENTENCES_MS
+                transcript_sentences.append(
+                    TranscriptSentence(
+                        i=idx,
+                        text=sentence_text,
+                        start_ms=sent_start_ms,
+                        end_ms=sent_end_ms,
+                        word_start=word_start_idx,
+                        word_end=word_end_idx,
+                        paragraph_i=p_idx,
+                        is_title=is_title,
+                    )
+                )
 
-        pause_samples = pause_ms * 24
-        silence = np.zeros(pause_samples, dtype=np.float32)
-        audio_chunks.append(silence)
-        current_sample += pause_samples
+                # Insert pause after sentence
+                is_last = idx == num_sentences - 1
+                if is_last:
+                    pause_ms = TAIL_SILENCE_MS
+                elif is_title:
+                    pause_ms = PAUSE_AFTER_TITLE_MS
+                elif sentence_specs[idx + 1][1] != p_idx:
+                    pause_ms = PAUSE_BETWEEN_PARAGRAPHS_MS
+                else:
+                    pause_ms = PAUSE_BETWEEN_SENTENCES_MS
+
+                pause_samples = pause_ms * 24
+                silence = np.zeros(pause_samples, dtype=np.float32)
+                audio_chunks.append(silence)
+                current_sample += pause_samples
+
+            del pipeline
+    finally:
+        release_in_process_models()
 
     # Enforce Rule 4 transcript invariants across all words
     repaired_words = enforce_rule4_invariants(all_words)
