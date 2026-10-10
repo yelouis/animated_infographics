@@ -97,6 +97,11 @@
 - **Wave J's bake-off verdict is not valid evidence.** The designer's §6.6 gave both contestants a candidate set that a lost follower can never leave (lesson 2.17). Replays by the designer, using the agent's own code with only the candidate set changed, roughly double A2's accuracy (Issue 9, rewritten).
 - **Three summary lines misdescribe correct code:** I5 ("dialogue"), J3 ("prior slide titles") and §1's "59 goldens". The verdicts in §3 say so.
 
+**Waves K (K1–K4) and M (M1–M2) were delivered and verified on October 10, 2026.**
+- **Gates:** every gate G1–G16 was re-run bare under the gate lock (`gate.lock` flock) and memory guard (`guard()` / `watch()`): 436 fast tests, 44 slow tests, 21 vitest, 82 gallery goldens (0 overflows, 0 overlaps), E2E (exit 0), offline gate (exit 0), doctor (exit 0), creative E2E (exit 0), and presentation simulation (exit 3 as expected; all mechanics pass, oracle meets all §8 bars).
+- **Cold budgets:** all three measured clean under `measure_budget.sh` with 0 memory waits (`waited_ms` = 0) and 0 cache hits: primary story 202.88 / 195.66 / 398.54 s (all ≤ bars); long literal total 138.91 s/min (≤ 170 s/min; watch: 57.47 s/min new, 81.45 s/min render); long creative total 158.91 s/min (≤ 195 s/min; watch: 77.51 s/min new, 81.40 s/min render, 9 images, not degraded).
+- **Memory safety:** admission queue, heavy step lock, automatic Ollama unloading, 5 s unified memory reclamation window, and watchdog with exit 5 prevent memory exhaustion.
+
 **No open decision.** Issues 9 and 10 were decided on October 10, 2026 (both Option A). They are being built in Waves K and L.
 
 ## ⚠️ Unresolved Issues & Suggestions
@@ -221,6 +226,7 @@ Your selection: **Option A**. Given by the user in chat on October 7, 2026, verb
 - **What remains is lag.** The follower trails the speaker by 1–3 points for 25–41% of the talk. After a new point begins, the model keeps answering "current" for 1–6 decisions (≈ 1.5–9 s): the 25-word window still holds mostly the old point's words.
 - **Bars and corrections have both been seen.** The designer's replays looked at the decision set (seed 7), and A1's replay also looked at seed 11. Any next round therefore needs a **fresh held-out seed (13)**.
 - **The scorer's lag will also change** with Wave K's correction (K2): a point already on screen at its first word now counts 0 s, not a 10 s miss.
+- **K2-corrected onset lag on the four seed-7 `bm25` baseline jobs:** `history` mild: 8.70 s / 12.06 s; `history` strong: 10.00 s / 22.41 s; `overdue` strong: 8.62 s / 10.53 s; `overdue` mild: 9.96 s / 92.46 s.
 
 **Option A (recommended)**: **Round 2: the corrected A2 against the unchanged bars.**
 - **The contestant:** A2 with the three corrections in the table's last column: every node is a candidate, the section step, and the "side story" prompt.
@@ -564,6 +570,7 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 - K1 — The budget script's exit code states its bars — git log --grep "(k1)" — budget_verdict implemented returning 0 when all spans <= bars and 3 on miss; measure_budget.sh propagates verdict exit code and prints BUDGET/WATCH lines; long runs judged on total only (bars <= 170 s/min literal, <= 195 creative) with new/render as watch numbers; unit cases verified bare and falsified (assert 0 == 3); real cold long literal run exited 3 on total 189.05 s/min (watch: new 106.22, render 82.83 s/min) writing exit 3 to budget report.
 - K2 — Onset lag measured as §8 defines it — git log --grep "(k2)" — calculate_onset_lag updated per §8 (0 if on screen at t0, first commit in (t0, t_end) minus t0, else max(10, (t_end - t0)/1000)); unit tests passed including early-shown -> 0, 14s run -> 14, 6s run -> 10, revisit ignored, oracle -> 0.0; falsified bare by restoring -500 window (assert 5.0 == 0.0 red); 8 frozen corpus jobs and bake-off jobs re-scored; bm25 harness reproduces re-scored corpus within 0.000 <= 0.01; corpus hashes intact.
 - K3 — Compute time recorded and reported per decision — git log --grep "(k3)" — compute_ms added to PlaybackHold (G8 schema sync verified across 27 files); matchers pass compute_ms to holds; compute_decision_percentiles implemented taking median and p90 over all decisions (holds + post-initial commits, excluding initial t=0 commit); unit tests passed and falsified; re-ran harness with --matcher llm on frozen corpus (warm cache) measuring per-decision medians (438.0–497.5 ms) and p90s (503.0–594.0 ms, max 594.0 ms <= 1500 ms live bar); Section 7 Addendum appended to bake-off report.
+- K4 — Re-measure; close-out of Waves K and M — git log --grep "(k4)" — full battery G1–G16 bare verified (G1–G15 exit 0, G16 exits 3 as expected); three cold budgets measured bare with 0 cache hits and 0 asset execution errors (primary: 202.88 / 195.66 / 398.54 s; long literal: 57.47 / 81.45 / 138.91 s/min total <= 170; long creative: 77.51 / 81.40 / 158.91 s/min total <= 195 with 9 images); budget report docs/evals/budget_2026-10-10.md verified clean with 0 INVALID lines; cold-load LLM timeout and asset batching optimizations in place; Waves K and M closed out.
 
 **Wave M:**
 

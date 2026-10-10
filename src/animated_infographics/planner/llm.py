@@ -228,6 +228,9 @@ class OllamaBackend:
             if not is_ollama_model_loaded(self.model, endpoint=base_url):
                 need_guard = True
 
+        if need_guard:
+            timeout = max(timeout, self.timeout_s)
+
         def _do_post() -> httpx.Response:
             client = self.client or httpx.Client(timeout=timeout)
             try:

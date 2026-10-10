@@ -437,6 +437,7 @@ Measured on \`fixtures/scripts/story_overdue_book.txt\` ({narration_sec:.1f} s /
 \`\`\`json
 {json.dumps(timings_ms, indent=2)}
 \`\`\`
+'''
         if mem_waited_ms > 0 or step_stopped:
             inv_str = f'INVALID: memory guard waited {mem_waited_ms} ms'
             print(inv_str)

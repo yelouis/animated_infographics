@@ -447,55 +447,88 @@ def run_assets(bible: Bible, job: Job, backend: LLMBackend | None = None) -> Ass
     images_dir = job.dir / "assets" / "images"
     images_dir.mkdir(parents=True, exist_ok=True)
 
-    def process_entity(
-        ent_id: str, kind: Literal["place", "set_piece", "metaphor"], visual_desc: str
-    ) -> AssetEntity:
+    items_to_process: list[tuple[str, Literal["place", "set_piece", "metaphor"], str]] = []
+
+    # Places: up to 4 per bible cap
+    for p in bible.places[:4]:
+        items_to_process.append((p.id, "place", p.visual_description))
+
+    # Set pieces: up to 3 per bible cap
+    for s in bible.set_pieces[:3]:
+        items_to_process.append((s.id, "set_piece", s.visual_description))
+
+    # Metaphors from director.json if present
+    director_path = job.dir / "director.json"
+    if director_path.is_file():
+        try:
+            from animated_infographics.contracts.director import DirectorPlan
+
+            d_plan = DirectorPlan.model_validate_json(director_path.read_text(encoding="utf-8"))
+            for m in d_plan.metaphors:
+                items_to_process.append((f"metaphor_{m.beat_i}", "metaphor", m.image))
+        except Exception:
+            pass
+
+    # Phase 1: Generate initial images (attempt 0) for all entities.
+    # Running initial image generations back-to-back avoids thrashing between
+    # flux (32 GB) and the vision LLM (12 GB).
+    initial_generations: dict[str, tuple[str, Path, bool, int, ImageResult]] = {}
+    for ent_id, kind, visual_desc in items_to_process:
         prompt = image_prompt(kind, visual_desc)
         out_path = images_dir / f"{ent_id}.png"
         expected = text_expected(visual_desc)
+        s0 = image_seed(prompt)
+        res = generate(prompt, out_path, seed=s0, timeout_s=timeout_s)
+        initial_generations[ent_id] = (prompt, out_path, expected, s0, res)
+
+    # Phase 2: Process results and run text checks with retry loop if needed.
+    entities: list[AssetEntity] = []
+    for ent_id, _kind, _visual_desc in items_to_process:
+        prompt, out_path, expected, s0, res = initial_generations[ent_id]
 
         if expected:
-            s0 = image_seed(prompt)
-            res = generate(prompt, out_path, seed=s0, timeout_s=timeout_s)
             status: Literal["generated", "cached", "failed"] = res.status if res.ok else "failed"
-            return AssetEntity(
-                id=ent_id,
-                prompt=prompt,
-                cache_key=res.cache_key,
-                status=status,
-                elapsed_ms=res.elapsed_ms,
-                error=res.error,
-                text_expected=True,
-                text_check="skipped",
-                attempts=[],
+            entities.append(
+                AssetEntity(
+                    id=ent_id,
+                    prompt=prompt,
+                    cache_key=res.cache_key,
+                    status=status,
+                    elapsed_ms=res.elapsed_ms,
+                    error=res.error,
+                    text_expected=True,
+                    text_check="skipped",
+                    attempts=[],
+                )
             )
+            continue
 
-        # text_expected is False: check image with retry up to 2 regenerations (3 images total)
-        s0 = image_seed(prompt)
         attempts: list[CheckAttempt] = []
         entity_status: Literal["generated", "cached", "failed"] = "failed"
         entity_error: str | None = None
         entity_text_check: Literal["skipped", "clean", "regenerated", "failed", "unavailable"] = (
             "clean"
         )
-        final_key = ""
-        total_elapsed_ms = 0
+        final_key = res.cache_key
+        total_elapsed_ms = res.elapsed_ms
 
+        current_res = res
         for attempt_idx in range(3):
             current_seed = s0 + attempt_idx
-            res = generate(prompt, out_path, seed=current_seed, timeout_s=timeout_s)
-            final_key = res.cache_key
-            total_elapsed_ms += res.elapsed_ms
-            if not res.ok:
+            if attempt_idx > 0:
+                current_res = generate(prompt, out_path, seed=current_seed, timeout_s=timeout_s)
+                final_key = current_res.cache_key
+                total_elapsed_ms += current_res.elapsed_ms
+
+            if not current_res.ok:
                 entity_status = "failed"
-                entity_error = res.error
+                entity_error = current_res.error
                 entity_text_check = "failed"
                 break
 
             check_res = check_image_for_text(out_path, llm_backend)
             if check_res is None:
-                # Check failed/unavailable -> keep image, text_check: unavailable
-                entity_status = res.status
+                entity_status = current_res.status
                 entity_error = None
                 entity_text_check = "unavailable"
                 attempts.append(
@@ -518,52 +551,30 @@ def run_assets(bible: Bible, job: Job, backend: LLMBackend | None = None) -> Ass
             )
 
             if not check_res.has_text:
-                entity_status = res.status
+                entity_status = current_res.status
                 entity_error = None
                 entity_text_check = "clean" if attempt_idx == 0 else "regenerated"
                 break
             else:
                 if attempt_idx == 2:
-                    # 3 texty images -> failed with exact error
                     entity_status = "failed"
                     entity_error = "lettering detected in 3 attempts"
                     entity_text_check = "failed"
                     out_path.unlink(missing_ok=True)
 
-        return AssetEntity(
-            id=ent_id,
-            prompt=prompt,
-            cache_key=final_key,
-            status=entity_status,
-            elapsed_ms=total_elapsed_ms,
-            error=entity_error,
-            text_expected=False,
-            text_check=entity_text_check,
-            attempts=attempts,
+        entities.append(
+            AssetEntity(
+                id=ent_id,
+                prompt=prompt,
+                cache_key=final_key,
+                status=entity_status,
+                elapsed_ms=total_elapsed_ms,
+                error=entity_error,
+                text_expected=False,
+                text_check=entity_text_check,
+                attempts=attempts,
+            )
         )
-
-    entities: list[AssetEntity] = []
-
-    # Places: up to 4 per bible cap
-    for p in bible.places[:4]:
-        entities.append(process_entity(p.id, "place", p.visual_description))
-
-    # Set pieces: up to 3 per bible cap
-    for s in bible.set_pieces[:3]:
-        entities.append(process_entity(s.id, "set_piece", s.visual_description))
-
-    # Metaphors from director.json if present
-    director_path = job.dir / "director.json"
-    if director_path.is_file():
-        try:
-            from animated_infographics.contracts.director import DirectorPlan
-
-            d_plan = DirectorPlan.model_validate_json(director_path.read_text(encoding="utf-8"))
-            for m in d_plan.metaphors:
-                ent_id = f"metaphor_{m.beat_i}"
-                entities.append(process_entity(ent_id, "metaphor", m.image))
-        except Exception:
-            pass
 
     manifest = AssetManifest(schema_version=1, entities=entities)
     manifest_path = job.dir / "assets" / "manifest.json"

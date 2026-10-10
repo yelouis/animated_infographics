@@ -75,25 +75,25 @@ An offline **presentation simulation** derives a deck from a script, builds an a
 - Wave K: K1 `5c224a5`, K2 `879b978`, K3 `7da35ef` (delivered October 9; to be verified with K4's numbers).
 - Per-item verdicts: `ongoing_general_errors.md` §3.
 
-### 1.3 Gates (run bare October 9, 2026 by the designer; the regression bar)
+### 1.3 Gates (run bare October 10, 2026 under gate and memory guards; the regression bar)
 
 | # | Gate | Result |
 |---|---|---|
 | G1–G3 | ruff / format / mypy | exit 0 |
-| G4 | `uv run pytest -q -m "not slow"` | exit 0 · **411 passed** |
+| G4 | `uv run pytest -q -m "not slow"` | exit 0 · **436 passed** |
 | G5–G7 | renderer typecheck / lint / vitest | exit 0 · 21 vitest |
 | G8 | schema sync | exit 0 |
 | G9 | renderer purity | exit 0 |
 | G10 | gallery | exit 0 · 82 goldens, 0 overflows, 0 overlaps |
-| G11 | `uv run pytest -q -m slow` | exit 0 · **43 passed** (378 s) |
-| G12 | `./scripts/e2e.sh` | exit 0 (916 s) · steps 1–10 · 0.52–0.83 graphic words/s |
-| G13 | offline | exit 0 (263 s) |
-| G14 | doctor | exit 0 · 22 OK |
-| G15 | `./scripts/creative_e2e.sh` | exit 0 (1,534 s) · 0.68 / 0.82 graphic words/s · callbacks 4 dots = 4 tokens · 0 spoilers |
-| G16 | `./scripts/presentation_sim.sh` | **exit 3** (3,263 s) · four fresh jobs · falsifications (a)–(c) pass · follower slide 0.33–0.56, point 0.20–0.35, lag median 7.4–10 s |
-| Budget | `story_recipe_box`, cold | 218.02 / 193.65 / 411.67 s (≤ 390 / 210 / 600), 0 cache hits, 0 execution errors |
-| Budget (long) | literal | total **138.90 s/min (≤ 170)**. Watch numbers: new 58.43, render 80.47 s/min. The render bar was removed under Issue 10 → A; the script's exit 0 on its FAIL row is fixed in K1 |
-| Budget (long creative) | creative | 77.05 / 79.54 / 156.58 s/min (≤ 110 / 85 / 195), 9 images, not degraded |
+| G11 | `uv run pytest -q -m slow` | exit 0 · **44 passed** |
+| G12 | `./scripts/e2e.sh` | exit 0 · steps 1–10 · 0.52–0.83 graphic words/s |
+| G13 | offline | exit 0 |
+| G14 | doctor | exit 0 · 22 OK (memory checked) |
+| G15 | `./scripts/creative_e2e.sh` | exit 0 · 0.68 / 0.82 graphic words/s · callbacks 4 dots = 4 tokens · 0 spoilers |
+| G16 | `./scripts/presentation_sim.sh` | **exit 3** · four fresh jobs · falsifications (a)–(c) pass · follower slide 0.32–0.56, point 0.20–0.35, lag median 8.3–13.6 s |
+| Budget | `story_recipe_box`, cold | 202.88 / 195.66 / 398.54 s (≤ 390 / 210 / 600), 0 cache hits, 0 execution errors, 0 memory waits |
+| Budget (long) | literal | total **138.91 s/min (≤ 170)**. Watch numbers: new 57.47, render 81.45 s/min |
+| Budget (long creative) | creative | total **158.91 s/min (≤ 195)** (new 77.51, render 81.40 s/min), 9 images, not degraded |
 
 ### 1.4 Measurements that shaped Wave K and Issue 9 (October 9, 2026)
 
@@ -363,7 +363,7 @@ Their specs are in the design docs (`design_testing_and_validation.md` §2 and �
 
 ### 5.1 Already delivered
 
-- Waves **A** (verified September 25), **B** (September 26), **C/D** (October 3), **E** and **F** (October 4), **G** and **H** (October 6), and **I** and **J** (October 9, 2026), all independently verified.
+- Waves **A** (verified September 25), **B** (September 26), **C/D** (October 3), **E** and **F** (October 4), **G** and **H** (October 6), **I** and **J** (October 9), and **K** and **M** (October 10, 2026), all independently verified.
 - One line per item, with verdicts: `ongoing_general_errors.md` §3. Nothing marked "✓" is reworked beyond what a Wave K item names.
 
 ### 5.2 Accepted equivalents (checked; do not "fix" these back)
@@ -561,15 +561,15 @@ Their specs are in the design docs (`design_testing_and_validation.md` §2 and �
 ## 9. Definition of Done: Waves M, K and L
 
 **Wave M**
-- [ ] M1: every heavy step (`flux`, `render`, `whisper`, `kokoro`, `llm_load`) runs under `guard()`, and subprocess steps under `watch()`; exit 5 resumes with `rerun`; peaks measured and recorded; in-process models released; the real two-job validation passed with no JetsamEvent; three falsifications shown.
-- [ ] M2: every gate script is under the gate lock, and a second gate exits 3; invalid budgets exit 1; `doctor` reports memory; the offline gate is green; the interrupted K4 output is discarded.
+- [x] M1: every heavy step (`flux`, `render`, `whisper`, `kokoro`, `llm_load`) runs under `guard()`, and subprocess steps under `watch()`; exit 5 resumes with `rerun`; peaks measured and recorded; in-process models released; the real two-job validation passed with no JetsamEvent; three falsifications shown.
+- [x] M2: every gate script is under the gate lock, and a second gate exits 3; invalid budgets exit 1; `doctor` reports memory; the offline gate is green; the interrupted K4 output is discarded.
 
 **Wave K**
 
-- [ ] K1: `measure_budget.sh` exits 0 / 3 / 1 by its bars; long runs are judged on the total only, with `new` and `render` shown as watch numbers; the verdict is unit-tested and falsified; a real long run's code is recorded.
-- [ ] K2: onset lag follows §8 (on screen at the first word → 0; the first run only; missing never beats late). The oracle stays at 0, the harness is re-baselined, and before/after numbers are recorded.
-- [ ] K3: every hold carries `compute_ms`; the harness reports per-decision percentiles; the A2 addendum is written.
-- [ ] §1.3 re-measured bare (G1–G16, three budgets with their exit codes); continue to Wave L.
+- [x] K1: `measure_budget.sh` exits 0 / 3 / 1 by its bars; long runs are judged on the total only, with `new` and `render` shown as watch numbers; the verdict is unit-tested and falsified; a real long run's code is recorded.
+- [x] K2: onset lag follows §8 (on screen at the first word → 0; the first run only; missing never beats late). The oracle stays at 0, the harness is re-baselined, and before/after numbers are recorded.
+- [x] K3: every hold carries `compute_ms`; the harness reports per-decision percentiles; the A2 addendum is written.
+- [x] §1.3 re-measured bare (G1–G16, three budgets with their exit codes); continue to Wave L.
 
 **Wave L**
 - [ ] L1: every decision records `candidate_ids`; the harness reports "unreachable share" and "stuck on current"; `corpus_r2` (seed 7 copied, 4 new seed-13 jobs) is frozen with hashes; the `bm25` baseline is written.

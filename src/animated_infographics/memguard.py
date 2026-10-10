@@ -253,6 +253,7 @@ def guard(step: str, *, stage_log: Path | str | None = None) -> Iterator[None]:
         unloaded_llm = False
         admitted = False
         last_log_time = 0.0
+        slept = False
 
         while time.monotonic() - t_start < timeout_s:
             available, pressure = read_memory()
@@ -270,13 +271,19 @@ def guard(step: str, *, stage_log: Path | str | None = None) -> Iterator[None]:
                     )
                     logger.info("memory guard: unloaded gemma4:26b to admit %s", step)
                     unloaded_llm = True
-                    # Re-check available memory immediately
-                    available, pressure = read_memory()
-                    if available - peak >= FLOOR:
-                        admitted = True
+                    # Re-check available memory (allowing up to 5s for OS to reclaim pages)
+                    t_reclaim = time.monotonic()
+                    while time.monotonic() - t_reclaim < 5.0:
+                        available, pressure = read_memory()
+                        if available - peak >= FLOOR:
+                            admitted = True
+                            break
+                        time.sleep(0.5)
+                    if admitted:
                         break
 
             # 4. Otherwise wait
+            slept = True
             now = time.monotonic()
             if now - last_log_time >= 30.0:
                 avail_gb = available / (1024**3)
@@ -305,10 +312,7 @@ def guard(step: str, *, stage_log: Path | str | None = None) -> Iterator[None]:
                 f"need {peak_gb:.0f} GB + floor 8 GB, available {avail_gb:.1f} GB"
             )
 
-        waited_ms = int((time.monotonic() - t_start) * 1000)
-        # If admitted without loop wait, waited_ms is 0
-        if waited_ms < 50:
-            waited_ms = 0
+        waited_ms = int((time.monotonic() - t_start) * 1000) if slept else 0
         avail_gb = available / (1024**3)
         record_admission(
             step,

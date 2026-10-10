@@ -14,6 +14,7 @@ from typing import Any, Final, Literal
 
 from PIL import Image
 
+from animated_infographics.errors import DependencyMissing
 from animated_infographics.planner.llm import LLMBackend, run_with_retries
 
 TEXT_CHECK_PROMPT: Final[str] = (
@@ -157,19 +158,22 @@ def check_image_for_text(
         validate_naive_text_check if prompt == REJECTED_NAIVE_PROMPT else validate_text_check
     )
 
-    result, _attempts = run_with_retries(
-        backend,
-        stage="text_check",
-        system="",
-        user=prompt,
-        schema=schema,
-        validate=validate_fn,
-        images=[resized_bytes],
-        num_predict=96,
-        temperature=0.0,
-        max_attempts=3,
-        attempt_offset=attempt_offset,
-    )
+    try:
+        result, _attempts = run_with_retries(
+            backend,
+            stage="text_check",
+            system="",
+            user=prompt,
+            schema=schema,
+            validate=validate_fn,
+            images=[resized_bytes],
+            num_predict=96,
+            temperature=0.0,
+            max_attempts=3,
+            attempt_offset=attempt_offset,
+        )
+    except DependencyMissing:
+        return None
     elapsed_ms = int((time.perf_counter() - t0) * 1000)
 
     if result is None:
