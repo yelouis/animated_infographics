@@ -59,6 +59,162 @@ def compute_decision_percentiles(pb: PlaybackPlan) -> tuple[float, float]:
     return lat_median, lat_p90
 
 
+def compute_diagnostics(job_dir: Path, pb: PlaybackPlan) -> dict[str, float]:
+    """Compute Round 2 bake-off diagnostics per §6.6.6 and guide L1.
+
+    Returns dict with keys:
+    - unreachable_share: share of decisions where true node at decision time
+      (for point 0, its slide's section also counts) was not in candidate_ids.
+    - stuck_on_current_median: median consecutive decisions answering current node
+      after each true point change while current is not true point.
+    - stuck_on_current_p90: p90 consecutive decisions answering current node
+      after each true point change while current is not true point.
+    """
+    perf_path = job_dir / "performance.json"
+    timing_path = job_dir / "speak_timing.json"
+
+    if not perf_path.is_file() or not timing_path.is_file():
+        return {
+            "unreachable_share": 0.0,
+            "stuck_on_current_median": 0.0,
+            "stuck_on_current_p90": 0.0,
+        }
+
+    perf_data = json.loads(perf_path.read_text(encoding="utf-8"))
+    timing_data = json.loads(timing_path.read_text(encoding="utf-8"))
+    sentences = perf_data.get("sentences", [])
+
+    def _get_sentence_label_info(sent: dict[str, Any]) -> tuple[str | None, int | None]:
+        if sent.get("op") == "adlib" or sent.get("label") == "adlib":
+            return None, None
+        lbl = sent.get("label")
+        if not isinstance(lbl, dict):
+            return None, None
+        if "back_ref" in lbl and isinstance(lbl["back_ref"], dict):
+            br = lbl["back_ref"]
+            return br.get("slide"), br.get("point")
+        return lbl.get("slide"), lbl.get("point")
+
+    def _get_true_nodes_at_time(t_ms: int) -> tuple[list[str], str | None]:
+        for sent, t in zip(sentences, timing_data, strict=False):
+            if int(t["start_ms"]) <= t_ms <= int(t["end_ms"]):
+                s_id, p_id = _get_sentence_label_info(sent)
+                if s_id is not None and p_id is not None:
+                    pt_node = f"{s_id}_p{p_id}"
+                    valid = [pt_node]
+                    if p_id == 0:
+                        valid.append(f"{s_id}_section")
+                    return valid, pt_node
+                return [], None
+        # In a gap, check previous sentence
+        prev_s = None
+        for sent, t in zip(sentences, timing_data, strict=False):
+            if int(t["start_ms"]) <= t_ms:
+                prev_s = sent
+            else:
+                break
+        if prev_s is not None:
+            s_id, p_id = _get_sentence_label_info(prev_s)
+            if s_id is not None and p_id is not None:
+                pt_node = f"{s_id}_p{p_id}"
+                valid = [pt_node]
+                if p_id == 0:
+                    valid.append(f"{s_id}_section")
+                return valid, pt_node
+        return [], None
+
+    decisions: list[dict[str, Any]] = []
+    for c in pb.commits[1:]:
+        decisions.append(
+            {
+                "type": "commit",
+                "dp_ms": c.decision_ms,
+                "candidate_ids": c.candidate_ids,
+                "node_id": c.node_id,
+            }
+        )
+    for h in pb.holds:
+        decisions.append(
+            {
+                "type": "hold",
+                "dp_ms": h.decision_ms,
+                "candidate_ids": h.candidate_ids,
+                "current_node_id": h.current_node_id,
+                "top_candidate_id": h.top_candidate_id,
+            }
+        )
+    decisions.sort(key=lambda d: d["dp_ms"])
+
+    total_decisions = len(decisions)
+    if total_decisions == 0:
+        return {
+            "unreachable_share": 0.0,
+            "stuck_on_current_median": 0.0,
+            "stuck_on_current_p90": 0.0,
+        }
+
+    # 1. Unreachable share: decisions whose true node was not in candidate_ids
+    unreachable_count = 0
+    for d in decisions:
+        valid_nodes, _ = _get_true_nodes_at_time(d["dp_ms"])
+        if valid_nodes and not any(v in d["candidate_ids"] for v in valid_nodes):
+            unreachable_count += 1
+    unreachable_share = round(unreachable_count / total_decisions, 4)
+
+    # 2. Stuck on current: after each change of the true point,
+    # the number of consecutive decisions whose answer or top candidate was the current
+    # node while the current node was not the true one.
+    cur_shown = pb.commits[0].node_id if pb.commits else ""
+    prev_gt_pt: str | None = None
+    stuck_runs: list[int] = []
+
+    for idx, d in enumerate(decisions):
+        dp_ms = d["dp_ms"]
+        valid_nodes, gt_pt = _get_true_nodes_at_time(dp_ms)
+
+        if gt_pt is not None:
+            if prev_gt_pt is not None and gt_pt != prev_gt_pt:
+                run_len = 0
+                cur_sim = cur_shown
+                for j in range(idx, total_decisions):
+                    d_j = decisions[j]
+                    v_j, pt_j = _get_true_nodes_at_time(d_j["dp_ms"])
+                    if pt_j != gt_pt:
+                        break
+
+                    if d_j["type"] == "hold":
+                        c_node = d_j["current_node_id"]
+                        ans_node = d_j["top_candidate_id"]
+                    else:
+                        c_node = cur_sim
+                        ans_node = d_j["node_id"]
+                        cur_sim = ans_node
+
+                    if c_node not in v_j and ans_node == c_node:
+                        run_len += 1
+                    else:
+                        break
+                stuck_runs.append(run_len)
+            prev_gt_pt = gt_pt
+
+        if d["type"] == "commit":
+            cur_shown = d["node_id"]
+
+    if stuck_runs:
+        stuck_med = round(float(statistics.median(stuck_runs)), 3)
+        p90_idx = int(math.ceil(0.9 * len(stuck_runs))) - 1
+        stuck_p90 = round(float(sorted(stuck_runs)[p90_idx]), 3)
+    else:
+        stuck_med = 0.0
+        stuck_p90 = 0.0
+
+    return {
+        "unreachable_share": unreachable_share,
+        "stuck_on_current_median": stuck_med,
+        "stuck_on_current_p90": stuck_p90,
+    }
+
+
 def verify_corpus(corpus_dir: Path) -> dict[str, Any]:
     """Verify integrity of frozen corpus via corpus.json SHA-256 hashes.
 
@@ -291,6 +447,7 @@ def run_bakeoff(
             (dst_job_dir / "playback.json").read_text(encoding="utf-8")
         )
         lat_median, lat_p90 = compute_decision_percentiles(pb)
+        diags = compute_diagnostics(dst_job_dir, pb)
 
         metrics = evaluate_presentation_bars(score_res)
         for m in metrics:
@@ -325,8 +482,17 @@ def run_bakeoff(
                 "llm_calls": llm_calls,
                 "compute_time_median_ms": lat_median,
                 "compute_time_p90_ms": lat_p90,
+                "unreachable_share": diags["unreachable_share"],
+                "stuck_on_current_median": diags["stuck_on_current_median"],
+                "stuck_on_current_p90": diags["stuck_on_current_p90"],
             }
             all_rows.append(row)
+
+        print(
+            f"DIAG {job_id} unreachable_share={diags['unreachable_share']:.4f} "
+            f"stuck_on_current_median={diags['stuck_on_current_median']} "
+            f"stuck_on_current_p90={diags['stuck_on_current_p90']}"
+        )
 
     # Verify corpus again to ensure untouched
     verify_corpus(corpus_dir)

@@ -10,6 +10,13 @@
           "title": "At Ms",
           "type": "integer"
         },
+        "candidate_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Candidate Ids",
+          "type": "array"
+        },
         "compute_ms": {
           "minimum": 0,
           "title": "Compute Ms",
@@ -72,6 +79,13 @@
       "additionalProperties": false,
       "description": "A hold decision where no node switch occurred.",
       "properties": {
+        "candidate_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Candidate Ids",
+          "type": "array"
+        },
         "compute_ms": {
           "default": 0,
           "minimum": 0,

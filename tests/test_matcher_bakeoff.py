@@ -23,6 +23,7 @@ from animated_infographics.contracts.playback import (
 )
 from animated_infographics.evals.matcher_bakeoff import (
     compute_decision_percentiles,
+    compute_diagnostics,
     run_bakeoff,
     synthesize_perfect_hearing,
     verify_corpus,
@@ -358,3 +359,155 @@ def test_decision_compute_time_percentiles_stub_matcher() -> None:
     med_c, p90_c = compute_decision_percentiles(pb_commit)
     assert med_c == 700.0
     assert p90_c == 700.0
+
+
+def test_diagnostics_round1_a2_unreachable_share(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Wave L1 unit row: re-run Round 1's A2 on history-great-stink-20261009-074656.
+
+    Through the harness so that candidates are recorded, and "unreachable share" is >= 0.40.
+    Uses warm cache INFOGRAPHICS_CACHE_DIR=artifacts/matcher_bakeoff/2026-10-09/cache_llm.
+    """
+    corpus_src = Path("artifacts/matcher_bakeoff/2026-10-09/corpus")
+    cache_dir = Path("artifacts/matcher_bakeoff/2026-10-09/cache_llm")
+    jid = "history-great-stink-20261009-074656"
+
+    if not (corpus_src / jid).is_dir() or not cache_dir.is_dir():
+        pytest.skip("Round 1 corpus or LLM cache missing")
+
+    monkeypatch.setenv("INFOGRAPHICS_CACHE_DIR", str(cache_dir.resolve()))
+
+    # Build a 1-job test corpus
+    test_corpus_dir = tmp_path / "corpus"
+    test_corpus_dir.mkdir(parents=True, exist_ok=True)
+    dst_job = test_corpus_dir / jid
+    shutil.copytree(corpus_src / jid, dst_job)
+
+    # Hashes from original corpus.json
+    orig_corpus_data = json.loads((corpus_src / "corpus.json").read_text(encoding="utf-8"))
+    job_info = next(j for j in orig_corpus_data["jobs"] if j["job_id"] == jid)
+
+    corpus_record = {
+        "corpus_version": 1,
+        "date": "2026-10-09",
+        "jobs": [job_info],
+    }
+    (test_corpus_dir / "corpus.json").write_text(
+        json.dumps(corpus_record, indent=2) + "\n", encoding="utf-8"
+    )
+
+    out_dir = tmp_path / "out"
+    exit_code, rows = run_bakeoff(
+        corpus_dir=test_corpus_dir,
+        matcher="llm",
+        out_dir=out_dir,
+    )
+
+    # Check that candidate_ids were recorded
+    pb = PlaybackPlan.model_validate_json(
+        (out_dir / jid / "playback.json").read_text(encoding="utf-8")
+    )
+    assert len(pb.holds) > 0
+    assert any(len(h.candidate_ids) > 0 for h in pb.holds)
+    assert any(len(c.candidate_ids) > 0 for c in pb.commits[1:])
+
+    # Check unreachable_share >= 0.40
+    unreachable_share = rows[0]["unreachable_share"]
+    assert unreachable_share >= 0.40, f"Expected unreachable_share >= 0.40, got {unreachable_share}"
+    assert rows[0]["stuck_on_current_median"] >= 0.0
+    assert rows[0]["stuck_on_current_p90"] >= 0.0
+
+
+def test_diagnostics_synthetic_scenarios(tmp_path: Path) -> None:
+    """Test compute_diagnostics on synthetic performance and playback data."""
+    job_dir = tmp_path / "job"
+    job_dir.mkdir()
+
+    # Synthetic performance: 2 points
+    # Point 0: 0 - 5000 ms (slide d1, point 0)
+    # Point 1: 5000 - 10000 ms (slide d1, point 1)
+    perf = {
+        "schema_version": 1,
+        "sentences": [
+            {
+                "i": 0,
+                "text": "Slide 1 point 0",
+                "op": "verbatim",
+                "label": {"slide": "d1", "point": 0},
+            },
+            {
+                "i": 1,
+                "text": "Slide 1 point 1",
+                "op": "verbatim",
+                "label": {"slide": "d1", "point": 1},
+            },
+        ],
+    }
+    timing = [
+        {"sentence_i": 0, "start_ms": 0, "end_ms": 5000},
+        {"sentence_i": 1, "start_ms": 5000, "end_ms": 10000},
+    ]
+    (job_dir / "performance.json").write_text(json.dumps(perf), encoding="utf-8")
+    (job_dir / "speak_timing.json").write_text(json.dumps(timing), encoding="utf-8")
+
+    # Scenario: 4 decisions
+    # d1 at 1500ms: candidate_ids=["d1_p0"], current="d1_section", top="d1_p0"
+    #   -> reachable! (point 0 allows d1_section & d1_p0)
+    # d2 at 3000ms: candidate_ids=["d1_section"], current="d1_p0", top="d1_p0"
+    #   -> reachable! (section counts for pt 0)
+    # d3 at 6500ms: candidate_ids=["d1_p0"], current="d1_p0", top="d1_p0"
+    #   -> unreachable! (true is d1_p1)
+    # d4 at 8000ms: candidate_ids=["d1_p1"], current="d1_p0", top="d1_p1"
+    #   -> reachable!
+    pb = PlaybackPlan(
+        schema_version=1,
+        commits=[
+            PlaybackCommit(node_id="d1_section", at_ms=0, decision_ms=0, compute_ms=0, score=0.0),
+            PlaybackCommit(
+                node_id="d1_p0",
+                at_ms=1700,
+                decision_ms=1500,
+                compute_ms=200,
+                score=1.0,
+                candidate_ids=["d1_p0"],
+            ),
+        ],
+        holds=[
+            PlaybackHold(
+                decision_ms=3000,
+                current_node_id="d1_p0",
+                top_candidate_id="d1_p0",
+                top_candidate_score=1.0,
+                reason="top_is_current",
+                compute_ms=10,
+                candidate_ids=["d1_section"],
+            ),
+            PlaybackHold(
+                decision_ms=6500,
+                current_node_id="d1_p0",
+                top_candidate_id="d1_p0",
+                top_candidate_score=1.0,
+                reason="top_is_current",
+                compute_ms=10,
+                candidate_ids=["d1_p0"],
+            ),
+            PlaybackHold(
+                decision_ms=8000,
+                current_node_id="d1_p0",
+                top_candidate_id="d1_p1",
+                top_candidate_score=1.0,
+                reason="top_is_current",
+                compute_ms=10,
+                candidate_ids=["d1_p1"],
+            ),
+        ],
+    )
+
+    diags = compute_diagnostics(job_dir, pb)
+    # 1 of 4 decisions is unreachable (decision at 6500ms where true is d1_p1
+    # but candidates=[d1_p0])
+    assert diags["unreachable_share"] == 0.25
+    # At point 1 change (6500ms): current is d1_p0 (not true pt), answered d1_p0
+    # -> 1 consecutive hold before answering d1_p1
+    assert diags["stuck_on_current_median"] == 1.0

@@ -7,6 +7,7 @@
  */
 
 export type AtMs = number;
+export type CandidateIds = string[];
 export type ComputeMs = number;
 export type DecisionMs = number;
 export type NodeId = string;
@@ -15,6 +16,7 @@ export type RunnerUpId = string | null;
 export type Score = number;
 export type TiebreakUsed = boolean;
 export type Commits = PlaybackCommit[];
+export type CandidateIds1 = string[];
 export type ComputeMs1 = number;
 export type CurrentNodeId = string;
 export type DecisionMs1 = number;
@@ -39,6 +41,7 @@ export interface PlaybackPlan {
  */
 export interface PlaybackCommit {
   at_ms: AtMs;
+  candidate_ids?: CandidateIds;
   compute_ms: ComputeMs;
   decision_ms: DecisionMs;
   node_id: NodeId;
@@ -51,6 +54,7 @@ export interface PlaybackCommit {
  * A hold decision where no node switch occurred.
  */
 export interface PlaybackHold {
+  candidate_ids?: CandidateIds1;
   compute_ms?: ComputeMs1;
   current_node_id: CurrentNodeId;
   decision_ms: DecisionMs1;

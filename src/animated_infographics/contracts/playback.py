@@ -23,6 +23,7 @@ class PlaybackCommit(BaseModel):
     runner_up_id: str | None = None
     runner_up_gap: float | None = None
     tiebreak_used: bool = False
+    candidate_ids: list[str] = Field(default_factory=list)
 
     @property
     def node(self) -> str:
@@ -56,6 +57,7 @@ class PlaybackHold(BaseModel):
     top_candidate_score: float
     reason: str
     compute_ms: int = Field(default=0, ge=0)
+    candidate_ids: list[str] = Field(default_factory=list)
 
 
 class PlaybackPlan(BaseModel):

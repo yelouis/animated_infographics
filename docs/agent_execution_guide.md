@@ -572,7 +572,7 @@ Their specs are in the design docs (`design_testing_and_validation.md` §2 and �
 - [x] §1.3 re-measured bare (G1–G16, three budgets with their exit codes); continue to Wave L.
 
 **Wave L**
-- [ ] L1: every decision records `candidate_ids`; the harness reports "unreachable share" and "stuck on current"; `corpus_r2` (seed 7 copied, 4 new seed-13 jobs) is frozen with hashes; the `bm25` baseline is written.
+- [x] L1: every decision records `candidate_ids`; the harness reports "unreachable share" and "stuck on current"; `corpus_r2` (seed 7 copied, 4 new seed-13 jobs) is frozen with hashes; the `bm25` baseline is written.
 - [ ] L2: `ClassifierMatcher` matches §6.6.6 verbatim. Round 2 is run cold on all 8 jobs, with "unreachable share" 0.0, the cross-check against Issue 9's replay within 0.05, and the decision written out with the rule.
 - [ ] L3: `llm` is the default and G16 on fresh jobs exits **0**; or Issue 11 is filed and G16 stays at 3.
 - [ ] §1.3 re-measured bare (G1–G16).

@@ -392,6 +392,8 @@ class LiveMatcher:
             if not candidate_scores:
                 candidate_scores = [(current_node_id, 0.0)]
 
+            candidate_ids = [nid for nid, _ in candidate_scores]
+
             # Sort descending by score
             candidate_scores.sort(key=lambda item: item[1], reverse=True)
             top_id, top_score = candidate_scores[0]
@@ -469,6 +471,7 @@ class LiveMatcher:
                         runner_up_id=runner_up_id,
                         runner_up_gap=runner_up_gap,
                         tiebreak_used=tiebreak_used,
+                        candidate_ids=candidate_ids,
                     )
                 )
                 current_node_id = top_id
@@ -495,6 +498,7 @@ class LiveMatcher:
                         top_candidate_score=round(top_score, 3),
                         reason="; ".join(reasons),
                         compute_ms=compute_ms,
+                        candidate_ids=candidate_ids,
                     )
                 )
                 prev_top_id = top_id
@@ -604,6 +608,8 @@ class AnticipateMatcher:
                 if b_node.kind == "point":
                     candidates.append((b_node.id, 0.5))
 
+            candidate_ids = [nid for nid, _ in candidates]
+
             # Score candidates: BM25(window, doc) - cost
             candidate_scores: list[tuple[str, float]] = []
             for nid, cost in candidates:
@@ -655,6 +661,7 @@ class AnticipateMatcher:
                         runner_up_id=runner_up_id,
                         runner_up_gap=runner_up_gap,
                         tiebreak_used=False,
+                        candidate_ids=candidate_ids,
                     )
                 )
                 current_node_id = top_id
@@ -685,6 +692,7 @@ class AnticipateMatcher:
                         top_candidate_score=round(top_score, 3),
                         reason="; ".join(reasons),
                         compute_ms=compute_ms,
+                        candidate_ids=candidate_ids,
                     )
                 )
                 prev_top_id = top_id
@@ -896,6 +904,7 @@ class ClassifierMatcher:
                         top_candidate_score=0.0,
                         reason="llm_error",
                         compute_ms=compute_ms,
+                        candidate_ids=candidate_ids,
                     )
                 )
                 prev_top_id = None
@@ -923,6 +932,7 @@ class ClassifierMatcher:
                         runner_up_id=None,
                         runner_up_gap=None,
                         tiebreak_used=False,
+                        candidate_ids=candidate_ids,
                     )
                 )
                 current_node_id = ans_node_id
@@ -949,6 +959,7 @@ class ClassifierMatcher:
                         top_candidate_score=1.0,
                         reason="; ".join(reasons),
                         compute_ms=compute_ms,
+                        candidate_ids=candidate_ids,
                     )
                 )
                 prev_top_id = ans_node_id
