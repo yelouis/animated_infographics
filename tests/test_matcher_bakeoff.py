@@ -16,8 +16,13 @@ from typing import Any
 import pytest
 
 from animated_infographics.contracts.models import Transcript
-from animated_infographics.contracts.playback import PlaybackCommit, PlaybackPlan
+from animated_infographics.contracts.playback import (
+    PlaybackCommit,
+    PlaybackHold,
+    PlaybackPlan,
+)
 from animated_infographics.evals.matcher_bakeoff import (
+    compute_decision_percentiles,
     run_bakeoff,
     synthesize_perfect_hearing,
     verify_corpus,
@@ -311,3 +316,45 @@ def test_bakeoff_harness_corpus_hash_mismatch_fails(tmp_path: Path) -> None:
     with pytest.raises(SystemExit) as exc_info:
         verify_corpus(corpus_dir)
     assert exc_info.value.code == 1
+
+
+def test_decision_compute_time_percentiles_stub_matcher() -> None:
+    # Stub matcher with a fixed 700 ms per decision
+    # Initial commit at t=0 has compute_ms=0
+
+    # Subcase 1: Holds only, 0 post-initial commits
+    pb_holds = PlaybackPlan(
+        schema_version=1,
+        commits=[
+            PlaybackCommit(node_id="d1_section", at_ms=0, decision_ms=0, compute_ms=0, score=0.0),
+        ],
+        holds=[
+            PlaybackHold(
+                decision_ms=i * 1000,
+                current_node_id="d1_section",
+                top_candidate_id="d1_section",
+                top_candidate_score=1.0,
+                reason="top_is_current",
+                compute_ms=700,
+            )
+            for i in range(1, 10)
+        ],
+    )
+    med_h, p90_h = compute_decision_percentiles(pb_holds)
+    assert med_h == 700.0
+    assert p90_h == 700.0
+
+    # Subcase 2: Single post-initial commit, 0 holds (tests excluding initial 0ms commit)
+    pb_commit = PlaybackPlan(
+        schema_version=1,
+        commits=[
+            PlaybackCommit(node_id="d1_section", at_ms=0, decision_ms=0, compute_ms=0, score=0.0),
+            PlaybackCommit(
+                node_id="d1_p0", at_ms=2000, decision_ms=2000, compute_ms=700, score=1.0
+            ),
+        ],
+        holds=[],
+    )
+    med_c, p90_c = compute_decision_percentiles(pb_commit)
+    assert med_c == 700.0
+    assert p90_c == 700.0

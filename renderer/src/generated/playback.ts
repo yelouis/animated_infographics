@@ -15,6 +15,7 @@ export type RunnerUpId = string | null;
 export type Score = number;
 export type TiebreakUsed = boolean;
 export type Commits = PlaybackCommit[];
+export type ComputeMs1 = number;
 export type CurrentNodeId = string;
 export type DecisionMs1 = number;
 export type Reason = string;
@@ -50,6 +51,7 @@ export interface PlaybackCommit {
  * A hold decision where no node switch occurred.
  */
 export interface PlaybackHold {
+  compute_ms?: ComputeMs1;
   current_node_id: CurrentNodeId;
   decision_ms: DecisionMs1;
   reason: Reason;

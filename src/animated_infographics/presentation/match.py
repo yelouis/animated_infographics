@@ -494,6 +494,7 @@ class LiveMatcher:
                         top_candidate_id=top_id,
                         top_candidate_score=round(top_score, 3),
                         reason="; ".join(reasons),
+                        compute_ms=compute_ms,
                     )
                 )
                 prev_top_id = top_id
@@ -683,6 +684,7 @@ class AnticipateMatcher:
                         top_candidate_id=top_id,
                         top_candidate_score=round(top_score, 3),
                         reason="; ".join(reasons),
+                        compute_ms=compute_ms,
                     )
                 )
                 prev_top_id = top_id
@@ -893,6 +895,7 @@ class ClassifierMatcher:
                         top_candidate_id=current_node_id,
                         top_candidate_score=0.0,
                         reason="llm_error",
+                        compute_ms=compute_ms,
                     )
                 )
                 prev_top_id = None
@@ -945,6 +948,7 @@ class ClassifierMatcher:
                         top_candidate_id=ans_node_id,
                         top_candidate_score=1.0,
                         reason="; ".join(reasons),
+                        compute_ms=compute_ms,
                     )
                 )
                 prev_top_id = ans_node_id

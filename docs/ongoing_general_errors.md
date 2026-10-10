@@ -554,6 +554,8 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 
 - K1 — The budget script's exit code states its bars — git log --grep "(k1)" — budget_verdict implemented returning 0 when all spans <= bars and 3 on miss; measure_budget.sh propagates verdict exit code and prints BUDGET/WATCH lines; long runs judged on total only (bars <= 170 s/min literal, <= 195 creative) with new/render as watch numbers; unit cases verified bare and falsified (assert 0 == 3); real cold long literal run exited 3 on total 189.05 s/min (watch: new 106.22, render 82.83 s/min) writing exit 3 to budget report.
 - K2 — Onset lag measured as §8 defines it — git log --grep "(k2)" — calculate_onset_lag updated per §8 (0 if on screen at t0, first commit in (t0, t_end) minus t0, else max(10, (t_end - t0)/1000)); unit tests passed including early-shown -> 0, 14s run -> 14, 6s run -> 10, revisit ignored, oracle -> 0.0; falsified bare by restoring -500 window (assert 5.0 == 0.0 red); 8 frozen corpus jobs and bake-off jobs re-scored; bm25 harness reproduces re-scored corpus within 0.000 <= 0.01; corpus hashes intact.
+- K3 — Compute time recorded and reported per decision — git log --grep "(k3)" — compute_ms added to PlaybackHold (G8 schema sync verified across 27 files); matchers pass compute_ms to holds; compute_decision_percentiles implemented taking median and p90 over all decisions (holds + post-initial commits, excluding initial t=0 commit); unit tests passed and falsified; re-ran harness with --matcher llm on frozen corpus (warm cache) measuring per-decision medians (438.0–497.5 ms) and p90s (503.0–594.0 ms, max 594.0 ms <= 1500 ms live bar); Section 7 Addendum appended to bake-off report.
+
 
 ---
 

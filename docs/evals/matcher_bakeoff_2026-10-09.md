@@ -377,4 +377,29 @@ Therefore:
 
 **Conclusion:** Perfect hearing provides almost zero gain across all contestants. The tracking bottlenecks are algorithmic and structural, not acoustic or phonetic.
 
+---
+
+## 7. Wave K3 Addendum: Decision Compute Time Latency Profile
+
+Under Wave K3, `PlaybackHold` records `compute_ms` at every hold decision, and the bake-off harness (`evals/matcher_bakeoff.py`) computes median and p90 latencies across every follower decision (holds plus post-initial commits, excluding the initial t=0 commit).
+
+The harness was re-run with `--matcher llm` on the frozen 8-job corpus with warm cache (`INFOGRAPHICS_CACHE_DIR=artifacts/matcher_bakeoff/2026-10-09/cache_llm`). The table below reports the per-decision call counts, median compute time, and p90 compute time across all 8 corpus jobs:
+
+| Job ID | Configuration | Total Decisions | Median Latency (ms) | P90 Latency (ms) | Live Viable (≤1500 ms) |
+|---|---|---|---|---|---|
+| `history-great-stink-20261009-074656` | literal / mild / seed 7 | 234 | 470.0 ms | 565.0 ms | YES |
+| `history-great-stink-20261009-074747` | creative / strong / seed 7 | 283 | 461.0 ms | 529.0 ms | YES |
+| `story-overdue-book-20261009-074844` | literal / strong / seed 7 | 271 | 438.0 ms | 503.0 ms | YES |
+| `story-overdue-book-20261009-074959` | creative / mild / seed 7 | 233 | 450.0 ms | 517.0 ms | YES |
+| `history-great-stink-20261009-075108` | literal / mild / seed 11 | 237 | 471.0 ms | 570.0 ms | YES |
+| `history-great-stink-20261009-075201` | creative / strong / seed 11 | 267 | 459.0 ms | 539.0 ms | YES |
+| `story-overdue-book-20261009-075301` | literal / strong / seed 11 | 237 | 453.0 ms | 526.0 ms | YES |
+| `story-overdue-book-20261009-075415` | creative / mild / seed 11 | 230 | 497.5 ms | 594.0 ms | YES |
+
+**Summary Findings:**
+- Across all 1,992 decisions in the 8 jobs, decision compute latency medians range from 438.0 ms to 497.5 ms, and p90 latencies range from 503.0 ms to 594.0 ms.
+- Maximum p90 latency across all jobs is 594.0 ms, well within the live-viability budget of ≤ 1,500 ms.
+- Holds and commits exhibit consistent timing (~450–500 ms) reflecting single-token LLM generation cadence.
+
+
 

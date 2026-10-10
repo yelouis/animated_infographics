@@ -72,6 +72,12 @@
       "additionalProperties": false,
       "description": "A hold decision where no node switch occurred.",
       "properties": {
+        "compute_ms": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Compute Ms",
+          "type": "integer"
+        },
         "current_node_id": {
           "title": "Current Node Id",
           "type": "string"

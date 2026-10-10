@@ -55,6 +55,7 @@ class PlaybackHold(BaseModel):
     top_candidate_id: str
     top_candidate_score: float
     reason: str
+    compute_ms: int = Field(default=0, ge=0)
 
 
 class PlaybackPlan(BaseModel):

@@ -44,6 +44,21 @@ HASH_FILES = [
 ]
 
 
+def compute_decision_percentiles(pb: PlaybackPlan) -> tuple[float, float]:
+    """Compute median and p90 latency over every decision (holds + post-initial commits)."""
+    post_initial_commits = pb.commits[1:] if len(pb.commits) > 1 else []
+    compute_times = [float(h.compute_ms) for h in pb.holds] + [
+        float(c.compute_ms) for c in post_initial_commits
+    ]
+
+    if not compute_times:
+        return 0.0, 0.0
+    lat_median = round(statistics.median(compute_times), 3)
+    p90_idx = int(math.ceil(0.9 * len(compute_times))) - 1
+    lat_p90 = round(sorted(compute_times)[p90_idx], 3)
+    return lat_median, lat_p90
+
+
 def verify_corpus(corpus_dir: Path) -> dict[str, Any]:
     """Verify integrity of frozen corpus via corpus.json SHA-256 hashes.
 
@@ -275,14 +290,7 @@ def run_bakeoff(
         pb = PlaybackPlan.model_validate_json(
             (dst_job_dir / "playback.json").read_text(encoding="utf-8")
         )
-        compute_times = [float(c.compute_ms) for c in pb.commits]
-        if compute_times:
-            lat_median = round(statistics.median(compute_times), 3)
-            p90_idx = int(math.ceil(0.9 * len(compute_times))) - 1
-            lat_p90 = round(sorted(compute_times)[p90_idx], 3)
-        else:
-            lat_median = 0.0
-            lat_p90 = 0.0
+        lat_median, lat_p90 = compute_decision_percentiles(pb)
 
         metrics = evaluate_presentation_bars(score_res)
         for m in metrics:
