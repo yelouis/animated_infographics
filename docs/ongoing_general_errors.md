@@ -568,6 +568,7 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 **Wave M:**
 
 - M1 — The memory guard — git log --grep "(m1)" — HEAVY_STEPS peaks measured (flux 32 GB, whisper 5 GB, kokoro 3 GB, render 6 GB, llm_load 12 GB; flux 27.54 GB within 0.5% of Jetsam evidence); read_memory agrees with system memory free percentage within 1%; Ollama gemma4:26b unloaded when needed; ResourceUnavailable maps to exit 5 and keeps failed_stage; unit tests (a)–(f) green bare; slow test serialises two real processes in 40 s; one-off validation of two cold jobs at once maintains min available 16.64 GB (>= 7 GB) with 0 new Jetsam events; 3 falsifications pass.
+- M2 — Gates never run concurrently; budgets stay honest; doctor reports memory — git log --grep "(m2)" — gate.lock non-blocking flock implemented with gatelock wrapper across all 7 gate scripts; concurrent gate refusal within 2 s verified bare (exit 3); battery runs end-to-end under single lock; measure_budget.sh marks runs INVALID and exits 1 on waited_ms > 0 or stopped step; doctor checks hw.memsize >= 52 GB (exit 4), reports available memory, pressure level and lock holder pid; G13 offline gate passes under lock with scripts/offline.sb unchanged; discarded interrupted K4 outputs.
 
 
 

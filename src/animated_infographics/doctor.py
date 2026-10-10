@@ -17,6 +17,13 @@ from typing import Final
 import httpx
 from huggingface_hub import scan_cache_dir, try_to_load_from_cache
 
+from animated_infographics.memguard import (
+    FLOOR,
+    HEAVY_STEPS,
+    get_heavy_lock_holder,
+    read_memory,
+)
+
 # HF repo id for FLUX.2 klein 4B used by mflux
 FLUX2_KLEIN_4B_REPO: Final[str] = "black-forest-labs/FLUX.2-klein-4B"
 
@@ -277,6 +284,50 @@ def run_doctor() -> int:
         report_missing(
             "renderer/public/geo/lakes-50m.json",
             "npx --prefix renderer tsx renderer/scripts/gen-lakes.ts",
+        )
+
+    # 14. Hardware memory check per §11:
+    # Fails (exit 4) if hw.memsize < largest declared peak + llm_load + FLOOR
+    largest_peak = max(HEAVY_STEPS.values())
+    llm_peak = HEAVY_STEPS.get("llm_load", 12 * (1024**3))
+    min_required_bytes = largest_peak + llm_peak + FLOOR
+    min_required_gb = min_required_bytes // (1024**3)
+
+    hw_memsize = 0
+    try:
+        hw_memsize = int(subprocess.check_output(["sysctl", "-n", "hw.memsize"], text=True).strip())
+    except Exception:
+        try:
+            hw_memsize = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES")
+        except Exception:
+            hw_memsize = 0
+
+    hw_mem_gb = hw_memsize / (1024**3)
+    if hw_memsize >= min_required_bytes:
+        report_ok(f"hardware memory ({hw_mem_gb:.0f} GB >= {min_required_gb} GB required)")
+    else:
+        report_missing(
+            f"hardware memory ({hw_mem_gb:.0f} GB < {min_required_gb} GB required)",
+            "64 GB unified memory machine",
+        )
+
+    # 15. Memory status and lock state per §11
+    avail_bytes, pressure = read_memory()
+    avail_gb = avail_bytes / (1024**3)
+    holder_pid = get_heavy_lock_holder()
+    if holder_pid is not None:
+        holder_str = f", heavy.lock held by pid {holder_pid}"
+    else:
+        holder_str = ", heavy.lock free"
+    report_ok(f"available memory ({avail_gb:.1f} GB, pressure level {pressure}{holder_str})")
+
+    # Warning (not failure) if available memory < flux + FLOOR right now
+    flux_floor_bytes = HEAVY_STEPS.get("flux", 32 * (1024**3)) + FLOOR
+    flux_floor_gb = flux_floor_bytes / (1024**3)
+    if avail_bytes < flux_floor_bytes:
+        print(
+            f"WARN available memory ({avail_gb:.1f} GB) is below flux + FLOOR "
+            f"({flux_floor_gb:.0f} GB)"
         )
 
     if missing_count > 0:

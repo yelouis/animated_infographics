@@ -1,4 +1,21 @@
 #!/usr/bin/env bash
+# Gate lock check (Wave M) per design_system_architecture.md §11
+is_held_by_ancestor() {
+  local target="${INFOGRAPHICS_GATE_LOCK_HELD:-}"
+  [ -z "$target" ] && return 1
+  local cur="$PPID"
+  while [ -n "$cur" ] && [ "$cur" -gt 1 ] 2>/dev/null; do
+    if [ "$cur" = "$target" ]; then return 0; fi
+    cur=$(ps -o ppid= -p "$cur" 2>/dev/null | tr -d ' ' || true)
+  done
+  return 1
+}
+
+if ! is_held_by_ancestor; then
+  GATE_NAME="$(basename "$0" .sh)"
+  exec uv run python -m animated_infographics.gatelock "$GATE_NAME" -- "$0" "$@"
+fi
+
 set -u
 
 # scripts/e2e.sh: G12 End-to-End gate per design_testing_and_validation.md §4 and agent_execution_guide.md §A22.

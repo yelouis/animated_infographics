@@ -68,11 +68,14 @@ def read_memory() -> tuple[int, int]:
         ],
         text=True,
     ).split()
-    memsize = int(out[0])
-    level = int(out[1])
-    pressure = int(out[2])
-    available_bytes = int(memsize * level / 100)
-    return available_bytes, pressure
+    try:
+        memsize = int(out[0])
+        level = int(out[1])
+        pressure = int(out[2])
+        available_bytes = int(memsize * level / 100)
+        return available_bytes, pressure
+    except (ValueError, IndexError):
+        return (64 * (1024**3), 1)
 
 
 def get_lock_dir() -> Path:
@@ -230,6 +233,13 @@ def guard(step: str, *, stage_log: Path | str | None = None) -> Iterator[None]:
             try:
                 fcntl.flock(lock_fd.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
                 acquired_lock = True
+                try:
+                    lock_fd.seek(0)
+                    lock_fd.truncate()
+                    lock_fd.write(f"{step} pid {os.getpid()}\n")
+                    lock_fd.flush()
+                except Exception:
+                    pass
                 break
             except (BlockingIOError, OSError):
                 time.sleep(0.05)
@@ -313,6 +323,11 @@ def guard(step: str, *, stage_log: Path | str | None = None) -> Iterator[None]:
     finally:
         if acquired_lock:
             try:
+                lock_fd.seek(0)
+                lock_fd.truncate()
+            except Exception:
+                pass
+            try:
                 fcntl.flock(lock_fd.fileno(), fcntl.LOCK_UN)
             except Exception:
                 pass
@@ -320,6 +335,33 @@ def guard(step: str, *, stage_log: Path | str | None = None) -> Iterator[None]:
             lock_fd.close()
         except Exception:
             pass
+
+
+def get_heavy_lock_holder() -> int | None:
+    """Read holder PID of heavy.lock if currently held, else None."""
+    lock_file = get_lock_dir() / "heavy.lock"
+    if not lock_file.exists():
+        return None
+    try:
+        with open(lock_file, "r+", encoding="utf-8") as f:
+            try:
+                fcntl.flock(f.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+                return None  # not held
+            except (BlockingIOError, OSError):
+                # Held! Read PID
+                content = f.read().strip()
+                parts = content.split()
+                if "pid" in parts:
+                    idx = parts.index("pid")
+                    if idx + 1 < len(parts):
+                        return int(parts[idx + 1])
+                for p in parts:
+                    if p.isdigit():
+                        return int(p)
+                return None
+    except Exception:
+        return None
 
 
 # ---------------------------------------------------------------------------

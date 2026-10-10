@@ -1,4 +1,21 @@
 #!/usr/bin/env bash
+# Gate lock check (Wave M) per design_system_architecture.md §11
+is_held_by_ancestor() {
+  local target="${INFOGRAPHICS_GATE_LOCK_HELD:-}"
+  [ -z "$target" ] && return 1
+  local cur="$PPID"
+  while [ -n "$cur" ] && [ "$cur" -gt 1 ] 2>/dev/null; do
+    if [ "$cur" = "$target" ]; then return 0; fi
+    cur=$(ps -o ppid= -p "$cur" 2>/dev/null | tr -d ' ' || true)
+  done
+  return 1
+}
+
+if ! is_held_by_ancestor; then
+  GATE_NAME="$(basename "$0" .sh)"
+  exec uv run python -m animated_infographics.gatelock "$GATE_NAME" -- "$0" "$@"
+fi
+
 set -euo pipefail
 
 fail() {
@@ -178,19 +195,38 @@ span_preview = end_preview - start_preview
 
 total_span = span_new + span_render
 
-# Parse cold logs for llm_calls and cache_hits
+# Parse logs for llm_calls, cache_hits, and memguard lines
 total_llm_calls = 0
 total_cache_hits = 0
+mem_waited_ms = 0
+step_stopped = False
 
-for log_file in (job_dir / 'logs_cold').glob('*.log'):
-    content = log_file.read_text(encoding='utf-8')
-    for line in content.splitlines():
-        m_calls = re.search(r'llm_calls=(\d+)', line)
-        m_hits = re.search(r'cache_hits=(\d+)', line)
-        if m_calls:
-            total_llm_calls += int(m_calls.group(1))
-        if m_hits:
-            total_cache_hits += int(m_hits.group(1))
+seen_memguard = set()
+for l_dir in [job_dir / 'logs_cold', job_dir / 'logs']:
+    if not l_dir.exists():
+        continue
+    for log_file in l_dir.glob('*.log'):
+        content = log_file.read_text(encoding='utf-8')
+        for line in content.splitlines():
+            line_str = line.strip()
+            if l_dir.name == 'logs_cold':
+                m_calls = re.search(r'llm_calls=(\d+)', line_str)
+                m_hits = re.search(r'cache_hits=(\d+)', line_str)
+                if m_calls:
+                    total_llm_calls += int(m_calls.group(1))
+                if m_hits:
+                    total_cache_hits += int(m_hits.group(1))
+            if line_str.startswith('memguard '):
+                key = (log_file.name, line_str)
+                if key not in seen_memguard:
+                    seen_memguard.add(key)
+                    m_wait = re.search(r'waited_ms=(\d+)', line_str)
+                    if m_wait:
+                        w_ms = int(m_wait.group(1))
+                        if w_ms > 0:
+                            mem_waited_ms += w_ms
+            if 'memory guard: stopped' in line_str:
+                step_stopped = True
 
 # Assert cache_hits must be 0 for cold budget run
 assert total_cache_hits == 0, f'Expected 0 cache hits for cold budget, got {total_cache_hits}'
@@ -288,6 +324,13 @@ Cold-cache performance budget measured on \`fixtures/scripts/story_recipe_box.tx
 {json.dumps(timings_ms, indent=2)}
 \`\`\`
 '''
+    if mem_waited_ms > 0 or step_stopped:
+        report = f'INVALID: memory guard waited {mem_waited_ms} ms\n\n' + report
+        report_path.write_text(report, encoding='utf-8')
+        print(f'INVALID: memory guard waited {mem_waited_ms} ms')
+        import sys
+        sys.exit(1)
+
     report_path.write_text(report, encoding='utf-8')
     print(f'Report written to {report_path}')
     for s_name in ['new', 'render', 'total']:
@@ -394,10 +437,21 @@ Measured on \`fixtures/scripts/story_overdue_book.txt\` ({narration_sec:.1f} s /
 \`\`\`json
 {json.dumps(timings_ms, indent=2)}
 \`\`\`
-'''
+        if mem_waited_ms > 0 or step_stopped:
+            inv_str = f'INVALID: memory guard waited {mem_waited_ms} ms'
+            print(inv_str)
+            report_path.write_text(f'{inv_str}\n\n' + existing + sub, encoding='utf-8')
+            import sys
+            sys.exit(1)
         report_path.write_text(existing + sub, encoding='utf-8')
         print(f'Appended long budget to {report_path}')
     else:
+        if mem_waited_ms > 0 or step_stopped:
+            inv_str = f'INVALID: memory guard waited {mem_waited_ms} ms'
+            print(inv_str)
+            report_path.write_text(f'{inv_str}\n\n' + long_report, encoding='utf-8')
+            import sys
+            sys.exit(1)
         report_path.write_text(long_report, encoding='utf-8')
         print(f'Report written to {report_path}')
 
