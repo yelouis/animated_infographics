@@ -762,7 +762,7 @@ class ClassifierMatcher:
         candidates: list[TreeNode],
         last_words: str,
     ) -> str:
-        """Build user prompt verbatim per §6.6.2."""
+        """Build user prompt verbatim per §6.6.6."""
         lines = [
             "You are following a live talk against its slide deck. "
             "You hear only the last few seconds of speech.",
@@ -773,8 +773,9 @@ class ClassifierMatcher:
             lines.append(self.format_node_desc(cand))
         lines.append(f'Last words heard: "{last_words}"')
         lines.append(
-            "Which point is the speaker on now? If they are between points, telling a side story, "
-            "or you are unsure, answer the current point. Answer one id."
+            "Which point is the speaker on now? "
+            "If they are telling a side story that matches no point, "
+            "answer the current point. Answer one id."
         )
         return "\n".join(lines)
 
@@ -828,28 +829,21 @@ class ClassifierMatcher:
                 c_idx = 0
             current_node = self.tree.nodes[c_idx]
 
-            # Candidates per §6.6.2:
-            # - the current node c;
-            # - the next 3 nodes after c in deck order;
-            # - every point node before c.
-            candidates: list[TreeNode] = [current_node]
-
-            f1: str | None = None
-            if c_idx + 1 < len(self.tree.nodes):
-                f1_node = self.tree.nodes[c_idx + 1]
-                f1 = f1_node.id
-                candidates.append(f1_node)
-            if c_idx + 2 < len(self.tree.nodes):
-                candidates.append(self.tree.nodes[c_idx + 2])
-            if c_idx + 3 < len(self.tree.nodes):
-                candidates.append(self.tree.nodes[c_idx + 3])
-
-            for k in range(c_idx):
-                b_node = self.tree.nodes[k]
-                if b_node.kind == "point":
-                    candidates.append(b_node)
-
+            # Candidates per §6.6.6:
+            # every node of the tree, in deck order
+            candidates: list[TreeNode] = list(self.tree.nodes)
             candidate_ids = [cand.id for cand in candidates]
+
+            # The step set per §6.6.6:
+            # The node after c in deck order. If that node is a section node,
+            # the node after it (its slide's first point) is in the step set too.
+            step_set: set[str] = set()
+            if c_idx + 1 < len(self.tree.nodes):
+                nxt = self.tree.nodes[c_idx + 1]
+                step_set.add(nxt.id)
+                if nxt.kind == "section" and c_idx + 2 < len(self.tree.nodes):
+                    step_set.add(self.tree.nodes[c_idx + 2].id)
+
             prompt = self.build_prompt(current_node, candidates, last_words)
             schema = {
                 "type": "object",
@@ -913,11 +907,11 @@ class ClassifierMatcher:
             dwell_ms = dp_ms - current_node_start_ms
             dwell_met = dwell_ms >= 2000
 
-            is_f1 = f1 is not None and ans_node_id == f1
+            is_step = ans_node_id in step_set
             is_different = ans_node_id != current_node_id
-            is_other_move = is_different and not is_f1
+            is_other_move = is_different and not is_step
 
-            forward_commit = is_f1 and dwell_met
+            forward_commit = is_step and dwell_met
             other_commit = is_other_move and (ans_node_id == prev_top_id) and dwell_met
 
             if forward_commit or other_commit:
@@ -942,7 +936,7 @@ class ClassifierMatcher:
                 reasons: list[str] = []
                 if not is_different:
                     reasons.append("top_is_current")
-                elif is_f1:
+                elif is_step:
                     if not dwell_met:
                         reasons.append(f"dwell_{dwell_ms}ms_below_2000ms")
                 else:

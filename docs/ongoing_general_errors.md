@@ -580,6 +580,7 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 **Wave L:**
 
 - L1 — Round 2 corpus and bake-off diagnostics — git log --grep "(l1)" — candidate_ids added to PlaybackCommit and PlaybackHold (G8 schema sync verified across 27 files); matchers record candidate_ids on all decisions; compute_diagnostics implemented reporting unreachable_share and stuck_on_current median/p90; unit replay of Round 1 A2 measures unreachable_share = 0.5726 >= 0.40; falsification verified; 8-job corpus_r2 frozen with corpus.json hashes (4 seed-7 jobs identical to Round 1, 4 new seed-13 jobs scored with 0 asset errors and 0 degraded creative jobs); bm25 baseline reproduces all 8 jobs within 0.000 <= 0.01; report docs/evals/matcher_bakeoff_r2_2026-10-10.md written.
+- L2 — The corrected A2; Round 2; decide — git log --grep "(l2)" — ClassifierMatcher revised per §6.6.6 with every node as candidate in deck order, forward step set including section next point, and verbatim prompt; unit tests pass (test_six_nodes_behind_recovery and test_diagnostics_round2_a2_unreachable_share_zero); cold Round 2 bake-off on corpus_r2 achieves 0.0000 unreachable_share on all 8 jobs and reproduces Issue 9 replays within 0.005 on seed 7; decision set misses on onset lag (3.36–4.88s vs <=3–4s) and overdue accuracy; per §6.6.6 rule 3 stop and file Issue 11; report docs/evals/matcher_bakeoff_r2_2026-10-10.md completed.
 
 
 

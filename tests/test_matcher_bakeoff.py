@@ -361,20 +361,20 @@ def test_decision_compute_time_percentiles_stub_matcher() -> None:
     assert p90_c == 700.0
 
 
-def test_diagnostics_round1_a2_unreachable_share(
+def test_diagnostics_round2_a2_unreachable_share_zero(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Wave L1 unit row: re-run Round 1's A2 on history-great-stink-20261009-074656.
+    """Wave L2 unit row: re-run Round 2's A2 on history-great-stink-20261009-074656.
 
-    Through the harness so that candidates are recorded, and "unreachable share" is >= 0.40.
-    Uses warm cache INFOGRAPHICS_CACHE_DIR=artifacts/matcher_bakeoff/2026-10-09/cache_llm.
+    Through the harness so that candidates are recorded, and "unreachable share" is 0.0.
+    Uses warm cache INFOGRAPHICS_CACHE_DIR=artifacts/matcher_bakeoff/2026-10-10/cache_llm.
     """
-    corpus_src = Path("artifacts/matcher_bakeoff/2026-10-09/corpus")
-    cache_dir = Path("artifacts/matcher_bakeoff/2026-10-09/cache_llm")
+    corpus_src = Path("artifacts/matcher_bakeoff/2026-10-10/corpus_r2")
+    cache_dir = Path("artifacts/matcher_bakeoff/2026-10-10/cache_llm")
     jid = "history-great-stink-20261009-074656"
 
     if not (corpus_src / jid).is_dir() or not cache_dir.is_dir():
-        pytest.skip("Round 1 corpus or LLM cache missing")
+        pytest.skip("Round 2 corpus or LLM cache missing")
 
     monkeypatch.setenv("INFOGRAPHICS_CACHE_DIR", str(cache_dir.resolve()))
 
@@ -389,8 +389,8 @@ def test_diagnostics_round1_a2_unreachable_share(
     job_info = next(j for j in orig_corpus_data["jobs"] if j["job_id"] == jid)
 
     corpus_record = {
-        "corpus_version": 1,
-        "date": "2026-10-09",
+        "corpus_version": 2,
+        "date": "2026-10-10",
         "jobs": [job_info],
     }
     (test_corpus_dir / "corpus.json").write_text(
@@ -412,9 +412,9 @@ def test_diagnostics_round1_a2_unreachable_share(
     assert any(len(h.candidate_ids) > 0 for h in pb.holds)
     assert any(len(c.candidate_ids) > 0 for c in pb.commits[1:])
 
-    # Check unreachable_share >= 0.40
+    # In Round 2, every node is a candidate by construction -> unreachable_share must be 0.0
     unreachable_share = rows[0]["unreachable_share"]
-    assert unreachable_share >= 0.40, f"Expected unreachable_share >= 0.40, got {unreachable_share}"
+    assert unreachable_share == 0.0, f"Expected unreachable_share == 0.0, got {unreachable_share}"
     assert rows[0]["stuck_on_current_median"] >= 0.0
     assert rows[0]["stuck_on_current_p90"] >= 0.0
 

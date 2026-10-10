@@ -155,17 +155,14 @@ def _make_test_tree() -> TreePlan:
 
 
 def test_classifier_matcher_prompt_byte_equal() -> None:
-    """Prompt format is byte-equal to design_presentation_simulation.md §6.6.2."""
+    """Prompt format is byte-equal to design_presentation_simulation.md §6.6.6."""
     tree = _make_test_tree()
     deck = _make_test_deck()
     backend = StubClassifierBackend()
     matcher = ClassifierMatcher(tree=tree, backend=backend, deck=deck)
 
-    # When speaker is currently on d1_p1:
-    # Next 3 nodes: d2_section, d2_p0
-    # Earlier points: d1_p0
-    # Candidate order: [c] + next nodes + earlier points
-    cand_nodes = [tree.nodes[2], tree.nodes[3], tree.nodes[4], tree.nodes[1]]
+    # In Round 2 (§6.6.6): candidates are every node of the tree in deck order
+    cand_nodes = list(tree.nodes)
     prompt = matcher.build_prompt(
         current_node=tree.nodes[2],
         candidates=cand_nodes,
@@ -178,19 +175,21 @@ def test_classifier_matcher_prompt_byte_equal() -> None:
         "The speaker is currently on: "
         "d1_p1 — Summer of 1858: Parliament soaked their heavy curtains in lime\n"
         "Candidates:\n"
+        "d1_section — Summer of 1858: (start of this slide)\n"
+        "d1_p0 — Summer of 1858: The river Thames was completely full of sewage\n"
         "d1_p1 — Summer of 1858: Parliament soaked their heavy curtains in lime\n"
         "d2_section — A Modern Sewer Network: (start of this slide)\n"
         "d2_p0 — A Modern Sewer Network: Joseph Bazalgette engineered eighty-two miles of pipes\n"
-        "d1_p0 — Summer of 1858: The river Thames was completely full of sewage\n"
         'Last words heard: "summer London parliament curtains lime chloride"\n'
-        "Which point is the speaker on now? If they are between points, telling a side story, "
-        "or you are unsure, answer the current point. Answer one id."
+        "Which point is the speaker on now? "
+        "If they are telling a side story that matches no point, "
+        "answer the current point. Answer one id."
     )
     assert prompt == expected
 
 
 def test_classifier_matcher_candidate_enum() -> None:
-    """Schema enum contains exactly c, next 3 nodes, and earlier points."""
+    """Schema enum contains every node of the tree in deck order (§6.6.6)."""
     tree = _make_test_tree()
     deck = _make_test_deck()
     backend = StubClassifierBackend()
@@ -204,8 +203,35 @@ def test_classifier_matcher_candidate_enum() -> None:
 
     assert len(backend.recorded_schemas) == 1
     schema = backend.recorded_schemas[0]
-    expected_enum = ["d1_section", "d1_p0", "d1_p1", "d2_section"]
+    expected_enum = ["d1_section", "d1_p0", "d1_p1", "d2_section", "d2_p0"]
     assert schema["properties"]["node"]["enum"] == expected_enum
+
+
+def test_classifier_matcher_section_step_set_single_step_commit() -> None:
+    """When the next node is section, its slide's first point commits in 1 decision (§6.6.6)."""
+    tree = _make_test_tree()
+    deck = _make_test_deck()
+    # Speaker is on d1_p1. Next node is d2_section (kind=section), so d2_p0 is also in step_set.
+    # Answering d2_p0 directly at a single decision point should commit in 1 decision.
+    backend = StubClassifierBackend(
+        responses=[{"node": "d1_p0"}, {"node": "d1_p1"}, {"node": "d2_p0"}]
+    )
+    matcher = ClassifierMatcher(tree=tree, backend=backend, deck=deck)
+
+    words = [
+        TranscriptWord(i=0, text="w0", start_ms=0, end_ms=1000, sentence_i=0),
+        TranscriptWord(i=1, text="w1", start_ms=1000, end_ms=2100, sentence_i=0),  # dp 1 -> d1_p0
+        TranscriptWord(i=2, text="w2", start_ms=2100, end_ms=4200, sentence_i=1),  # dp 2 -> d1_p1
+        TranscriptWord(
+            i=3, text="w3", start_ms=4200, end_ms=6500, sentence_i=2
+        ),  # dp 3 -> d2_p0 (single step!)
+    ]
+    pb = matcher.run(words)
+
+    assert len(pb.commits) == 4
+    assert [c.node_id for c in pb.commits] == ["d1_section", "d1_p0", "d1_p1", "d2_p0"]
+    assert pb.commits[-1].node_id == "d2_p0"
+    assert pb.commits[-1].decision_ms == 6500
 
 
 def test_classifier_matcher_next_node_single_step_commit() -> None:
@@ -389,3 +415,64 @@ def test_follow_dispatch_llm(tmp_path: Path) -> None:
     log_content = (job_dir / "logs" / "follow.log").read_text(encoding="utf-8")
     assert "matcher=llm" in log_content
     assert "llm_calls=1" in log_content
+
+
+def test_six_nodes_behind_recovery() -> None:
+    """Wave L2 red first test: 6 nodes behind; the stub answers the true point twice -> commit.
+
+    Under Round 1 ClassifierMatcher, this fails because candidates only included
+    the next 3 nodes, so a node 6 ahead was not a candidate.
+    """
+    slides = [
+        {
+            "id": f"d{i}",
+            "title": f"Slide {i}",
+            "points": [{"text": f"pt {i}.0"}, {"text": f"pt {i}.1"}],
+        }
+        for i in range(1, 4)
+    ]
+    deck = {"slides": slides}
+    nodes = []
+    idx = 0
+    for i in range(1, 4):
+        s_node = TreeNode(
+            id=f"d{i}_section",
+            slide=f"d{i}",
+            kind="section",
+            point_i=None,
+            text=f"Slide {i}",
+            scene=_make_dummy_scene(idx, f"Slide {i}"),
+        )
+        nodes.append(s_node)
+        idx += 1
+        for p in range(2):
+            p_node = TreeNode(
+                id=f"d{i}_p{p}",
+                slide=f"d{i}",
+                kind="point",
+                point_i=p,
+                text=f"pt {i}.{p}",
+                scene=_make_dummy_scene(idx, f"pt {i}.{p}"),
+            )
+            nodes.append(p_node)
+            idx += 1
+    # nodes has 9 nodes:
+    # 0: d1_section, 1: d1_p0, 2: d1_p1, 3: d2_section, 4: d2_p0, 5: d2_p1,
+    # 6: d3_section, 7: d3_p0, 8: d3_p1
+    tree = TreePlan(nodes=nodes, edges=[])
+
+    target_node_id = "d3_section"  # index 6 (6 nodes ahead of current=0)
+    backend = StubClassifierBackend(responses=[{"node": target_node_id}, {"node": target_node_id}])
+    matcher = ClassifierMatcher(tree=tree, backend=backend, deck=deck)
+
+    # 2 decision points: at 2500ms and 5000ms
+    words = [
+        TranscriptWord(i=0, text="first", start_ms=0, end_ms=1000, sentence_i=0),
+        TranscriptWord(i=1, text="gap1", start_ms=1000, end_ms=2500, sentence_i=0),
+        TranscriptWord(i=2, text="second", start_ms=2500, end_ms=3500, sentence_i=1),
+        TranscriptWord(i=3, text="gap2", start_ms=3500, end_ms=5000, sentence_i=1),
+    ]
+    pb = matcher.run(words)
+
+    # After answering target_node_id twice consecutively, it should have committed to target_node_id
+    assert pb.commits[-1].node_id == target_node_id
