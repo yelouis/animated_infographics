@@ -97,7 +97,7 @@
 - **Wave J's bake-off verdict is not valid evidence.** The designer's §6.6 gave both contestants a candidate set that a lost follower can never leave (lesson 2.17). Replays by the designer, using the agent's own code with only the candidate set changed, roughly double A2's accuracy (Issue 9, rewritten).
 - **Three summary lines misdescribe correct code:** I5 ("dialogue"), J3 ("prior slide titles") and §1's "59 goldens". The verdicts in §3 say so.
 
-**Open decisions for the user:** Issue 9 (the follower's next round) and Issue 10 (the long-story render bar).
+**No open decision.** Issues 9 and 10 were decided on October 10, 2026 (both Option A). They are being built in Waves K and L.
 
 ## ⚠️ Unresolved Issues & Suggestions
 
@@ -184,7 +184,7 @@ Your selection: **Option A**. Given by the user in chat on October 7, 2026, verb
 
 ### Issue 9: The bake-off measured a trap in the follower spec; corrected, A2 roughly doubles accuracy but still misses lag
 
-**Status**: ⚠️ Confirmed Unresolved.
+**Status**: ✅ Decided: **Option A** (user, October 10, 2026). Round 2 is to be built as **Wave L**, after Wave K; the contract is `design_presentation_simulation.md` §6.6.6.
 - **The original filing:** by the implementing agent on October 9, 2026, after neither contestant met the §8 bars (`docs/evals/matcher_bakeoff_2026-10-09.md`).
 - **Re-measured and rewritten by the designer the same day.** The agent built both contestants exactly to the designer's §6.6. The bake-off's verdict comes mostly from a defect in that spec (lesson 2.17), not from the contestants' ability.
 
@@ -261,13 +261,14 @@ The overdue story is the hard case.
   - *Pros*: No more work now; the evidence is preserved.
   - *Cons*: Simulated presentations keep showing the wrong slide about half the time. The corrections already measured go unused.
 
-Your selection: _____
+Your selection: **Option A**. Given by the user in chat on October 10, 2026, verbatim: *"For issue 9 select Option A, for issue 10 select Option A. Update the agent_execution_guide to reflect these choices"*. Recorded by the designer.
 
 ---
 
 ### Issue 10: The long-story render bar sits inside run-to-run noise
 
-**Status**: ⚠️ Confirmed Unresolved. The designer's cold `measure_budget.sh --long` on October 9, 2026 measured **80.47 s/min** of render against the **80 s/min** bar. The same span in earlier cold runs: 79.80 (G1, October 6), 79.23 (designer, October 6), 78.22 (I9, October 8). The run was on a quiet machine; nothing else was running.
+**Status**: ✅ Decided: **Option A** (user, October 10, 2026). Long-story budgets are judged on the total per narration minute only; it is built in Wave K's K1, and the contract is `design_testing_and_validation.md` §5.
+- **The finding:** the designer's cold `measure_budget.sh --long` on October 9, 2026 measured **80.47 s/min** of render against the **80 s/min** bar. The same span in earlier cold runs: 79.80 (G1, October 6), 79.23 (designer, October 6), 78.22 (I9, October 8). The run was on a quiet machine; nothing else was running.
 - **The spread is ±1.1 s/min** (≈ 1.4%), and the bar sits inside it, so this bar passes or fails by chance.
 - **The total is far inside its bar:** 138.90 s/min against 170.
 - **The other bars still have headroom:** the creative render (79.54 against 85) and the primary render (193.65 s against 210).
@@ -289,7 +290,7 @@ Your selection: _____
   - *Pros*: no change.
   - *Cons*: a gate that fails at random trains everyone to ignore it.
 
-Your selection: _____
+Your selection: **Option A**. Given by the user in chat on October 10, 2026, verbatim: *"For issue 9 select Option A, for issue 10 select Option A. Update the agent_execution_guide to reflect these choices"*. Recorded by the designer.
 
 ---
 
@@ -772,4 +773,9 @@ Wave C (C1–C7) specced. Issue 6 filed for the user.
 - **Wave K (K1–K4) specced,** with no decision needed: the budget exit code, onset lag as §8 defines it, and compute time per decision.
 - **Contracts:** `design_presentation_simulation.md` §6.6.5 (Round 1 result) and §8 (onset lag); `design_testing_and_validation.md` §2 (three rows) and §5 (exit codes); `design_data_contracts.md` §10 (`compute_ms` on holds); master plan.
 - **Lesson 2.17 added.**
+
+**October 10, 2026: Issues 9 and 10 decided (user, in chat).**
+- *"For issue 9 select Option A, for issue 10 select Option A. Update the agent_execution_guide to reflect these choices"*.
+- **Issue 9 → A:** Round 2 of the bake-off. The corrected A2 (every node a candidate, the section step, the "side story" prompt) is judged against the unchanged §8 bars and the K2-corrected scorer, on the seed-7 decision set plus a fresh seed-13 held-out set. A1 is retired. Contract: `design_presentation_simulation.md` §6.6.6. Built as Wave L (L1–L3), after Wave K.
+- **Issue 10 → A:** long-story budgets are judged on the total per narration minute only (≤ 170 literal, ≤ 195 creative). `new` and `render` per minute stay in the report as watch numbers. Contract: `design_testing_and_validation.md` §5. Built in K1.
 

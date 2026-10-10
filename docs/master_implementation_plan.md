@@ -134,7 +134,17 @@ Contract: `design_presentation_simulation.md` §6.6.
 - Onset lag is measured as §8 defines it: a point already on screen counts 0, and missing never beats being late.
 - Compute time is recorded per decision.
 
-None needs a user decision, and each must land before any next follower round is judged. **Open for the user:** Issue 9 (the follower) and Issue 10 (the long-story render bar).
+None needs a user decision, and each must land before any next follower round is judged. Wave K also carries **Issue 10 → Option A** (selected October 10, 2026): long-story budgets are judged on the total time per narration minute only.
 
-## After Wave K (deferred; each needs a user selection)
+## Wave L: follower Round 2 (Issue 9 → Option A, selected October 10, 2026)
+**The contestant:** the LLM follower with the designer's three corrections:
+- every slide point is a candidate, so a lost follower can always recover;
+- a slide's title and its first point count as one step;
+- the follower holds only during side stories.
+
+**The test:** the unchanged bars, on the earlier decision talks plus four fresh held-out talks. The report shows how often the follower could not reach the true point, and how long it stayed on the old one.
+
+**The outcome:** if it meets the bars, it becomes the default, and the presentation gate turns green. If not, the evidence goes back to the user. Contract: `design_presentation_simulation.md` §6.6.6.
+
+## After Wave L (deferred; each needs a user selection)
 Video input with picture-in-picture · 16:9 output · **live mode** (streaming ASR → incremental planning → the same templates on a live clock, webcam in a corner) · multi-voice narration · Reddit URL fetch · public-domain photos · historical borders · a web review editor. See `ongoing_general_errors.md` §4.

@@ -118,7 +118,9 @@ The `voice`/`reason` expectations are the table in `design_planner.md` §10; the
 | bake-off harness (Wave J) | `--matcher bm25` on each corpus job reproduces its `presentation_score.json` within 0.01 on every metric; the harness never writes into the corpus (corpus file hashes unchanged after a run); `bakeoff.json` has one row per job and metric; exit 0 only when all 8 jobs pass, exit 1 otherwise; the "perfect hearing" input spreads each performed sentence's words evenly across its `speak_timing.json` span |
 | onset lag (Wave K; no LLM) | the revised §8 definition, on synthetic playbacks: a node already on screen at the point's first word → lag 0 (the case scored as a 10 s miss before K2); a commit 2.0 s after the first word → 2.0; never on screen during a 14 s first run → 14.0, and during a 6 s run → 10.0; a commit during a later revisit of the point is ignored; the oracle playback still scores 0.0 on every point |
 | decision compute time (Wave K) | every `PlaybackHold` carries `compute_ms` (G8); the harness's percentiles are taken over every decision (commits and holds), excluding the initial t = 0 commit; a stub matcher whose decisions take a fixed 700 ms gives median = p90 = 700 |
-| budget exit codes (Wave K) | the verdict lives in `evals/budget_verdict.py`: `budget_verdict(spans, bars) -> int` returns 0 when every span meets its bar and 3 when any misses (unit cases: all under → 0; one span 0.01 over → 3; a span exactly at its bar → 0). `measure_budget.sh` exits with that function's code after writing the report, and 1 on any mechanical failure. There is no test-only switch in the script |
+| budget exit codes (Wave K) | the verdict lives in `evals/budget_verdict.py`: `budget_verdict(spans, bars) -> int` returns 0 when every span meets its bar and 3 when any misses (unit cases: all under → 0; one span 0.01 over → 3; a span exactly at its bar → 0). `measure_budget.sh` exits with that function's code after writing the report, and 1 on any mechanical failure. **The bars passed in:** the primary run passes its three spans; a `--long` run passes **only its total** (§5, Issue 10 → A), and a long run whose render is 80.47 s/min with a total of 138.90 s/min exits 0. There is no test-only switch in the script |
+| corrected A2, Round 2 (Wave L; stub backend) | the prompt lists **every** node of the tree in deck order, and its last line is byte-equal to §6.6.6; the schema enum equals every node id. From `d1_p2`, an answer of `d2_section` **or** `d2_p0` commits at one decision point; `d2_p1` needs two consecutive identical answers. From a state 6 nodes behind the true point, a stub that answers the true point twice commits it: the trap is gone. Dwell 2.0 s, hold-with-`llm_error` and causality (prompts contain only ended words) as in Round 1 |
+| bake-off diagnostics (Wave L) | the harness reports "unreachable share" (decisions whose true node was not a candidate) and "stuck on current" (consecutive `c` answers after each true point change, median and p90). On Round 1's recorded A2 playback of `history-great-stink-20261009-074656`, "unreachable share" is ≥ 0.40 (it measured 0.57 of talk time), and on any Round 2 playback it is 0.0 |
 | grounding scale words (added Sept 25) | `numbers("holding 2.3 million gallons")` contains 2.3 and 2,300,000 and **not** 1,000,000; `numbers("a million reasons")` contains 1,000,000; `numbers("two million")` contains 2,000,000 |
 | `planner/voice.py` | first-person rate on all four fixtures equals the measured values in `design_planner.md` §10 (±0.01); a text whose only "I" is inside double quotes → third person; the tag cases `I (26F)` → female, `My (34M) wife (33F)` → male, `Me [F29]` → female, `My sister (22F) said` → no tag; **all 23 evidence cases** in the table in `design_planner.md` §10 (7 accepted, 16 rejected), each as its own parametrised test id; evidence not in the text → rejected; `unknown` with evidence → evidence repaired to null; the full decide() truth table (perspective × gender, 6 rows: only first_person+female → `af_heart`); `--voice am_michael` makes **zero** backend calls, counted at the backend's entry point; `--voice bm_george` → exit 2; a backend that fails 3 times → `unknown`/`no_evidence`/`am_michael`, never an exception |
 | `jobs.py` | every refusal in `design_system_architecture.md` §5 returns exit 3; an edit after approval flips `plan_sha256` |
@@ -242,7 +244,7 @@ Writes `docs/evals/e2e_<YYYY-MM-DD>.md` (committed): every exit code, the `verif
 - `docs/evals/presentation_<date>.md` holds the metrics table, the strip charts and the oracle comparison.
 - **The matcher G16 gates** is `present-sim`'s default (`bm25` until Wave J adopts a contestant). The report names it.
 
-**4d. The matcher bake-off (Wave J; run by hand, not a battery gate; added October 7, 2026).** `design_presentation_simulation.md` §6.6 is the contract.
+**4d. The matcher bake-off (Wave J, Round 1; Wave L, Round 2; run by hand, not a battery gate; added October 7, 2026).** `design_presentation_simulation.md` §6.6 is the contract, and §6.6.6 covers Round 2: its own corpus (`corpus_r2`, seed 7 plus a new seed 13), the corrected A2 only, and the two diagnostics. Round 2's report is `docs/evals/matcher_bakeoff_r2_<date>.md`.
 - **Corpus:** the 8 jobs of §6.6.3, created once after Wave I, in `artifacts/matcher_bakeoff/<date>/corpus/`.
 - **Each contestant** runs through the harness and writes `docs/evals/matcher_bakeoff_<date>.md`. The report holds:
   - the baseline (`bm25`) row;
@@ -277,10 +279,15 @@ Writes `docs/evals/e2e_<YYYY-MM-DD>.md` (committed): every exit code, the `verif
 
 **Long-story budget (added October 5, 2026; the user chose 4–6-minute test stories, whose option stated that the budget would be restated per minute of video).** Measured with the same script on `story_overdue_book` (`--long`), per minute of narration:
 
-| Style | `new` → `awaiting_review` | `render` | Total |
+| Style | Total (**the only bar**, from October 10, 2026) | `new` → `awaiting_review` (watch number) | `render` (watch number) |
 |---|---|---|---|
-| `literal` | ≤ **90 s per narration minute** | ≤ **80 s/min** | ≤ **170 s/min** |
-| `creative` | ≤ **110 s/min** | ≤ **85 s/min** | ≤ **195 s/min** |
+| `literal` | ≤ **170 s per narration minute** | reported; was ≤ 90 s/min | reported; was ≤ 80 s/min |
+| `creative` | ≤ **195 s/min** | reported; was ≤ 110 s/min | reported; was ≤ 85 s/min |
+
+- **Judged on the total only** (Issue 10 → Option A, selected by the user on October 10, 2026). The user's requirement is end-to-end time, restated per minute for 4–6-minute stories.
+  - **Why the span bars went:** the long literal render bar of 80 s/min sat inside the run-to-run spread (78.22–80.47 s/min over four cold runs).
+  - **The span numbers stay in the report** as watch numbers, next to their former bars, so a drift stays visible.
+  - **The primary story** (`story_recipe_box`) keeps its three span bars.
 
 - **Anchors:** cold literal runs on October 5, 2026 took **349 s** to `awaiting_review` for 5.5 min of narration (`story_overdue_book`, 63 s/min) and **331 s** for 5.1 min (`history_great_stink`, 65 s/min). The `story_recipe_box` render takes 73 s per minute of video. Creative adds the director call, the license calls and up to 5 metaphor illustrations (~20 s each).
 - The `story_recipe_box` bars above remain the primary budget.

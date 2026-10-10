@@ -315,8 +315,46 @@ At **each** decision point, one call: `generate_json(stage="follow_llm", tempera
 - **The cost:** the true point was unreachable for 46–60% of the talk for A2, and 68–81% for A1.
 - **A second defect:** a section node and its slide's first point are one moment in speech, but moving onto the first point counted as a two-decision jump.
 - **The designer's replays** fix both, and change A2's prompt so that only side stories answer "current". They take A2's slide accuracy from 0.34–0.40 to 0.66–0.86 and its false switches from 3.6–4.4 to 0.5–1.25 per minute; lag still misses. The full table is in Issue 9.
-- **Not yet the contract.** These corrections are measured but not adopted into §6.6.1–§6.6.2: the next step is the user's selection in Issue 9. Until then §6.6.1–§6.6.2 describe what Round 1 tested.
+- **The user selected Issue 9 → Option A on October 10, 2026:** Round 2, with the corrected A2 judged against the unchanged bars (§6.6.6). §6.6.1–§6.6.2 remain the record of what Round 1 tested; §6.6.6 supersedes §6.6.2 for A2.
 - **Invariant for any next round (lesson 2.17):** every node is reachable from every state, and the harness reports the share of talk time during which the true point was not a candidate.
+
+#### 6.6.6 Round 2: the corrected A2 against the unchanged bars (Issue 9 → Option A, selected by the user October 10, 2026)
+
+**The contestant.** `ClassifierMatcher` (`--matcher llm`) is **revised in place**. Round 1's version has a known trap, and its results stay in `docs/evals/matcher_bakeoff_2026-10-09.md`. Everything in §6.6.2 holds except these three changes, which are exactly what the designer's replays measured (Issue 9's last column):
+1. **Candidates: every node of the tree, in deck order.** The "currently on" line still names `c`.
+2. **The one-decision forward step.** The step set is the node after `c` in deck order. **If that node is a `section` node, the node after it (its slide's first point) is in the step set too.** An answer in the step set commits at one decision point (dwell ≥ 2.0 s). Any other non-current answer needs the same answer at 2 consecutive decision points (dwell ≥ 2.0 s).
+3. **The prompt's last line,** verbatim: `Which point is the speaker on now? If they are telling a side story that matches no point, answer the current point. Answer one id.`
+
+**Unchanged:**
+- the window of the last 25 heard words;
+- temperature 0, `num_predict` 32, no retries, and hold-with-`llm_error`;
+- the candidate line format, and the schema enum (now every node id);
+- honest latency (§6.6.2, and per decision since Wave K's K3).
+
+**A1 is retired** and not re-run (Issue 9): `AnticipateMatcher` and the `anticipate` stage stay selectable, unchanged.
+
+**The Round 2 corpus.** It lives in `artifacts/matcher_bakeoff/<date>/corpus_r2/`, with its own `corpus.json` and hashes.
+- **The decision set:** the 4 seed-7 jobs of the Round 1 corpus, copied with their hashes unchanged.
+- **The held-out set:** **4 new jobs at seed 13**, one per §9 configuration, created once with `--matcher bm25` after Wave K lands, and never regenerated. Seed 11 is not used: the designer's replays looked at it.
+- The Round 1 corpus stays as it is.
+
+**The scorer:** §8 as corrected by Wave K (K2). It is frozen for Round 2.
+
+**Diagnostics, reported but never deciding:**
+- **"Unreachable share":** the share of decisions where the true node was not a candidate. It must be 0.0 in Round 2 by construction; anything else is a bug.
+- **"Stuck on current":** after each true point change, the number of consecutive decisions that answered `c`. Report its median and p90.
+- **"Perfect hearing"** (§6.6.3).
+- **The `bm25` baseline row** on the Round 2 corpus.
+
+**The adoption rule for Round 2:**
+1. **The corrected A2 meets every §8 bar on all 4 decision-set and all 4 held-out jobs → adopt it.**
+   - `llm` becomes `present-sim`'s default and the matcher G16 gates, and a fresh G16 must exit **0**.
+   - `bm25` stays selectable as the baseline.
+2. **It passes the decision set but misses on the held-out set → stop and file it** with both tables, for the user.
+3. **It misses on the decision set → stop and file it** with every metric's residual against its bar, and both diagnostics. No other contestant is built, and nothing is tuned (§6.6.4 rule 5). G16 stays at exit 3.
+
+**The designer's expectation,** from the replays: likely a miss on lag (median 4.1–6.9 s against ≤ 3–4 s) and on the overdue story's accuracy (slide 0.66–0.68). The user chose to measure that on fresh data rather than assume it.
+
 
 ---
 
