@@ -235,14 +235,34 @@ if style == 'creative':
     assert metaphor_images >= 2, f'Creative budget failed: expected >= 2 metaphor images in assets/images, got {metaphor_images}'
 
 if not is_long:
+    from animated_infographics.evals.budget_verdict import budget_verdict
+
+    spans = {
+        'new': span_new,
+        'render': span_render,
+        'total': total_span,
+    }
+    bars = {
+        'new': 390.0,
+        'render': 210.0,
+        'total': 600.0,
+    }
+    verdict = budget_verdict(spans, bars)
+
     new_pass = 'PASS' if span_new <= 390.0 else 'FAIL'
     render_pass = 'PASS' if span_render <= 210.0 else 'FAIL'
     preview_pass = 'PASS' if span_preview <= 60.0 else 'FAIL'
     total_pass = 'PASS' if total_span <= 600.0 else 'FAIL'
 
+    exit_note = f'- **Exit Code**: {verdict}'
+    if verdict == 3:
+        exit_note += '\n\nexit 3: a budget bar was missed — file it with the per-stage timings\n'
+
     report = f'''# Performance Budget Evaluation Report — {date_str}
 
 Cold-cache performance budget measured on \`fixtures/scripts/story_recipe_box.txt\` (~3 min duration, longest fixture) per \`design_testing_and_validation.md\` §5.
+
+{exit_note}
 
 ## Spans vs Bars
 
@@ -270,7 +290,14 @@ Cold-cache performance budget measured on \`fixtures/scripts/story_recipe_box.tx
 '''
     report_path.write_text(report, encoding='utf-8')
     print(f'Report written to {report_path}')
+    for s_name in ['new', 'render', 'total']:
+        st = 'PASS' if spans[s_name] <= bars[s_name] else 'FAIL'
+        print(f'BUDGET {s_name} {spans[s_name]:.2f} {bars[s_name]:.1f} {st}')
+    import sys
+    sys.exit(verdict)
 else:
+    from animated_infographics.evals.budget_verdict import budget_verdict
+
     transcript = json.loads((job_dir / 'transcript.json').read_text(encoding='utf-8'))
     narration_sec = transcript.get('duration_ms', 0) / 1000.0
     narration_mins = narration_sec / 60.0
@@ -289,10 +316,20 @@ else:
         bar_render = 80.0
         bar_total = 170.0
 
-    new_pass = 'PASS' if span_new_per_min <= bar_new else 'FAIL'
-    render_pass = 'PASS' if span_render_per_min <= bar_render else 'FAIL'
+    spans = {
+        'total': total_span_per_min,
+    }
+    bars = {
+        'total': bar_total,
+    }
+    verdict = budget_verdict(spans, bars)
+
     preview_pass = 'PASS' if span_preview <= 60.0 else 'FAIL'
     total_pass = 'PASS' if total_span_per_min <= bar_total else 'FAIL'
+
+    exit_note = f'- **Exit Code**: {verdict}'
+    if verdict == 3:
+        exit_note += '\n\nexit 3: a budget bar was missed — file it with the per-stage timings\n'
 
     long_report = f'''# Long-Story Performance Budget Evaluation Report — {date_str}
 
@@ -300,13 +337,14 @@ Cold-cache long-story performance budget measured on \`fixtures/scripts/story_ov
 
 - **Narration Duration**: {narration_sec:.1f} s ({narration_mins:.2f} min)
 - **Style**: \`{style}\`
+{exit_note}
 
 ## Spans vs Bars (per narration minute)
 
 | Span | Measured Wall Time | Measured / Min | Bar | Status |
 |---|---|---|---|---|
-| \`new\` → \`awaiting_review\` | {span_new:.2f} s ({span_new/60:.2f} min) | {span_new_per_min:.2f} s/min | ≤ {bar_new:.0f} s/min | {new_pass} |
-| \`render\` | {span_render:.2f} s ({span_render/60:.2f} min) | {span_render_per_min:.2f} s/min | ≤ {bar_render:.0f} s/min | {render_pass} |
+| \`new\` → \`awaiting_review\` | {span_new:.2f} s ({span_new/60:.2f} min) | {span_new_per_min:.2f} s/min | was ≤ {bar_new:.0f} s/min | watch |
+| \`render\` | {span_render:.2f} s ({span_render/60:.2f} min) | {span_render_per_min:.2f} s/min | was ≤ {bar_render:.0f} s/min | watch |
 | **Total Pipeline** | **{total_span:.2f} s ({total_span/60:.2f} min)** | **{total_span_per_min:.2f} s/min** | **≤ {bar_total:.0f} s/min** | **{total_pass}** |
 | \`preview\` (warm cache) | {span_preview:.2f} s | — | ≤ 60 s | {preview_pass} |
 
@@ -335,10 +373,12 @@ Cold-cache long-story performance budget measured on \`fixtures/scripts/story_ov
 
 Measured on \`fixtures/scripts/story_overdue_book.txt\` ({narration_sec:.1f} s / {narration_mins:.2f} min):
 
+{exit_note}
+
 | Span | Measured Wall Time | Measured / Min | Bar | Status |
 |---|---|---|---|---|
-| \`new\` → \`awaiting_review\` | {span_new:.2f} s ({span_new/60:.2f} min) | {span_new_per_min:.2f} s/min | ≤ {bar_new:.0f} s/min | {new_pass} |
-| \`render\` | {span_render:.2f} s ({span_render/60:.2f} min) | {span_render_per_min:.2f} s/min | ≤ {bar_render:.0f} s/min | {render_pass} |
+| \`new\` → \`awaiting_review\` | {span_new:.2f} s ({span_new/60:.2f} min) | {span_new_per_min:.2f} s/min | was ≤ {bar_new:.0f} s/min | watch |
+| \`render\` | {span_render:.2f} s ({span_render/60:.2f} min) | {span_render_per_min:.2f} s/min | was ≤ {bar_render:.0f} s/min | watch |
 | **Total Pipeline** | **{total_span:.2f} s ({total_span/60:.2f} min)** | **{total_span_per_min:.2f} s/min** | **≤ {bar_total:.0f} s/min** | **{total_pass}** |
 | \`preview\` (warm cache) | {span_preview:.2f} s | — | ≤ 60 s | {preview_pass} |
 
@@ -360,6 +400,22 @@ Measured on \`fixtures/scripts/story_overdue_book.txt\` ({narration_sec:.1f} s /
     else:
         report_path.write_text(long_report, encoding='utf-8')
         print(f'Report written to {report_path}')
-"
 
-log "Budget measurement complete!"
+    print(f'WATCH new {span_new_per_min:.2f} {bar_new:.1f}')
+    print(f'WATCH render {span_render_per_min:.2f} {bar_render:.1f}')
+    print(f'BUDGET total {total_span_per_min:.2f} {bar_total:.1f} {total_pass}')
+    import sys
+    sys.exit(verdict)
+"
+PY_EXIT=$?
+set -e
+
+if [ "$PY_EXIT" -eq 0 ]; then
+  log "Budget measurement complete: exit 0"
+  exit 0
+elif [ "$PY_EXIT" -eq 3 ]; then
+  log "Budget measurement complete: exit 3 (bar missed)"
+  exit 3
+else
+  fail "Budget measurement failed with code $PY_EXIT"
+fi

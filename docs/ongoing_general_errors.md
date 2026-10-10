@@ -550,7 +550,12 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 - J2 — Anticipate stage and forward tracker; A1 misses decision set — git log --grep "(j2)" — AnticipationPlan schema (G8 verified); anticipate stage generates 4 sentences per point via Ollama gemma4:26b with length/uniqueness/no-copy validation; AnticipateMatcher evaluates {c, f1, f2, f3, back} with 10-word window, forward commit (gap >= 0.5) and jump commit (gap >= 1.5, 2 steps); bake-off on frozen corpus shows A1 misses all decision-set bars (slide 0.1789-0.2466 vs 0.80-0.90, point 0.1412-0.1946 vs 0.60-0.75); root cause: backward candidate enrichment; proceeds to J3 per §6.6.4 rule 1.
 - J3 — Contestant A2 LLM classifier; bake-off evaluation — git log --grep "(j3)" — ClassifierMatcher evaluates current slide points, next 3 points, prior slide titles, and 25 heard words via Ollama gemma4:26b enum schema; single-step f1 commit and two-step jump commit; honest latency measured via last_elapsed_ms; 9/9 tests pass bare; bake-off on frozen corpus shows A2 misses all decision-set bars (slide 0.3390-0.3962 vs 0.80-0.90, point 0.2271-0.2859 vs 0.60-0.75); live-viable confirmed (P90 compute 598.0 ms vs 1.5 s bar); perfect hearing diagnostic confirms tracking error is algorithmic; falsification on empty words collapses point accuracy to 0.0442; per §6.6.4 rule 3 neither contestant adopted; Issue 9 filed.
 
+**Wave K:**
+
+- K1 — The budget script's exit code states its bars — git log --grep "(k1)" — budget_verdict implemented returning 0 when all spans <= bars and 3 on miss; measure_budget.sh propagates verdict exit code and prints BUDGET/WATCH lines; long runs judged on total only (bars <= 170 s/min literal, <= 195 creative) with new/render as watch numbers; unit cases verified bare and falsified (assert 0 == 3); real cold long literal run exited 3 on total 189.05 s/min (watch: new 106.22, render 82.83 s/min) writing exit 3 to budget report.
+
 ---
+
 
 ## 4. Deferred features (do not start without a selection)
 
