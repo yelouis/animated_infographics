@@ -380,6 +380,15 @@ The designer's Wave J spec offered each contestant only the current point, the n
 
 Contract: `design_presentation_simulation.md` §6.6.
 
+#### 2.18 A machine shared with other programs needs admission control
+
+On October 9, 2026 the agent ran a cold budget, the offline gate, the E2E and a second budget at once. Two FLUX generations of about 27 GB each met Ollama's 10.5 GB and the user's own programs on a 64 GB Mac, and macOS began killing its own services.
+- **Nothing asked.** No step checked memory before taking it.
+- **"Enough memory when I started" is not a plan:** the user's programs start and stop at will.
+- **The rule:** every heavy step asks for memory at the moment it needs it, one heavy step runs at a time, our own memory is freed first, a step stops itself cleanly when memory turns critical, and a measurement that had to wait is not a measurement.
+
+Contract: `design_system_architecture.md` §11.
+
 ---
 
 ## 3. Resolved index
@@ -786,4 +795,21 @@ Wave C (C1–C7) specced. Issue 6 filed for the user.
 - *"For issue 9 select Option A, for issue 10 select Option A. Update the agent_execution_guide to reflect these choices"*.
 - **Issue 9 → A:** Round 2 of the bake-off. The corrected A2 (every node a candidate, the section step, the "side story" prompt) is judged against the unchanged §8 bars and the K2-corrected scorer, on the seed-7 decision set plus a fresh seed-13 held-out set. A1 is retired. Contract: `design_presentation_simulation.md` §6.6.6. Built as Wave L (L1–L3), after Wave K.
 - **Issue 10 → A:** long-story budgets are judged on the total per narration minute only (≤ 170 literal, ≤ 195 creative). `new` and `render` per minute stay in the report as watch numbers. Contract: `design_testing_and_validation.md` §5. Built in K1.
+
+**October 10, 2026: memory guards (user direction, in chat).**
+- *"During another agent's last implementation and testing it seems like we ran out of memory. Write guards so that we don't run out of memory. Assume that other program can start and stop which will take from the available memory."*
+- **The evidence** (designer): JetsamEvent reports at 19:50 and 19:52 on October 9 show two `mflux` processes at 26.6–27.2 GB at once, `llama-server` at 10.5 GB, and 16 GB wired, with system services killed. The cause was four concurrent heavy runs by the implementing agent during K4 (the artifact paths are in `design_system_architecture.md` §11). Image generation is serial within one job, so the doubling came from concurrent jobs.
+- **Specced as Wave M (M1–M2), before K4:**
+  - a machine-wide heavy lock;
+  - admission against the kernel's available memory with an 8 GB floor;
+  - unloading our own LLM first;
+  - waiting, then exit 5, with the job resumable;
+  - a watchdog that stops only our own child when memory turns critical;
+  - measured peaks per heavy step;
+  - a gate lock (gates never run concurrently);
+  - budgets invalid if the guard waited;
+  - memory checks in `doctor`.
+- **Contracts:** `design_system_architecture.md` §11 and §6 (exit 5, three variables); `design_testing_and_validation.md` §2 (three rows, the slow test, the one-off real validation), §3 and §5.
+- **Lesson 2.18 added.**
+- **The interrupted K4's uncommitted output** is to be discarded in M2.
 

@@ -1,4 +1,4 @@
-# Agent Execution Guide — Active Build: Wave K (measurement fixes, 4 items), then Wave L (follower Round 2, 3 items) — October 10, 2026
+# Agent Execution Guide — Active Build: Wave M (memory guards, 2 items), then K4 and Wave L (follower Round 2) — October 10, 2026
 
 **You are an engineering agent with no memory of this project.** Waves A–J are built, committed and pushed (head `main`).
 - **The verification.** Waves I and J were independently verified by the designer on October 9, 2026. **All 12 items do what their specs say,** and every Wave I target is fixed on fresh output (`ongoing_general_errors.md` §1, §3).
@@ -6,9 +6,11 @@
 - **The user's decisions (October 10, 2026):** *"For issue 9 select Option A, for issue 10 select Option A. Update the agent_execution_guide to reflect these choices"*.
   - **Issue 9 → A:** Round 2 of the bake-off. The corrected LLM follower is judged against the unchanged bars on fresh held-out talks. That is **Wave L**.
   - **Issue 10 → A:** long-story budgets are judged on the total time per narration minute only. That is part of **K1**.
-- **Wave K comes first.** It fixes three measurement defects (the budget exit code, onset lag, per-decision compute time) that Round 2 is judged by.
+- **Wave K's K1–K3 are delivered** (`5c224a5`, `879b978`, `7da35ef`; not yet independently verified).
+- **K4's re-measure was interrupted when the machine ran out of memory** (October 9, 19:50–19:52). Four heavy runs, a cold budget, the offline gate, the E2E and a second budget, ran **at the same time**. Two 27 GB image generations met Ollama's 10.5 GB and the user's own programs on a 64 GB Mac.
+- **The user's direction (October 10, 2026):** *"Write guards so that we don't run out of memory. Assume that other program can start and stop which will take from the available memory."* That is **Wave M**, and it comes **before** K4, whose battery and budgets are heavy.
 
-**Status:** **Active Build: Wave K** (K1–K4), then **Wave L** (L1–L3), in the §2 order. No user decision is pending. L2 may end in a filed **Issue 11**, whose `Your selection:` line will belong to the user.
+**Status:** **Active Build: Wave M** (M1–M2), then **K4**, then **Wave L** (L1–L3), in the §2 order. No user decision is pending. L2 may end in a filed **Issue 11**, whose `Your selection:` line will belong to the user.
 
 **Every number and literal string in this guide and the design docs is a decision, not a suggestion.**
 
@@ -18,7 +20,8 @@
 
 An offline **presentation simulation** derives a deck from a script, builds an animation tree from the deck alone, perturbs the script into a "performed" talk, follows it with a causal matcher, and scores the result.
 
-**The lessons that shape this wave** (`ongoing_general_errors.md` §2):
+**The lessons that shape these waves** (`ongoing_general_errors.md` §2):
+- **2.18:** a machine shared with other programs needs admission control. Free memory at the start of a run says nothing about ten minutes later, and nothing in the pipeline asked.
 - **2.14:** a gate's exit code must state its bars. The budget script still writes FAIL and exits 0.
 - **2.17:** an evaluation must measure what it claims. The onset-lag scorer counted a point already on screen as a 10 s miss, and the harness's "per-decision" latency was measured over commits only.
 - **Still binding:** 2.8, 2.10, 2.12, 2.13.
@@ -41,12 +44,17 @@ An offline **presentation simulation** derives a deck from a script, builds an a
 10. **When this guide and a design doc disagree, stop and file it.**
 11. Every stage log ends in `llm_calls=<n> cache_hits=<m> elapsed_ms=<t>`.
 12. **Nothing in the package changes the environment at import.** Any run that generates images must show 0 asset execution errors to count.
-13. **Ids:** waves A–L; deferred features DF1–DF9; live constraints LC1–LC6; issues up to 10 (the next is Issue 11).
+13. **Ids:** waves A–M; deferred features DF1–DF9; live constraints LC1–LC6; issues up to 10 (the next is Issue 11).
 14. **Eval reports are named by date.** A second E2E or budget run on the same day overwrites the first. Commit each report in the item that produced it.
 15. **The follower changes only in L2, and only as `design_presentation_simulation.md` §6.6.6 says.**
     - **In Wave K and L1:** do not change any matcher's candidates, window, prompt, commit rule, costs or tie-break. L1 only *records* candidate ids.
     - K2 changes **how onset lag is measured**, to match §8's definition; it does not change what any follower does.
     - **Never:** change the §8 bars or the frozen scorer during Round 2, regenerate `corpus_r2`, or tune §6.6.6's constants to pass.
+16. **One heavy run at a time** (added October 10, 2026, after the out-of-memory event).
+    - **Never start a gate, budget, pipeline run, corpus build or bake-off while another is running**: not in the background, not in a second terminal, not as parallel tool calls. After M2 the gate lock enforces this for gates; for everything else, it is on you.
+    - **Before a long run,** run `memory_pressure | tail -1`. If the free percentage is below 45%, wait, or release what **you** started: your own leftover processes, or `ollama stop gemma4:26b`.
+    - **Never kill or signal the user's programs.**
+    - **If the memory guard waits, let it wait.** Exit 5 means "not enough memory now": `rerun --from <stage>` later. It is never a reason to bypass the guard.
 
 ---
 
@@ -64,6 +72,7 @@ An offline **presentation simulation** derives a deck from a script, builds an a
 - Waves A–H: `4df212a` … `6150482`.
 - Wave I: `ae0d00f` … `e71006e`.
 - Wave J: `b11dfde` … `a3fe8c2`.
+- Wave K: K1 `5c224a5`, K2 `879b978`, K3 `7da35ef` (delivered October 9; to be verified with K4's numbers).
 - Per-item verdicts: `ongoing_general_errors.md` §3.
 
 ### 1.3 Gates (run bare October 9, 2026 by the designer; the regression bar)
@@ -93,6 +102,7 @@ An offline **presentation simulation** derives a deck from a script, builds an a
 | Budget fail-open | `measure_budget.sh:292–295` computes PASS/FAIL and writes it, but nothing turns FAIL into an exit code: the long literal run wrote FAIL and exited 0 |
 | Onset-lag scorer | `score.py:146` ignores any commit made more than 0.5 s before the point's first word, and `:154` then scores the point as a 10 s miss. A point shown early and still on screen is "missed" (`history-great-stink-20261009-074656`, d4_p1, in the designer's replay). A later revisit counts as the onset (lags of 74.7 s in October 6 runs), while a point never shown counts only 10 s |
 | Harness latency | `matcher_bakeoff.py:278` takes "per decision" compute percentiles over **commits only**, including the 0 ms initial commit. Holds carry no compute time (`contracts/playback.py:48–57`). The reported "A2 p90 598 ms" is therefore not a per-decision figure; the replay's cache entries show 0.65–0.78 s per call |
+| **Out of memory** (October 9, 19:50–19:52) | JetsamEvent reports: two `mflux` processes at 26.6 and 27.2 GB at once (lifetime peak 27.4 GB), `llama-server` 10.5 GB, a browser tab 5.6 GB, 16 GB wired; macOS killed its own services. The cause was four heavy runs at once (M1's evidence). Image generation runs `mflux` serially within one job (`illustrate.py:342`), so only concurrent jobs can double it |
 | Follower trap (Issue 9) | The true point was unreachable 46–60% of the talk for A2, 68–81% for A1 and 32–62% for `bm25`. The designer's corrections cut it to 2–9% and raise A2's slide accuracy to 0.66–0.86 |
 
 ---
@@ -101,10 +111,10 @@ An offline **presentation simulation** derives a deck from a script, builds an a
 
 | # | Item | Why this position |
 |---|---|---|
-| K1 | The budget script's exit code states its bars; long stories judged on the total (Issue 10 → A) | Independent and small |
-| K2 | Onset lag measured as §8 defines it | Changes every follower's lag numbers. It must land before Round 2, and before K3 re-baselines the harness |
-| K3 | Compute time recorded and reported per decision | Needs the harness to be re-baselined after K2 |
-| K4 | Re-measure; close-out of Wave K | The Round 2 corpus must be scored by the finished scorer |
+| K1–K3 | **Delivered** (`5c224a5`, `879b978`, `7da35ef`) | Verified at the next designer pass, with K4's numbers |
+| M1 | The memory guard: admission, the heavy lock, the watchdog, exit 5, measured peaks | Every later item runs heavy steps: K4's battery and budgets, L1's corpus, L2's ≈ 2,000 LLM calls |
+| M2 | Gates never run concurrently; budgets stay honest; `doctor` reports memory; discard the interrupted K4 output | Needs M1's guard (the budget validity check reads its log lines) |
+| K4 | Re-measure; close-out of Waves K and M | The Round 2 corpus must be scored by the finished scorer, and the battery must run under the guards |
 | L1 | The Round 2 corpus (seed 7 + a fresh seed 13) and the diagnostics | The yardstick first. It needs K2's scorer and K3's per-decision times |
 | L2 | The corrected A2; Round 2; decide | Needs L1's corpus and diagnostics |
 | L3 | Adopt or file; close out | Needs the decision |
@@ -113,95 +123,122 @@ An offline **presentation simulation** derives a deck from a script, builds an a
 
 ## 3. The items
 
-### K1 — The budget script's exit code states its bars
+### K1–K3 — Delivered (October 9, 2026)
 
-**What this means for the user:** today a budget run can say FAIL in its report and still look green to anything reading its exit code. After this item, a missed time bar is visible as a missed time bar, and long stories are judged on the total time, as the user chose (Issue 10 → A).
+- **K1** `5c224a5`: budget exit codes, and long stories judged on the total.
+- **K2** `879b978`: onset lag per §8.
+- **K3** `7da35ef`: compute time per decision.
+
+Their specs are in the design docs (`design_testing_and_validation.md` §2 and §5, `design_presentation_simulation.md` §8, `design_data_contracts.md` §10) and in this guide's previous version (`git show 9bafe70:docs/agent_execution_guide.md`). **Do not rework them;** K4's numbers are their check.
+
+---
+
+### M1 — The memory guard
+
+**What this means for the user:** on October 9 two image generations ran at once and pushed the 64 GB Mac out of memory; macOS started killing its own services. After this item:
+- every heavy step asks for memory first and waits its turn;
+- the pipeline frees its own LLM before taking memory from anything else;
+- if memory runs short (including when the user opens other programs mid-run), our step stops cleanly with exit 5, not the machine.
 
 **The gap:**
-- `scripts/measure_budget.sh:238–241` (primary) and `:292–295` (long) compute PASS/FAIL per span, but the script exits 0 regardless.
-- The designer's long literal run on October 9, 2026 wrote `render … 80.47 s/min … ≤ 80 s/min … FAIL` and exited 0.
-- **Contract:** `design_testing_and_validation.md` §5: step 4 (revised) and the long-story table (total only, Issue 10 → A); and the "budget exit codes" row in §2.
+- **Nothing in the pipeline knows about memory:**
+  - `assets/illustrate.py:342` runs `mflux-generate-flux2` with `subprocess.run`;
+  - `audio/transcribe.py:205` calls `mlx_whisper.transcribe`;
+  - `audio/narrate.py:231` builds Kokoro's `KPipeline`;
+  - `preview.py:79–135` and `render.py:16–40` run Remotion through `npx`;
+  - `planner/llm.py:137` (`generate_json`) loads the model on demand.
+- **No machine-wide lock** exists, and the exit codes stop at 4.
+- **The evidence:**
+  - `/Library/Logs/DiagnosticReports/JetsamEvent-2026-10-09-195051.ips` and `-195211.ips`: two `python3.12` processes at 26.6–27.2 GB each (`mflux`), `llama-server` at 10.5 GB, 16 GB wired, and system services killed for "vm-compressor-space-shortage";
+  - the four concurrent runs that caused it: `artifacts/budget/20261009_194405`, `artifacts/offline/20261009_194518`, `artifacts/e2e/20261009_195347`, `artifacts/budget/20261009_195734`.
+- **Contract:** `design_system_architecture.md` §11 (all of it) and §6 (exit 5, the three new variables); the "`memguard.py`" row and the "Slow memory-guard test" and "One-off validation" paragraphs in `design_testing_and_validation.md` §2.
+
+**Implementation** (§11, verbatim rules):
+1. **`src/animated_infographics/memguard.py`:**
+   - `HEAVY_STEPS`, `FLOOR = 8 GB`;
+   - `read_memory() -> (available_bytes, pressure_level)` from `sysctl -n hw.memsize kern.memorystatus_level kern.memorystatus_vm_pressure_level`. This is the only function tests replace;
+   - `guard(step)`: the heavy lock, admission, our own Ollama unload, the wait, the timeout, and the `memguard …` log line;
+   - `watch(step, popen)`: the watchdog that only ever signals that child;
+   - `ResourceUnavailable`.
+2. **Exit 5:** the CLI's error handler maps `ResourceUnavailable` to exit **5**, and the job keeps its failed stage, so `rerun --from <stage>` resumes. Document it in the README.
+3. **Wire every heavy step:**
+   - **`flux`:** each `mflux` call in `illustrate.py` becomes `Popen` under `guard("flux")` and `watch`, keeping the existing `INFOGRAPHICS_IMAGE_TIMEOUT_S`. **`ResourceUnavailable` must pass through `generate_image` unchanged, never into the icon fallback.**
+   - **`render`:** `preview.py` (stills and media), `render.py`, the oracle render, and the gallery run, each under `guard("render")` and `watch`.
+   - **`whisper`:** under `guard("whisper")`, then release the model.
+   - **`kokoro`:** under `guard("kokoro")`, then release the model.
+   - **`llm_load`:** in `OllamaBackend`, before a stage's first call, `GET /api/ps`. If `gemma4:26b` is not loaded, that first call runs under `guard("llm_load")`.
+   - **The presentation stages** (`speak`, `hear`, `tree`'s assets) reach the same functions. Confirm that by test.
+4. **Measure the peaks** on the longest fixture, `story_overdue_book`: each step alone, as a subprocess under `/usr/bin/time -l`, reading "peak memory footprint".
+   - **The steps:** one `flux` illustration; `whisper` on its narration; `kokoro` narrating it; a final `render` at the concurrency it uses.
+   - **Write the results** (× 1.15, rounded up to a GB) into `HEAVY_STEPS` with the date, and into §11's table, in the same commit.
+   - **Check `flux` against the evidence.** If it is off from 27.4 GB by > 10%, write why.
+   - **Check the reader.** Print `read_memory()` next to `memory_pressure`'s "System-wide memory free percentage"; they must agree within 1 point.
+5. **Release in-process models.** After `whisper` and `kokoro`: drop the references, `gc.collect()`, and clear the MLX or MPS cache. Measure the pipeline process's footprint before the stage and after the release: it must be within 1 GB.
+
+**Validation:**
+- **Red first. Do NOT reproduce the out-of-memory condition.** The two JetsamEvent reports above are the red evidence; quote their numbers in the commit body. The new unit cases are red because the module does not exist.
+- **Green:**
+  - the "`memguard.py`" unit row (a)–(f);
+  - the slow test (two real processes are serialised);
+  - **the one-off validation on real work** (two cold jobs at once, with the safety monitor): no `flux` overlap, minimum `available` ≥ 7 GB, no new JetsamEvent file, both jobs at `awaiting_review`. Paste the monitor's minimum and the two `memguard` logs into the commit body.
+- **Falsify:**
+  - (1) in a scratch copy, skip the heavy lock → the slow test's intervals overlap;
+  - (2) make the watchdog ignore the pressure level → unit (e) goes red;
+  - (3) let `ResourceUnavailable` fall into the icon fallback → the unit case "stage exits 5, no icon" goes red.
+
+  Restore each.
+
+**Blast radius:**
+- `memguard.py` (new);
+- `assets/illustrate.py`, `audio/transcribe.py`, `audio/narrate.py`, `preview.py`, `render.py`, `planner/llm.py`;
+- `cli.py` (exit 5), the README;
+- tests;
+- `design_system_architecture.md` §11's measured numbers.
+
+---
+
+### M2 — Gates never run concurrently; budgets stay honest; `doctor` reports memory
+
+**What this means for the user:** a second gate started by mistake now refuses at once instead of doubling the machine's load. A budget run that had to wait for memory says so, instead of reporting slow numbers as real. `doctor` tells you whether there is room to run.
+
+**The gap:**
+- **No gate lock:** none of the seven gate scripts takes one. On October 9 four heavy runs went at once (M1's evidence).
+- **Budgets:** `measure_budget.sh` does not look for memory waits.
+- **`doctor`** has no memory check.
+- **The interrupted K4 left invalid, uncommitted output,** measured while four gates competed for memory: `docs/evals/budget_2026-10-09.md` (modified), and the untracked `docs/evals/e2e_2026-10-09.md` and `docs/evals/assets/2026-10-09/`.
+- **Contract:** `design_system_architecture.md` §11 ("Gates never run concurrently", "Budgets stay honest", `doctor`); `design_testing_and_validation.md` §3 (the battery line) and §5 (the budget validity line); the "gate lock" and "budget validity" rows in §2.
 
 **Implementation:**
-1. Add `src/animated_infographics/evals/budget_verdict.py` with `budget_verdict(spans: dict[str, float], bars: dict[str, float]) -> int`. It returns 0 when every span is ≤ its bar and 3 otherwise. A span exactly at its bar passes.
-2. In `measure_budget.sh`, after the report is written, compute the verdict through that function and print one line per span: `BUDGET <span> <value> <bar> PASS|FAIL`. Exit with the function's code. Mechanical failures keep exit 1 (the existing `fail`). **No test-only switch in the script.**
-3. **The bars passed in.**
-   - The primary run passes its three spans (≤ 390 / 210 / 600 s).
-   - A `--long` run passes **only its total** (≤ 170 s/min literal, ≤ 195 creative).
-   - The long run's `new` and `render` per minute are printed and reported as **watch numbers**, next to their former bars (90 / 80 literal, 110 / 85 creative), never as PASS/FAIL.
-4. **The report** states the exit code and, on 3, the line `exit 3: a budget bar was missed — file it with the per-stage timings`.
+1. **`src/animated_infographics/gatelock.py`:** `python -m animated_infographics.gatelock <name> -- <command…>`.
+   - It takes a non-blocking `flock` on `<INFOGRAPHICS_LOCK_DIR>/gate.lock`.
+   - **If it is held,** it prints `another gate is running: <holder name> pid <pid>` and exits **3**. The holder writes its name and pid into the lock file.
+   - **Otherwise** it sets `INFOGRAPHICS_GATE_LOCK_HELD=<its pid>`, runs the command, and returns the command's exit code.
+2. **Every gate script** (`battery.sh`, `e2e.sh`, `creative_e2e.sh`, `presentation_sim.sh`, `check_offline.sh`, `check_gallery.sh`, `measure_budget.sh`) re-executes itself through the wrapper on its first line, **unless** `INFOGRAPHICS_GATE_LOCK_HELD` names a live ancestor pid.
+3. **`measure_budget.sh`:** after the run, scan the archived stage logs' `memguard` lines. Any `waited_ms` > 0, or a stopped step, gives `INVALID: memory guard waited <ms> ms` at the top of the report and exit 1.
+4. **`doctor`:** the three additions of §11.
+5. **The offline gate** passes with the guard active. Confirm that `scripts/offline.sb` needs no change; if it does, STOP and file it.
+6. **Discard the interrupted K4 output.**
+   - First check that `git status` shows exactly the three paths above.
+   - Then: `git checkout -- docs/evals/budget_2026-10-09.md`, and remove `docs/evals/e2e_2026-10-09.md` and `docs/evals/assets/2026-10-09/`.
+   - Say so in the commit body. K4 re-measures.
 
 **Validation:**
-- **Red first:** the designer's October 9 long literal run wrote a FAIL row and exited 0 (§1.3). Confirm in the source that nothing after `:292–295` exits on a FAIL, and record it. The function in step 1 does not exist yet, so its unit cases are red by construction.
 - **Green:**
-  - the unit row: all under → 0; one span 0.01 over → 3; exactly at the bar → 0;
-  - the October 9 long numbers (render 80.47, total 138.90 s/min) give exit 0;
-  - a real `./scripts/measure_budget.sh --long` run exits 0 with its total ≤ 170 s/min. Record the code, the total and both watch numbers.
-- **Falsify:** make `budget_verdict` always return 0 → the "one span over" unit case goes red. Restore.
+  - the "gate lock" and "budget validity" rows;
+  - **a real refusal:** start `./scripts/check_gallery.sh`, and while it runs start `./scripts/e2e.sh`. The second exits **3** within 2 s, with the message;
+  - the battery runs end to end under one lock;
+  - `doctor` prints the memory lines;
+  - G13 exits 0.
+- **Falsify:** remove the wrapper line from `e2e.sh` → the real refusal check fails, because the second gate starts. Restore.
 
-**Blast radius:** `evals/budget_verdict.py` (new), `scripts/measure_budget.sh`, and tests.
-
----
-
-### K2 — Onset lag measured as §8 defines it
-
-**What this means for the user:** the lag number is how far the visuals trail the speaker. Today it can call a point "missed" when it was on screen all along, and call a point "74 s late" because of a later revisit. Every follower decision is judged on this number.
-
-**The gap:**
-- `src/animated_infographics/presentation/score.py:117–160` (`calculate_onset_lag`):
-  - it matches the first commit to a valid node with `at_ms >= first_t - 500` (`:146`), so a node committed earlier and still on screen is not found;
-  - an unmatched point scores a fixed 10.0 s (`:154`), so a miss can beat a long lag;
-  - any later commit, including a revisit minutes later, counts as the onset.
-- **Contract:** `design_presentation_simulation.md` §8, the revised onset-lag definition, and the "onset lag" row in `design_testing_and_validation.md` §2.
-
-**Implementation** (§8, verbatim rules):
-1. **Per point,** with `t0` the start of its first spoken sentence:
-   - `t_end` is the start of the first later sentence whose label is not this point (ad-libs and back-references included), or the end of the talk.
-   - The valid nodes are the point's node and, for point 0, its slide's `section` node.
-2. **The lag:**
-   - if a valid node is on screen at `t0`, the lag is 0;
-   - otherwise, the first commit to a valid node in `(t0, t_end)`, minus `t0`;
-   - otherwise, the point is missed and scores `max(10.0, (t_end − t0)/1000)`.
-3. **Median and p90** as today. The oracle must still score 0.0 on every point.
-4. **Re-baseline the harness.** Re-run `score` on the 8 frozen corpus jobs, so the J1 baseline check (`bm25` reproduces each job's own `presentation_score.json`) compares against the new scorer. The corpus hashes cover only the inputs, so they do not change; verify that they still pass.
-
-**Validation:**
-- **Red first:** the new unit case "node already on screen at the first word → 0" fails against today's scorer, which gives 10.0.
-- **Green:**
-  - the unit row;
-  - the oracle still scores 0.0 everywhere;
-  - `bm25` through the harness reproduces the re-scored corpus within 0.01;
-  - re-score the designer's G16 fresh jobs and the bake-off runs (`artifacts/matcher_bakeoff/2026-10-09/{bm25,anticipate,llm}_run/*`) and report before/after lag medians per job in the commit body.
-- **Falsify:** restore the `- 500` window → the early-shown unit case goes red. Restore.
-
-**Blast radius:** `presentation/score.py`, the corpus jobs' `presentation_score.json` (outputs, not hashed), tests, and the report addendum (K4).
+**Blast radius:** `gatelock.py` (new), the seven gate scripts, `doctor.py`, tests, and the three discarded eval files.
 
 ---
 
-### K3 — Compute time recorded and reported per decision
+### K4 — Re-measure; close-out of Waves K and M
 
-**What this means for the user:** whether an LLM follower could run live depends on how long **each decision** takes. Today that number is measured over a handful of commits, plus a 0 ms placeholder.
+**Run everything one at a time** (constraint 16). The battery and the three budgets run sequentially under the gate lock, and every heavy step under the memory guard. A budget marked `INVALID` (the guard waited) is re-run when the machine is quieter. It is never reported as a measurement.
 
-**The gap:**
-- `PlaybackHold` (`contracts/playback.py:48–57`) has no compute time.
-- `evals/matcher_bakeoff.py:278` takes percentiles over `pb.commits`, which includes the initial t = 0 commit.
-- **Contract:** `design_presentation_simulation.md` §6.6.2 ("the median and p90 call time per decision"), `design_data_contracts.md` §10 (`playback.json`), and the "decision compute time" row in `design_testing_and_validation.md` §2.
-
-**Implementation:**
-1. `PlaybackHold` gains `compute_ms: int = Field(default=0, ge=0)` (G8). All three matchers (`LiveMatcher`, `AnticipateMatcher`, `ClassifierMatcher`) fill it with the same measured value a commit at that decision would have carried (for A2, the cached or live call time plus the non-LLM time).
-2. The harness computes median and p90 over every decision: holds, plus commits after the first.
-3. Re-run the harness with `--matcher llm` on the corpus (warm cache, so it is fast), and add its per-decision median and p90 to the bake-off report as an addendum.
-
-**Validation:**
-- **Red first:** the stub-matcher unit case (a fixed 700 ms per decision) gives a p90 that includes the 0 ms commit today.
-- **Green:** the unit row: median = p90 = 700; G8 in sync; the addendum's numbers.
-- **Falsify:** include the initial commit again → the unit case goes red. Restore.
-
-**Blast radius:** `contracts/playback.py` and generated files, the three matchers in `presentation/match.py` (hold construction only), `evals/matcher_bakeoff.py`, tests, and the report addendum.
-
----
-
-### K4 — Re-measure; close-out
 
 1. **The full battery G1–G16, bare.** Expected: all 0 except **G16 = 3**.
 2. **The three cold budgets.** Record their exit codes. Long literal is 0 or 3, with 3 filed under Issue 10 while it is open.
@@ -381,6 +418,8 @@ An offline **presentation simulation** derives a deck from a script, builds an a
 - **Slide import:** not now.
 - **"Make sure to not actually perform any coding and just update the docs + execution guide for another agent to implement".** This applies to the designer; you implement.
 
+**October 10, 2026 (memory):** *"During another agent's last implementation and testing it seems like we ran out of memory. Write guards so that we don't run out of memory. Assume that other program can start and stop which will take from the available memory."*
+
 **October 10, 2026:** *"For issue 9 select Option A, for issue 10 select Option A. Update the agent_execution_guide to reflect these choices"*.
 - **Issue 9 → A:** Round 2 with the corrected A2 against the unchanged bars, on a fresh held-out set (Wave L).
 - **Issue 10 → A:** long-story budgets are judged on the total only (K1).
@@ -390,6 +429,11 @@ An offline **presentation simulation** derives a deck from a script, builds an a
 - **Designer's validation, added under that instruction:** a held-out seed-11 set. If it disagrees with the decision set, that is filed for the user, not decided by you.
 
 ### 5.4 Invariants and intentional design decisions
+
+**New (October 10, 2026):**
+- **Every heavy step asks the memory guard first;** one heavy step runs at a time on the machine; gates never run concurrently.
+- **A memory stop is exit 5,** never an icon fallback and never a crash of the machine. The watchdog only ever signals the child it started.
+- **A budget that waited for memory is not a measurement.**
 
 **New (October 9, 2026):**
 - **Every follower state can reach every correct state** (lesson 2.17), and any follower evaluation reports the share of talk time during which the true point was not a candidate.
@@ -453,6 +497,8 @@ An offline **presentation simulation** derives a deck from a script, builds an a
   - **Raising the back-edge cost as the fix for Issue 8.** It was measured: at best slide 0.55–0.59.
   - **Re-introducing renderer defaults** for dots or overlay icons.
   - **Loosening the motif spacing (3 / 20) or the spoiler rule** to keep a fixture from degrading. File it instead.
+  - **Running heavy work in parallel to save time,** whether gates, budgets, corpus jobs or bake-off runs. That is what ran the machine out of memory on October 9.
+  - **Lowering FLUX quality (quantisation, smaller images) to save memory** without the user's decision. The guard makes room by waiting and by unloading our own LLM, not by degrading output.
   - **Re-running Round 1's contestants unchanged.** Their candidate sets contain a trap (Issue 9). A1 also measured weak with the trap removed (slide 0.34–0.57, 5–8 false switches per minute).
   - **Removing "book" (or any word) from `TEXT_EXPECTED_WORDS`, or skipping rule 6 for metaphors,** to stop a degradation. A book in a FLUX image grows lettering that the skipped text check would never catch; salvage is the fix.
 
@@ -465,6 +511,7 @@ An offline **presentation simulation** derives a deck from a script, builds an a
 | Styles, the director, the license, overlays, creative bars | `design_styles.md` §3.3–3.7 |
 | The presentation simulation; the follower bake-off (§6.6), its Round 1 result (§6.6.5) and **Round 2** (§6.6.6); the onset-lag definition (§8) | `design_presentation_simulation.md` |
 | Job files incl. `playback.json` (holds gain `compute_ms`) | `design_data_contracts.md` §10 |
+| **The memory guard** (heavy steps, admission, the watchdog, exit 5, the gate lock, budget validity, `doctor`) | `design_system_architecture.md` §11 and §6; tests in `design_testing_and_validation.md` §2, §3 and §5 |
 | The name rule (item 6), R8 and the rule order | `design_planner.md` §4, §6 |
 | Templates; the callback dot count; word caps | `design_templates.md` §2.18, §5 |
 | Test rows (Wave K: onset lag, decision compute time, budget exit codes; Wave L: corrected A2, bake-off diagnostics), gates, the budget rules (long stories: total only) | `design_testing_and_validation.md` §2–§5 |
@@ -488,9 +535,10 @@ An offline **presentation simulation** derives a deck from a script, builds an a
 ## 8. THE LOOP
 
 ```
-(1) Is there an approved item? Wave K (K1–K4), then Wave L (L1–L3), in §2
-    order. If all are done, STOP. Never start DF1–DF9 or anything not in §3.
-    Never fill in a `Your selection:` line.
+(1) Is there an approved item? Wave M (M1–M2), then K4, then Wave L
+    (L1–L3), in §2 order. If all are done, STOP. Never start DF1–DF9 or
+    anything not in §3. Never fill in a `Your selection:` line.
+    One heavy run at a time (constraint 16).
 (2) Read the item and EVERY design section it names. Copy rules, thresholds
     and error strings VERBATIM.
 (3) RED FIRST on the recorded artefacts the item names; record the failure.
@@ -498,9 +546,9 @@ An offline **presentation simulation** derives a deck from a script, builds an a
 (5) GREEN; then falsify (break, see red, restore, see green).
 (6) Open every artefact and describe it.
 (7) Full battery, bare. Update §1.3.
-(8) ONE commit, scope = item id (`fix(k1): …`, `feat(l2): …`). WHY +
-    red/green in the body. ONE line under "Wave K" or "Wave L" in
-    ongoing_general_errors.md §3.
+(8) ONE commit, scope = item id (`feat(m1): …`, `fix(k4): …`, `feat(l2): …`).
+    WHY + red/green in the body. ONE line under "Wave M", "Wave K" or
+    "Wave L" in ongoing_general_errors.md §3.
     Never amend after pushing.
 (9) git push origin main.
 (10) Next item. A failed bar or an impossible rule → file it and stop at
@@ -510,7 +558,11 @@ An offline **presentation simulation** derives a deck from a script, builds an a
 
 ---
 
-## 9. Definition of Done: Waves K and L
+## 9. Definition of Done: Waves M, K and L
+
+**Wave M**
+- [ ] M1: every heavy step (`flux`, `render`, `whisper`, `kokoro`, `llm_load`) runs under `guard()`, and subprocess steps under `watch()`; exit 5 resumes with `rerun`; peaks measured and recorded; in-process models released; the real two-job validation passed with no JetsamEvent; three falsifications shown.
+- [ ] M2: every gate script is under the gate lock, and a second gate exits 3; invalid budgets exit 1; `doctor` reports memory; the offline gate is green; the interrupted K4 output is discarded.
 
 **Wave K**
 

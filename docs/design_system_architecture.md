@@ -1,6 +1,6 @@
 # System Architecture
 
-This document owns: **what the product is**, the pipeline and its stages, the repository and job-directory layouts, the CLI and its exit codes, the **mandatory review gate**, the local-only policy, and the pinned model/tool list. Detailed behaviour of each stage lives in the other `design_*.md` files (see §10).
+This document owns: **what the product is**, the pipeline and its stages, the repository and job-directory layouts, the CLI and its exit codes, the **mandatory review gate**, the local-only policy, the pinned model/tool list, and the **memory guard** (§11). Detailed behaviour of each stage lives in the other `design_*.md` files (see §10).
 
 ---
 
@@ -224,6 +224,7 @@ Entry point: `infographics` (`[project.scripts] infographics = "animated_infogra
 | 2 | Validation error: bad input file, bad option combination, invalid edited plan |
 | 3 | Gate refusal: wrong state, or hash mismatch |
 | 4 | Missing dependency (the same checks `doctor` runs) |
+| 5 | **Not enough memory** (added October 10, 2026; §11): the memory guard waited its limit for a heavy step, or stopped a running one. The job is left resumable: `rerun --from <stage>` |
 
 `--voice` with an audio input, or with any value outside `af_heart`/`am_michael`, exits **2**. `--music`/`--sfx-dir` paths that do not exist exit **2**.
 
@@ -235,6 +236,9 @@ Entry point: `infographics` (`[project.scripts] infographics = "animated_infogra
 | `INFOGRAPHICS_CACHE_DIR` | `./cache` | Relocates the LLM and image caches (the offline gate uses a fresh one) |
 | `INFOGRAPHICS_IMAGE_TIMEOUT_S` | `180` | Per-image generation timeout (the fallback test sets `1`) |
 | `HF_HUB_OFFLINE` | set to `1` by the CLI at runtime | Blocks Hugging Face network access |
+| `INFOGRAPHICS_LOCK_DIR` | `~/.cache/animated_infographics/locks` | Where the machine-wide heavy lock and gate lock live (§11). Tests point it at a temp dir. It is **never** inside `INFOGRAPHICS_CACHE_DIR`, which gates replace with fresh dirs |
+| `INFOGRAPHICS_MEM_WAIT_S` | `1800` | The longest the memory guard waits to admit one heavy step before exit 5 (§11) |
+| `INFOGRAPHICS_GATE_LOCK_HELD` | unset | Set by a gate script that holds the gate lock, so the gate scripts it calls do not try to take it again (§11) |
 
 ---
 
@@ -286,3 +290,88 @@ The renderer is written so that live mode can reuse every template unchanged. Te
 | Remotion project, clock, compositions, preview, final render, output verification | `design_rendering.md` |
 | Fixtures, gates, falsification, performance budget, evals | `design_testing_and_validation.md` |
 | Constraints that keep live mode and video input possible | `design_future_live_and_video.md` |
+| The memory guard: heavy steps, admission, the watchdog, the gate lock | this document, §11 |
+
+---
+
+## 11. Memory guard (added October 10, 2026)
+
+**Why.** On October 9, 2026 the 64 GB machine ran out of memory. The macOS JetsamEvent reports at 19:50 and 19:52 show:
+- **two image-generation processes at once,** at 26.6–27.2 GB each, about 27.4 GB lifetime peak (FLUX.2 klein 4B through `mflux`);
+- **Ollama's `llama-server`** at 10.5 GB;
+- **the user's own browser** at 5.6 GB.
+
+Wired memory reached 16 GB, and macOS killed its own services for lack of compressor space.
+
+**The cause:** the implementing agent ran a cold budget, the offline gate (fresh image cache), the E2E and a second budget **at the same time** (`artifacts/budget/20261009_194405`, `artifacts/offline/20261009_194518`, `artifacts/e2e/20261009_195347`, `artifacts/budget/20261009_195734`). Each generated FLUX images. Nothing in the pipeline knew about memory. Other programs (browsers, editors, other agents) also start and stop at will, so the memory free at the start of a run says little about the memory free ten minutes later.
+
+**Principles:**
+1. **Admission, not hope.** Before every heavy step, check the memory available *now*.
+2. **One heavy step at a time on the machine,** across all pipelines, gates, tests and budgets.
+3. **Other programs come and go.** Re-check before every heavy step, and keep watching during it.
+4. **Free our own memory first.** Unload our own Ollama model before a non-LLM heavy step if that is what it takes. Never touch another program.
+5. **Fail clean, never take the machine down.** A step that cannot get memory waits, then fails with exit 5 and leaves the job resumable. A step still running when memory turns critical is stopped by us, not by the kernel.
+
+**Heavy steps and their declared peaks** (`src/animated_infographics/memguard.py`, `HEAVY_STEPS`):
+
+| Step | Where it runs | How | Declared peak |
+|---|---|---|---|
+| `flux` | `assets`: illustrations, metaphor images, text-check regenerations | the `mflux-generate-flux2` subprocess | **32 GB.** Measured 27.4 GB lifetime peak (jetsam, October 9), × 1.15, rounded up. Re-measured in M1 |
+| `whisper` | `transcribe`, `hear` | in-process `mlx-whisper` | measured in M1 |
+| `kokoro` | `narrate`, `speak` | in-process | measured in M1 |
+| `render` | `preview` stills, `render`, the oracle render, the gallery | Remotion (node + headless Chrome) subprocess, at the concurrency it actually uses | measured in M1 |
+| `llm_load` | the first LLM call of a stage while `gemma4:26b` is not loaded | Ollama | **12 GB.** `llama-server` 10.5 GB resident, × 1.15 |
+
+- **How a peak is measured:** run the step alone, as a subprocess, under `/usr/bin/time -l` on the longest fixture, and read "peak memory footprint". The declared peak is the measurement × 1.15, rounded up to a whole GB.
+- **Recorded:** each constant carries its measurement date in a comment, and this table carries the numbers.
+
+**Available memory:**
+- **The figure:** `available = hw.memsize × kern.memorystatus_level / 100`. That is the kernel's own "free percentage", the one jetsam acts on and the one `memory_pressure` prints as "System-wide memory free percentage".
+- **The pressure level:** `kern.memorystatus_vm_pressure_level`: 1 normal, 2 warning, 4 critical.
+- **How it is read:** both through `sysctl -n`, with no new dependency. Reading it is one function, so tests can substitute a fake.
+
+**The floor:** **`FLOOR = 8 GB`** must remain available after a step is admitted. It is the room for the OS, the compressor, and programs that start while the step runs.
+
+**Admission:** `with guard("<step>"):` around every heavy step.
+1. **Take the machine-wide heavy lock.** That is `fcntl.flock(LOCK_EX)` on `<INFOGRAPHICS_LOCK_DIR>/heavy.lock`.
+   - Every heavy step of every process takes it, so two pipelines never run two heavy steps at once.
+   - The OS releases a `flock` when its process dies, so there is never a stale lock.
+   - Waiting for the lock counts toward the wait below.
+2. **Admit** when `available − peak(step) ≥ FLOOR`.
+3. **Unload our own model if that suffices.** If not admitted, and `gemma4:26b` is loaded (`GET /api/ps`), and the step is not `llm_load`:
+   - unload it with `POST /api/generate {"model": "gemma4:26b", "keep_alive": 0}`;
+   - wait up to 30 s for `/api/ps` to stop listing it;
+   - log `memory guard: unloaded gemma4:26b to admit <step>`;
+   - check again.
+4. **Otherwise wait.** Check every 5 s, and log `memory guard: waiting for <step>: need <peak> GB + floor 8 GB, available <a> GB` at most every 30 s.
+5. **Give up cleanly.** After `INFOGRAPHICS_MEM_WAIT_S` (1800 s) in total, raise `ResourceUnavailable`. The stage fails with **exit 5**, `state.json` records the failed stage, and `rerun --from <stage>` resumes.
+6. **Record.** Every admitted step writes `memguard step=<s> waited_ms=<w> available_gb=<a> unloaded_llm=<true|false>` into its stage log.
+
+**Watching a running step** (subprocess steps: `flux`, `render`):
+- **Poll every 2 s.** If the pressure level reaches 4 (critical) or `available < FLOOR / 2`:
+  - send SIGTERM to **our own child**, and SIGKILL after 10 s;
+  - release the lock;
+  - raise `ResourceUnavailable("memory guard: stopped <step> at <a> GB available")` (exit 5).
+- **The watchdog never signals any process but the child it started.**
+- **In-process steps** (`whisper`, `kokoro`) get admission only. When the stage ends, they release their model: drop the references, `gc.collect()`, and clear the MLX or MPS cache. The pipeline process must return to within 1 GB of its pre-stage footprint (measured in M1).
+
+**LLM calls:**
+- Before a stage's first LLM call, if `gemma4:26b` is not loaded, admit `llm_load`.
+- The calls themselves are not locked; Ollama serialises them.
+- **Avoid thrashing:** the guard unloads the model only when a step cannot otherwise be admitted.
+
+**Gates never run concurrently.**
+- **The gate lock.** Every gate script (`battery.sh`, `e2e.sh`, `creative_e2e.sh`, `presentation_sim.sh`, `check_offline.sh`, `check_gallery.sh`, `measure_budget.sh`) takes a **non-blocking** exclusive lock, `<INFOGRAPHICS_LOCK_DIR>/gate.lock`, at start.
+- **If it is held,** the script exits **3** with `another gate is running: <script> pid <pid>`.
+- **Nested gates.** A script that holds it sets `INFOGRAPHICS_GATE_LOCK_HELD=<pid>`. A script that sees that variable, with a live pid that is its own ancestor, skips taking the lock. That is how `battery.sh` runs the others in sequence.
+- **Offline gate.** `check_offline.sh`'s sandbox profile (`scripts/offline.sb`) is `allow default` with network denied, so the lock dir and `sysctl` already work inside it. M2 verifies this; the profile is not widened.
+- **Portability.** macOS ships no `flock(1)` command, so the gate scripts take the lock through a small Python wrapper (`python -m animated_infographics.gatelock <name> -- <command>`). It holds the `flock`, sets `INFOGRAPHICS_GATE_LOCK_HELD`, runs the script and returns its exit code.
+
+**A memory stop is never an image fallback.** `generate_image` (`assets/illustrate.py`) never raises on a tool failure, and a failed image falls back to an icon. `ResourceUnavailable` is the one exception that must pass through it unchanged, and end the stage with exit 5. Otherwise the guard would hide memory failures as quality fallbacks (lesson 2.13).
+
+**Budgets stay honest.** A budget run counts only if every heavy step logged `waited_ms=0`, and no step was stopped. Otherwise the report is headed `INVALID: memory guard waited <ms> ms` and the script exits 1: the conditions for a measurement were not met, just as with cache hits.
+
+**`doctor`** adds:
+- a check that fails (exit 4) if `hw.memsize` < the largest declared peak + `llm_load` + `FLOOR`;
+- the current available memory and pressure level, and the heavy lock's holder pid if any;
+- a warning, not a failure, if available memory is below `flux` + `FLOOR` right now.

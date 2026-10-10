@@ -125,9 +125,24 @@ The `voice`/`reason` expectations are the table in `design_planner.md` §10; the
 | `planner/voice.py` | first-person rate on all four fixtures equals the measured values in `design_planner.md` §10 (±0.01); a text whose only "I" is inside double quotes → third person; the tag cases `I (26F)` → female, `My (34M) wife (33F)` → male, `Me [F29]` → female, `My sister (22F) said` → no tag; **all 23 evidence cases** in the table in `design_planner.md` §10 (7 accepted, 16 rejected), each as its own parametrised test id; evidence not in the text → rejected; `unknown` with evidence → evidence repaired to null; the full decide() truth table (perspective × gender, 6 rows: only first_person+female → `af_heart`); `--voice am_michael` makes **zero** backend calls, counted at the backend's entry point; `--voice bm_george` → exit 2; a backend that fails 3 times → `unknown`/`no_evidence`/`am_michael`, never an exception |
 | `jobs.py` | every refusal in `design_system_architecture.md` §5 returns exit 3; an edit after approval flips `plan_sha256` |
 | `contracts/` | an unknown key is rejected (`extra="forbid"`); `schema_version: 2` is rejected |
+| `memguard.py` (Wave M; fake memory reader, temp `INFOGRAPHICS_LOCK_DIR`, stub Ollama API) | (a) admits when `available − peak ≥ 8 GB`, with `waited_ms=0`; (b) with `available` rising after 3 polls (another program quitting), admits on the 4th and logs `waited_ms` ≥ 15000; (c) when `gemma4:26b` is loaded and unloading it suffices, unloads first (one `keep_alive: 0` request) and logs `unloaded_llm=true`; it never unloads for `llm_load`; (d) after `INFOGRAPHICS_MEM_WAIT_S` raises `ResourceUnavailable`, and the CLI exits **5** with the failed stage recorded, so `rerun --from <stage>` resumes; (e) the watchdog terminates a dummy child (`python -c 'import time; time.sleep(60)'`) within 4 s of the fake pressure turning critical, and never signals any other pid; (f) two processes contending for `heavy.lock` are strictly serialised (the second's start ≥ the first's end), and killing the holder frees the lock |
+| gate lock (Wave M) | `e2e.sh` started while another gate holds `gate.lock` exits **3** with `another gate is running: …`; `battery.sh` runs every gate in sequence with `INFOGRAPHICS_GATE_LOCK_HELD`; a stale `INFOGRAPHICS_GATE_LOCK_HELD` naming a dead or unrelated pid is ignored, and the lock is taken normally |
+| budget validity (Wave M) | a budget run whose stage logs contain `waited_ms` > 0, or a stopped step, writes `INVALID: memory guard waited …` and exits 1 |
 | `planner/llm.py` | retry protocol against `httpx.MockTransport`; cache key stable across dict ordering; the seed increments per attempt |
 
 **Integration (`uv run pytest -m slow`, real models).** Kokoro transcript invariants and exact sentence offsets (the sum of samples equals the WAV length to the sample); Whisper WER ≤ 8% on the `say` fixture (normalise: lowercase, strip punctuation, spell out nothing); Whisper-vs-Kokoro word-start error median ≤ 80 ms and p95 ≤ 250 ms; Ollama structured-output conformance **20/20** on a toy schema with an `enum` and a `maxLength`; **the text check on `fixtures/vision/` classifies 7/7 on seeds 7 and 8** (the design-time measurement); **the critic regression set (`design_planner.md` §11) classifies 8/8 (A, B, B′, C, E, F, G, H) on seeds 7, 8 and 9**; the **voice stage on all four fixtures** matches the expected `voice`/`reason`/`evidence_contains` (and `molasses_flood`/`emu_war` make zero LLM calls in that stage); two inline snippets through the real model: `"My sister is a nurse and my mom is a teacher. I work nights at the hospital and I love my job."` → `unknown` → `am_michael`, and `"As a dad of three, I never thought I'd be asked to leave a playground."` → `male` → `am_michael`; mflux generates one fixture image and the second call is a cache hit in < 1 s.
+
+**Slow memory-guard test (Wave M; part of G11).** Two real processes each run `guard("flux")` around a 20 s dummy child, using the **real** sysctl reader and the real lock dir. Their admitted intervals must not overlap, and both `memguard` log lines must be present.
+
+**One-off validation of the guard on real work (Wave M, M1; not a battery gate).** Two `infographics new` jobs on two different fixtures, started together, each with its own **fresh** `INFOGRAPHICS_CACHE_DIR`, so that both must generate images.
+- **A monitor samples `available` every 1 s.**
+- **Asserts:**
+  - the two jobs' `flux` steps never overlap (from the `memguard` log timestamps);
+  - the minimum sampled `available` is ≥ 7 GB;
+  - no new `JetsamEvent-*.ips` appears in `/Library/Logs/DiagnosticReports/` during the run;
+  - both jobs reach `awaiting_review`.
+- **Safety:** the monitor kills both jobs and fails the run if the pressure level reaches 4.
+- **Never reproduce the out-of-memory condition on purpose.** The October 9 JetsamEvent reports are the red evidence.
 
 **Renderer (`npm --prefix renderer test`, vitest).** Pure helpers: the map framing math (min-span expansion, 25% padding); caption word-activity lookup; avatar parameter → shape selection.
 
@@ -135,7 +150,7 @@ The `voice`/`reason` expectations are the table in `design_planner.md` §10; the
 
 ## 3. The battery (`scripts/battery.sh`)
 
-Runs every gate **bare**, one after another, prints a table of gate / exit code / key number, and exits non-zero if any gate failed. `--fast` runs G1–G10 and G14 (no heavy models). The execution guide's §1 is the recorded baseline of this table. The script explicitly exports `HF_HOME` for its own run if needed, setting its own environment, while the package itself never modifies `HF_HOME` on import.
+Runs every gate **bare**, one after another, prints a table of gate / exit code / key number, and exits non-zero if any gate failed. **Never run gates, budgets or pipelines concurrently** (added October 10, 2026). Every gate script takes the gate lock, and every heavy step takes the heavy lock (`design_system_architecture.md` §11), so a second concurrent gate exits 3 and two heavy steps never overlap. `--fast` runs G1–G10 and G14 (no heavy models). The execution guide's §1 is the recorded baseline of this table. The script explicitly exports `HF_HOME` for its own run if needed, setting its own environment, while the package itself never modifies `HF_HOME` on import.
 
 | # | Gate | Command | Green means | Falsify it by (must go red) |
 |---|---|---|---|---|
@@ -273,6 +288,7 @@ Writes `docs/evals/e2e_<YYYY-MM-DD>.md` (committed): every exit code, the `verif
 3. times `new fixtures/scripts/story_recipe_box.txt --music fixtures/music/test_bed.wav --sfx-dir fixtures/sfx`, then `approve`, then `render`, as wall-clock spans;
 4. exits 0 if every span meets its bar, **3** if the run is sound but a bar is missed (added October 9, 2026; it used to write FAIL and exit 0), and 1 on a mechanical failure;
 5. writes `docs/evals/budget_<YYYY-MM-DD>.md` with the three spans, the critic calls and text-check calls (and regenerations) made, every stage's `timings_ms`, `llm_calls`/`cache_hits` summed from the stage logs (**cache_hits must be 0** for the run to count), and the image count. **From October 6, 2026, the run also counts only with 0 asset execution errors** (§4 step 10's definition). A run whose images never generated is faster than a real one, and is not a budget measurement.
+- **A budget run counts only if the memory guard never waited and never stopped a step** (added October 10, 2026; `design_system_architecture.md` §11). Otherwise the report is headed `INVALID: memory guard waited <ms> ms` and the script exits 1. A run that queued behind other work, or reloaded the LLM to make room, is not a measurement of the pipeline.
 - **A creative budget run counts only if it was creative** (added October 6, 2026). `plan_report.style_degraded` must be false, ≥ 2 `metaphor` scenes must render, and their images must be in `assets/images/`.
   - **Why:** both cold creative long budgets so far (the agent's and the designer's) silently measured a literal run, reporting 5 images and 114 LLM calls (`design_styles.md` §3.3, "Salvage").
   - **Kept evidence:** before cleanup, the script copies the job's `logs/`, `plan_report.json`, `director.json` and `assets/manifest.json` to `artifacts/budget/<timestamp>/<span>/`. A budget must not delete its own evidence.
