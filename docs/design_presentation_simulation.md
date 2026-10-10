@@ -308,6 +308,16 @@ At **each** decision point, one call: `generate_json(stage="follow_llm", tempera
    - a fresh G16 must exit **0**.
 5. **No tuning, ever.** No constant in §6.6.1–§6.6.2 changes during the bake-off: windows, margins, costs, candidate sets, prompts, temperatures, the BM25 parameters. A contestant that misses, misses. If a constant is wrong, the evidence goes into the filed issue for the designer.
 
+#### 6.6.5 Round 1 result (October 9, 2026) and the spec defect it exposed
+
+**Neither contestant was adopted** (`docs/evals/matcher_bakeoff_2026-10-09.md`).
+- **Most of that verdict comes from this spec, not the contestants.** Both candidate sets (§6.6.1, §6.6.2) offered only the next 3 nodes ahead, and a slide is 4 nodes. A follower one slide behind could never be offered the true point again.
+- **The cost:** the true point was unreachable for 46–60% of the talk for A2, and 68–81% for A1.
+- **A second defect:** a section node and its slide's first point are one moment in speech, but moving onto the first point counted as a two-decision jump.
+- **The designer's replays** fix both, and change A2's prompt so that only side stories answer "current". They take A2's slide accuracy from 0.34–0.40 to 0.66–0.86 and its false switches from 3.6–4.4 to 0.5–1.25 per minute; lag still misses. The full table is in Issue 9.
+- **Not yet the contract.** These corrections are measured but not adopted into §6.6.1–§6.6.2: the next step is the user's selection in Issue 9. Until then §6.6.1–§6.6.2 describe what Round 1 tested.
+- **Invariant for any next round (lesson 2.17):** every node is reachable from every state, and the harness reports the share of talk time during which the true point was not a candidate.
+
 ---
 
 ## 7. `compose`, `preview` and `render`
@@ -332,7 +342,7 @@ At **each** decision point, one call: `generate_json(stage="follow_llm", tempera
 |---|---|---|---|
 | **Slide accuracy** | Fraction of non-ad-lib speech time where shown slide = ground-truth slide | ≥ 0.90 | ≥ 0.80 |
 | **Point accuracy** | Same, at point level; a `section` node counts as correct during its slide's first point | ≥ 0.75 | ≥ 0.60 |
-| **Onset lag** | Per point present in the performance: time from its first spoken word to its node's `start_ms`; median and p90 | median ≤ 3.0 s, p90 ≤ 6.0 s | median ≤ 4.0 s, p90 ≤ 8.0 s |
+| **Onset lag** | Per point present in the performance: time from its first spoken word `t0` until its node is on screen (for point 0, its slide's `section` node also counts). Revised October 9, 2026 (Wave K, K2): **0** if the node is already on screen at `t0`; otherwise the first commit to it before `t_end`, the end of the point's first contiguous spoken run; **missed** (never on screen in that run) counts `max(10 s, t_end − t0)`, so missing is never better than being late. A later revisit never counts as the onset. Median and p90 | median ≤ 3.0 s, p90 ≤ 6.0 s | median ≤ 4.0 s, p90 ≤ 8.0 s |
 | **False switches** | Commits to a node that is neither the ground-truth node nor the next one in the deck, per minute | ≤ 1.0 / min | ≤ 2.0 / min |
 | **Ad-lib stability** | Fraction of ad-lib time with no commit | ≥ 0.80 | ≥ 0.70 |
 | **Skip recovery** | (`strong`) time from the first word after a skipped point to the correct node | — | ≤ 6.0 s |

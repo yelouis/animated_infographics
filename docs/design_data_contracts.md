@@ -261,7 +261,7 @@ All are Pydantic contracts in `contracts/`, exported to `schema/*.schema.json` a
 | `performance.json` | `perform` | `speak`, `score` **only** | §4: `{"seed", "level", "sentences": [{"text", "label", "op", "source_sentence_id"}], "op_counts"}` |
 | `speak_timing.json` | `speak` | `score` only | `[{"sentence_i", "start_ms", "end_ms"}]` |
 | `heard.json` | `hear` | `follow`, `compose` | the transcript contract of §2 (`source: "asr"`) |
-| `playback.json` | `follow` | `compose`, `score` | §6.5, plus `matcher` (added October 7, 2026) |
+| `playback.json` | `follow` | `compose`, `score` | §6.5, plus `matcher` (added October 7, 2026); each hold gains `compute_ms` (October 9, 2026, Wave K) |
 | `presentation_score.json` | `score` | eval report | §8 metrics, the bars applied, and the oracle row |
 
 **Isolation invariant (tested):** `follow` reads only `tree.json`, `heard.json` and, with matcher `anticipate`, `anticipation.json`; `anticipate` reads only `deck.json` and `tree.json`; `tree` reads only `deck.json`, `deck_bible.json` (the bible stage run on the deck text; same contract as `bible.json`) and the style; neither reads `performance.json`, `speak_timing.json` or the script. A unit test patches file access during each stage and fails on any other read.

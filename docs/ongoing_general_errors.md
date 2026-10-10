@@ -78,22 +78,32 @@
      - **The spec gaps:** the designer's spec never showed the model rule 6's word list (lesson 2.11), and specified degradation without salvage.
 - **Defects 1–7 and 9 are Wave I** (I1–I9 in the guide), within approved behaviour. **Defect 8 needs the user's selection.**
 
-**Wave I (I1–I9) was delivered as 9 commits (`ae0d00f`…`HEAD`) and independently verified on October 8–9, 2026.**
-- **Gates:** every gate G1–G15 exited 0 bare, and G16 exited 3 bare as specified (Issue 8 follower misses; mechanics and all 3 falsifications clean). 388 fast tests, 43 slow tests, 21 vitest, 59 gallery goldens (0 overflows, hold motion verified, caption spacing verified).
-- **Cold budgets:** all 3 measured cold with 0 cache hits and 0 asset execution errors:
-  - primary: 200.52 s / 189.37 s / 389.89 s (bars ≤ 390 / 210 / 600 s)
-  - long literal: 56.80 / 78.22 / 135.01 s/min (bars ≤ 90 / 80 / 170 s/min)
-  - long creative: 76.17 / 79.54 / 155.71 s/min (bars ≤ 110 / 85 / 195 s/min), style_degraded=False, 9 images (≥ 2 metaphors)
-- **Cold planner eval:** 6/6 fixtures valid bare, 0 independent validation violations, names_before_narration = 0 on all 6, critic regression 8/8 PASS, text audit PASS.
-- **Visual artefacts verified on real renders:** callback dots count real appearances (I1), asides anchored top-left with 0 overlap on motif tokens (I2), empty thought bubble eliminated on overdue s001 (I3), motif spacing and salvage verified (I4), 7 former spoiler scenes clean (I5), asset execution failures caught (I6), and presentation metaphor nodes and images generated (I7).
+**Waves I (I1–I9) and J (J1–J3) were delivered as 12 commits (`ae0d00f`…`a3fe8c2`) and independently verified by the designer on October 9, 2026.**
+- **Gates, re-run bare:**
+  - G1–G15 exit 0: 411 fast tests, 43 slow, 21 vitest, 82 gallery goldens with 0 overflows and 0 overlaps; E2E 916 s; offline 263 s; creative E2E 1,534 s.
+  - **G16 exits 3**, as designed: four fresh jobs, all three falsifications pass, every follower bar misses.
+- **Cold budgets:**
+  - primary: 218.02 / 193.65 / 411.67 s (≤ 390 / 210 / 600);
+  - long creative: 77.05 / 79.54 / 156.58 s/min (≤ 110 / 85 / 195), with 9 images; a real creative run;
+  - **long literal: 58.43 / 80.47 / 138.90 s/min. Render misses its 80 s/min bar by 0.47, and `measure_budget.sh` still exits 0** (Issue 10).
+- **Source:** every item was read against its spec, and **all 12 do what their specs say** (verdicts in §3).
+- **On fresh output** (the battery's own G12 and G15 jobs), every Wave I target is fixed:
+  - 0 name spoilers in 25 named displays;
+  - each callback draws 4 dots for 4 earlier tokens;
+  - no empty thought;
+  - motifs named in story words ("pump handle", "blue ink"), with appearances spaced 4–16 beats apart;
+  - every overlay at its kind's anchor;
+  - creative presentation trees license-checked, with overlays; none degraded.
+- **Wave J's bake-off verdict is not valid evidence.** The designer's §6.6 gave both contestants a candidate set that a lost follower can never leave (lesson 2.17). Replays by the designer, using the agent's own code with only the candidate set changed, roughly double A2's accuracy (Issue 9, rewritten).
+- **Three summary lines misdescribe correct code:** I5 ("dialogue"), J3 ("prior slide titles") and §1's "59 goldens". The verdicts in §3 say so.
 
-**One open decision: Issue 9.** Waves I and J are complete through J3. In the Wave J bake-off, neither Contestant A1 nor Contestant A2 met the §8 accuracy bars on the frozen corpus. Issue 9 is filed below awaiting user selection.
+**Open decisions for the user:** Issue 9 (the follower's next round) and Issue 10 (the long-story render bar).
 
 ## ⚠️ Unresolved Issues & Suggestions
 
 ### Issue 8: The presentation follower cannot track paraphrased speech with lexical matching
 
-**Status**: ✅ Decided: **Option A**, by the user in chat on October 7, 2026. It is being built as **Wave J** (`agent_execution_guide.md`); the contract is `design_presentation_simulation.md` §6.6.
+**Status**: ✅ Decided: **Option A**, by the user in chat on October 7, 2026, and **carried out** as Wave J (J1–J3, October 9, 2026). Neither contestant was adopted, so the open question moves to **Issue 9**; nothing further is to be done under Issue 8. The contract is `design_presentation_simulation.md` §6.6.
 - **Validation added by the designer:** each contestant must also pass a held-out set (the same four configurations at seed 11). If the held-out result disagrees with the decision set, that is filed for the user, not decided by the agent.
 - **The original filing:** by the implementing agent on October 6, 2026; **re-measured and rewritten by the designer the same day.** Every run misses every accuracy bar. The tree is not the cause: the oracle (each point shown from its first spoken word) scores 1.00, 0.98, 0.98 and 1.00. The follower is.
 
@@ -172,49 +182,112 @@ Your selection: **Option A**. Given by the user in chat on October 7, 2026, verb
 
 ---
 
-### Issue 9: Neither follower contestant met the accuracy bars in the Wave J bake-off
+### Issue 9: The bake-off measured a trap in the follower spec; corrected, A2 roughly doubles accuracy but still misses lag
 
-**Status**: ⚠️ Confirmed Unresolved — `docs/evals/matcher_bakeoff_2026-10-09.md`: Contestant A1 (`anticipate`) and Contestant A2 (`llm`) both missed all accuracy bars on all 4 decision-set jobs in the frozen corpus bake-off. A1 scored slide accuracy 0.1789–0.2466 (bar ≥ 0.80–0.90) and point accuracy 0.1412–0.1946 (bar ≥ 0.60–0.75). A2 scored slide accuracy 0.3390–0.3962 and point accuracy 0.2271–0.2859. BM25 baseline remains highest on literal/mild (0.5542 / 0.3682); A2 is highest on creative/strong (0.3804 / 0.2322) and creative/mild (0.3437 / 0.2859). Perfect hearing diagnostic confirms tracking error is algorithmic, not ASR-driven (A2 slide 0.3233–0.3805 under synthetic ground-truth speech). G16 remains at exit 3 per §6.6.4 rule 3.
+**Status**: ⚠️ Confirmed Unresolved.
+- **The original filing:** by the implementing agent on October 9, 2026, after neither contestant met the §8 bars (`docs/evals/matcher_bakeoff_2026-10-09.md`).
+- **Re-measured and rewritten by the designer the same day.** The agent built both contestants exactly to the designer's §6.6. The bake-off's verdict comes mostly from a defect in that spec (lesson 2.17), not from the contestants' ability.
 
-#### Measured Results: Decision Set (Seed 7)
+**What went wrong.** Both contestants could consider only the current point, the next 3 nodes and earlier points. A slide is 4 nodes (a section plus 3 points), so a follower one slide behind could never be offered the true point again.
+- **A typical failure** (`history-great-stink-20261009-074656`, A2): A2 tracked within about 3 s until 121 s. It then committed one plausible backward jump on "Parliament was so desperate to get away from that smell…", and stayed on slides 1–2 from 165 s to 253 s while the speaker covered slides 4–5. Every candidate it was shown was wrong, so it answered "current".
+- **Time the true point was unreachable** (more than 3 nodes ahead), on the decision set: A2 46–60%, A1 68–81%, `bm25` 32–62% (its skip edges reach 2 slides ahead).
+- **Perfect hearing changes nothing,** for the same reason.
+- **A second, smaller spec defect:** a slide's section node and its first point are one moment in speech, yet moving onto the first point counted as a two-decision jump. That adds ≈ 1.5 s at every slide change.
 
-| Job Configuration | Metric | Bar | BM25 Baseline | Contestant A1 | Contestant A2 | Best Result | Perfect Hearing (A2) |
-|---|---|---|---|---|---|---|---|
-| `history-great-stink`, literal/mild | slide_accuracy | ≥ 0.90 | **0.5542** | 0.1789 | 0.3962 | **0.5542** (BM25) | 0.3654 |
-| `history-great-stink`, literal/mild | point_accuracy | ≥ 0.75 | **0.3682** | 0.1412 | 0.2859 | **0.3682** (BM25) | 0.2782 |
-| `history-great-stink`, literal/mild | onset_lag_median_s | ≤ 3.0 | **7.38 s** | 10.00 s | 10.00 s | **7.38 s** (BM25) | 10.00 s |
-| `history-great-stink`, literal/mild | false_switches_per_min | ≤ 1.0 | **3.01 /min** | 4.52 /min | 4.02 /min | **3.01 /min** (BM25) | 3.52 /min |
-| `history-great-stink`, creative/strong | slide_accuracy | ≥ 0.80 | 0.3348 | 0.2183 | **0.3804** | **0.3804** (A2) | 0.3805 |
-| `history-great-stink`, creative/strong | point_accuracy | ≥ 0.60 | 0.2224 | 0.1727 | **0.2322** | **0.2322** (A2) | 0.2549 |
-| `history-great-stink`, creative/strong | onset_lag_median_s | ≤ 4.0 | **10.00 s** | **10.00 s** | 32.15 s | **10.00 s** (BM25/A1) | 10.00 s |
-| `history-great-stink`, creative/strong | false_switches_per_min | ≤ 2.0 | **3.26 /min** | 4.82 /min | 3.97 /min | **3.26 /min** (BM25) | 3.69 /min |
-| `story-overdue-book`, literal/strong | slide_accuracy | ≥ 0.80 | **0.3634** | 0.2092 | 0.3390 | **0.3634** (BM25) | 0.3233 |
-| `story-overdue-book`, literal/strong | point_accuracy | ≥ 0.60 | 0.2039 | 0.1575 | **0.2271** | **0.2271** (A2) | 0.2255 |
-| `story-overdue-book`, literal/strong | onset_lag_median_s | ≤ 4.0 | 9.59 s | 10.00 s | **5.49 s** | **5.49 s** (A2) | 5.28 s |
-| `story-overdue-book`, literal/strong | false_switches_per_min | ≤ 2.0 | **4.07 /min** | 5.95 /min | 4.39 /min | **4.07 /min** (BM25) | 4.39 /min |
-| `story-overdue-book`, creative/mild | slide_accuracy | ≥ 0.90 | 0.3176 | 0.2466 | **0.3437** | **0.3437** (A2) | 0.3399 |
-| `story-overdue-book`, creative/mild | point_accuracy | ≥ 0.75 | 0.1959 | 0.1946 | **0.2859** | **0.2859** (A2) | 0.2647 |
-| `story-overdue-book`, creative/mild | onset_lag_median_s | ≤ 3.0 | 10.00 s | 10.00 s | **5.86 s** | **5.86 s** (A2) | 6.56 s |
-| `story-overdue-book`, creative/mild | false_switches_per_min | ≤ 1.0 | 5.00 /min | 5.87 /min | **3.62 /min** | **3.62 /min** (A2) | 3.46 /min |
+**What the designer measured.** These are replays on the frozen decision set (seed 7), run through the agent's own `ClassifierMatcher` and `AnticipateMatcher` code with targeted source swaps, and scored by the agent's `compose` and scorer. They are scratch measurements; no repository code was changed. Each column adds one correction to the one before it.
 
-**What the bake-off proved:**
-- **Tracking failure is algorithmic, not acoustic:** Replaying ground-truth synthetic hearing (`--hearing perfect`) left accuracy virtually unchanged (A2 slide 0.32–0.38, point 0.23–0.28). Eliminating ASR WER does not fix follower tracking.
-- **A1 failure mechanism:** Pre-generating 4 conversational sentences per point expanded lexical overlap across all candidates. Because the candidate set included backward points with low transition cost (0.5), early nodes with common keywords repeatedly outscored forward nodes, trapping the follower between D1 and D2 for entire talks.
-- **A2 failure mechanism & viability:** A2's median compute latency is 429–484 ms and P90 is 598 ms, easily satisfying the 1.5 s live cadence bar (`live-viable: yes`). However, error analysis showed two primary failure modes:
-  1. *Current-node confirmation bias:* The prompt instructs the model to answer the current point when unsure or between points. Once any delay occurs, the model repeatedly confirms $c$, pinning the follower while narration moves on.
-  2. *Intermediate section title barriers:* Transitioning from slide $k$ point 2 to slide $k+1$ point 0 treats `d(k+1)_section` as $f1$ and `d(k+1)_p0` as $f2$. Because $f2$ requires two consecutive identical decisions, transitions across slides stall.
+| Decision-set job (bars mild / strong) | Metric | A2 as built | + every node a candidate | + section step | + prompt: "a side story that matches no point" replaces "or you are unsure" |
+|---|---|---|---|---|---|
+| history literal/mild | slide (≥ 0.90) | 0.396 | 0.831 | 0.857 | **0.863** |
+| | point (≥ 0.75) | 0.286 | 0.596 | 0.622 | **0.633** |
+| | lag median / p90 (≤ 3 / 6 s) | 10.0 / — | 4.74 / 12.54 | 4.67 / 12.54 | **4.12 / 13.10** |
+| | false switches (≤ 1.0) | 4.02 | 0.50 ✓ | 0.67 ✓ | **0.50 ✓** |
+| history creative/strong | slide (≥ 0.80) | 0.380 | 0.823 ✓ | 0.824 ✓ | **0.846 ✓** |
+| | point (≥ 0.60) | 0.232 | 0.550 | 0.552 | **0.601 ✓** |
+| | lag median / p90 (≤ 4 / 8 s) | 32.2 / — | 7.74 / 17.07 | 6.86 / 17.07 | **6.88 / 18.63** |
+| | false switches (≤ 2.0) / ad-lib (≥ 0.70) | 3.97 / — | 0.99 ✓ / 0.57 | 0.99 ✓ / 0.51 | **0.71 ✓ / 0.83 ✓** |
+| overdue literal/strong | slide (≥ 0.80) | 0.339 | 0.608 | 0.634 | **0.662** |
+| | point (≥ 0.60) | 0.227 | 0.404 | 0.430 | **0.463** |
+| | lag median / p90 (≤ 4 / 8 s) | 5.49 / — | 5.75 / 12.87 | 5.58 / 11.36 | **4.88 / 11.33** |
+| overdue creative/mild | slide (≥ 0.90) | 0.344 | 0.638 | 0.664 | **0.681** |
+| | point (≥ 0.75) | 0.286 | 0.453 | 0.473 | **0.502** |
+| | lag median / p90 (≤ 3 / 6 s) | 5.86 / — | 5.85 / 11.21 | 5.50 / 11.01 | **4.38 / 10.15** |
+| | false switches (≤ 1.0) | 3.62 | 1.55 | 1.38 | **0.86 ✓** |
 
-**Option A (recommended)**: **Contestant A3: Local dense embedding matcher with Ollama** — Add a small local embedding model in Ollama (e.g. `nomic-embed-text`, ~274 MB) to compute cosine similarities between the heard window (15–20 words) and node embeddings precomputed at tree time.
-  - *Pros*: Directly bridges lexical paraphrase gap without LLM generation latency; executes in < 20 ms per decision point; avoids prompt-wording confirmation bias; fully local at runtime.
-  - *Cons*: Introduces one new model into Ollama, requiring updates to doctor, offline gate, and setup scripts; relaxes the standing "no new models" constraint.
+- **Time the true point was unreachable** falls to 2–9% with every node a candidate.
+- **Skip recovery** (strong runs) stays at 13–17 s (bar ≤ 6 s).
+- **Each call takes 0.65–0.78 s** (`elapsed_ms` of the replay's cache entries). That is live-viable at the 1.5 s cadence.
+- **A1 is not worth another round.** With every node a candidate, it reaches only slide 0.34–0.57, with 5–8 false switches per minute, on both seeds.
+- **What remains is lag.** The follower trails the speaker by 1–3 points for 25–41% of the talk. After a new point begins, the model keeps answering "current" for 1–6 decisions (≈ 1.5–9 s): the 25-word window still holds mostly the old point's words.
+- **Bars and corrections have both been seen.** The designer's replays looked at the decision set (seed 7), and A1's replay also looked at seed 11. Any next round therefore needs a **fresh held-out seed (13)**.
+- **The scorer's lag will also change** with Wave K's correction (K2): a point already on screen at its first word now counts 0 s, not a 10 s miss.
 
-**Option B**: **Hierarchical monotonic forward progression with A2 classifier** — Restructure the A2 follower graph: remove intermediate `section_title` nodes from the live candidate set (collapsing slide transitions directly to the next slide's first point), remove the "answer current point when unsure" fallback instruction from the classifier prompt, and require 3 consecutive decisions to trigger any backward jump while forward transitions commit on 1 decision.
-  - *Pros*: Directly addresses both identified root causes of A2's tracking failures without adding new models or changing dependencies; builds upon A2's proven live compute viability (P90 598 ms < 1.5 s).
-  - *Cons*: Still requires ~250 LLM calls (~1.8 min) per presentation; heavily paraphrased ad-lib sections may still slip if prompt context is too narrow.
+**Option A (recommended)**: **Round 2: the corrected A2 against the unchanged bars.**
+- **The contestant:** A2 with the three corrections in the table's last column: every node is a candidate, the section step, and the "side story" prompt.
+- **The test:** the K2-corrected scorer, on the existing decision set plus a fresh held-out set (the four configurations at seed 13).
+- **The outcome:** adopt it if it meets every §8 bar on both sets; otherwise file the residuals per metric and stop.
+  - *Pros*: The cleanest test of a design without the trap, on data nobody has tuned to. If it passes, presentations become much better (slide 0.66–0.86, against `bm25`'s 0.33–0.56) and G16 turns green honestly.
+  - *Cons*: The designer's replay says it will most likely still miss lag (median 4.1–6.9 s against ≤ 3–4 s) and the overdue story's accuracy. So this probably ends in another filing, after one more wave of work.
 
-**Option C**: **Recalibrate §8 presentation bars to realistic human-presentation levels and adopt A2** — Acknowledge that human presentation speech naturally leads or trails visual slides by 5–10 seconds and wanders into ad-libs, making ≥ 80–90% continuous time alignment unrealistic for any causal follower. Recalibrate bars to slide ≥ 0.50, point ≥ 0.30, lag median ≤ 8 s, false switches ≤ 4/min, and adopt A2 (which provides the best semantic tracking on creative presentations).
-  - *Pros*: No architectural refactoring or model additions; G16 turns green honestly under restated bars.
-  - *Cons*: Displays on screen will continue to lag spoken narration by 6–10 seconds; slide alignment will be incorrect ~50% of the time.
+**Option B**: **Round 2 as in A, judged on bars restated now from what a viewer can live with.** The designer's proposal, for mild / strong, reasoned from the viewer, not fitted to the replay:
+
+| Metric | Mild | Strong |
+|---|---|---|
+| slide | ≥ 0.80 | ≥ 0.75 |
+| point | ≥ 0.60 | ≥ 0.50 |
+| lag median | ≤ 5 s | ≤ 6 s |
+| lag p90 | ≤ 12 s | ≤ 15 s |
+| false switches | ≤ 1.0/min | ≤ 1.5/min |
+| ad-lib stability | ≥ 0.80 | ≥ 0.70 |
+| skip recovery | — | ≤ 15 s |
+
+  Edit any number when selecting. Against these bars, the corrected A2's decision-set replay would pass **none of the four jobs outright**:
+- history mild misses only p90 (13.1 s against 12);
+- history strong misses lag (median 6.9 s against 6, p90 18.6 s against 15);
+- both overdue jobs miss slide accuracy (0.66–0.68) and point accuracy (0.46–0.50), and the strong one also misses skip recovery (16.8 s against 15).
+
+The overdue story is the hard case.
+  - *Pros*: Decides the product question now: what is good enough for a presentation? The bars become targets, not 0.90 / 3 s ideals that no causal follower measured so far approaches.
+  - *Cons*: It lowers the §8 bars, which were the designer's initial decisions of October 5 ("a miss is filed with options, never tuned"); only the user may lower them. On the replay, even these bars would not turn G16 green: the overdue story misses accuracy and history strong misses lag.
+
+**Option C**: **Round 2 with the corrected A2 plus an embedding contestant (A3).**
+- **The model:** a small local embedding model in Ollama (e.g. `nomic-embed-text`).
+- **Scoring:** the cosine similarity between the last 12 heard words and each node's text and anticipated sentences, with every node a candidate and the same commit rules.
+- **The test:** both contestants judged on the unchanged bars, with a fresh held-out set.
+  - *Pros*: Embeddings react within milliseconds and track the newest words without an LLM's "current" bias, so they may attack the lag A2 keeps.
+  - *Cons*: It lifts "no new models", touching `doctor`, the offline gate and setup. It is unmeasured, and the lexical A1, its nearest relative, was weak.
+
+**Option D**: **Pause the presentation track.** Keep `bm25` as the default, record G16's exit 3 as the known state, and resume when live mode (DF4) is selected.
+  - *Pros*: No more work now; the evidence is preserved.
+  - *Cons*: Simulated presentations keep showing the wrong slide about half the time. The corrections already measured go unused.
+
+Your selection: _____
+
+---
+
+### Issue 10: The long-story render bar sits inside run-to-run noise
+
+**Status**: ⚠️ Confirmed Unresolved. The designer's cold `measure_budget.sh --long` on October 9, 2026 measured **80.47 s/min** of render against the **80 s/min** bar. The same span in earlier cold runs: 79.80 (G1, October 6), 79.23 (designer, October 6), 78.22 (I9, October 8). The run was on a quiet machine; nothing else was running.
+- **The spread is ±1.1 s/min** (≈ 1.4%), and the bar sits inside it, so this bar passes or fails by chance.
+- **The total is far inside its bar:** 138.90 s/min against 170.
+- **The other bars still have headroom:** the creative render (79.54 against 85) and the primary render (193.65 s against 210).
+- **Separately, `measure_budget.sh` exits 0 even when it writes FAIL.** That is fixed in Wave K (K1) without a decision, because a gate's exit code must state its bars (lesson 2.14).
+
+**Option A (recommended)**: **Judge long-story budgets on the total per narration minute.** The bars become ≤ 170 s/min literal and ≤ 195 creative. `new` and `render` per minute stay in the report as watch numbers, with no bar.
+  - *Pros*: It matches the user's actual requirement, end-to-end time ("1–3 min videos in about 10 min", restated per minute for 4–6-minute stories). It removes a bar that flips on noise. The primary story keeps its three span bars.
+  - *Cons*: a render regression of up to ≈ 30 s/min could hide inside planning's headroom until the total moves.
+
+**Option B**: **Raise the long literal render bar to 85 s/min,** the same as creative.
+  - *Pros*: keeps a per-span guard, with ≈ 6% headroom over the measured spread.
+  - *Cons*: it loosens a bar after a miss, which the process forbids agents to do; only the user can choose it.
+
+**Option C**: **Keep 80 s/min and add a render-speed item.** First measure Remotion's `concurrency` (8 today) and the encoder settings on the long story, then adopt only a setting that cuts render by ≥ 5% with identical `verify.json` checks.
+  - *Pros*: keeps the bar, and could also widen the primary render's 7.8% margin.
+  - *Cons*: unknown gain, and one more wave of work. Render is mostly frame rasterisation, which concurrency may not shorten on this machine.
+
+**Option D**: **Keep the bar as is,** and file each miss.
+  - *Pros*: no change.
+  - *Cons*: a gate that fails at random trains everyone to ignore it.
 
 Your selection: _____
 
@@ -296,6 +369,15 @@ The overlay test checked each overlay against a hand-written list of template re
 #### 2.16 A stage reused in a second pipeline leaves its guards behind
 
 The presentation tree called the director but not the license check, and it hard-coded `overlays: []`. A failed director silently turned a creative run literal. The spec said only "the style applies as in `design_styles.md`". **When a stage is reused, list every check, record and side output that travels with it, and test each one in the new pipeline.** Contract: `design_presentation_simulation.md` §3.
+
+#### 2.17 A follower that cannot reach the truth turns one mistake into a permanent one
+
+The designer's Wave J spec offered each contestant only the current point, the next 3 nodes and earlier points. A slide is 4 nodes, so falling one slide behind put the true point out of reach for good.
+- **What happened:** the LLM follower tracked within about 3 s for two minutes, then took one plausible backward jump on "Parliament was so desperate…", and stayed lost for 88 s. Every option it was shown was wrong.
+- **The measured cost:** on the decision set, the true point was unreachable for 46–60% of the talk (A1: 68–81%). Letting every node be a candidate cut that to 2–9%, and doubled A2's slide accuracy.
+- **The rule:** **every state a follower can enter must have a path back to every correct state, and the evaluation must measure the time spent unreachable.** A bake-off between contestants that share a structural trap measures the trap.
+
+Contract: `design_presentation_simulation.md` §6.6.
 
 ---
 
@@ -432,6 +514,17 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 - H4 — follow and compose simulation stages — git log --grep "(h4)" — G1–G10, G14 green bare, 342 fast passed (+12 tests); follow stage consumes only tree.json and heard.json in isolation; BM25 index with k1=1.2, b=0.75, committed stopwords, and suffix stemming; streaming decision points at gaps >= 300ms or 1500ms intervals; commit rules enforced (2 consecutive tops, score gap >= 1.0, dwell >= 2.0s); simulated latency = decision time + measured compute time; causality verified (identical commits on future-truncated prefix) and falsified (altering future speech); compose stage builds timeline.json merging scenes shorter than 20 frames (ENTER_FRAMES 12 + EXIT_FRAMES 8) and paginating live captions with 300ms lag; live present-sim on history_great_stink with --perturb strong --seed 7 committed across talking points in 422s with back-reference detection at 296s (score 15.29) and short-scene merging; hysteresis falsification verified red bare.
 - H5 — score stage, oracle baseline, presentation_sim.sh (G16), and evaluation report — git log --grep "(h5)" — G1–G10, G14, G16 green bare, 350 fast passed (+8 tests), 19 vitest passed; PresentationScore and PresentationMetricResult implemented in contracts/score.py; score stage calculates slide accuracy, point accuracy, median and p90 onset lag, false switches per minute, ad-lib stability, and skip recovery; Pillow strip chart renders ground truth vs shown slide bands; --oracle composes and renders oracle.mp4 baseline achieving 100% (1.0000) slide/point accuracy and 0.0s lag; scripts/presentation_sim.sh verifies all 4 simulation runs, scene criteria (step 10 = 0 clean), graphic word density (<= 1.0 graphic words/s), and LLM tie-break measurement (--tiebreak llm remains OFF by default per §6.4); evaluation report docs/evals/presentation_2026-10-06.md generated with visual strip charts; falsification verified on shuffled speech (fails red bare).
 
+**Wave I — delivered; independently verified October 9, 2026.** Verdicts:
+- I1 ✓ (`callback_item_count`, also used by the presentation tree and `compose`; no renderer default).
+- I2 ✓ (the rendered DOM probe excludes an overlay's own text; 20 overlay goldens; `overlap.json` fails closed).
+- I3 ✓.
+- I4 ✓ (the story-words rule, spacing, the rule-6 word list generated from the constants, salvage exactly as specified).
+- I5 ✓ in code (kinetic_quote, character_intro, relationship_map, text_thread). The resolved line below wrongly says "dialogue"; the code is right.
+- I6 ✓.
+- I7 ✓ (the overdue deck's director is now salvaged rather than silently literal: 2 metaphors, 2 callbacks, 14 overlays).
+- I8 ✓ (fresh jobs, exit 3, three falsifications; `battery.sh` refuses reuse).
+- I9 ✓. §1's "59 gallery goldens" is stale: there are 82.
+
 **Wave I:**
 
 - I1 — Callback seen-before dots count real motif appearances — git log --grep "(i1)" — callback_item_count in compile.py counts prior scene motif_token overlays; timing?.item_frames in callback.tsx with dotCount > 0 wrapper and no [15, 27] fallback; 3 callback goldens re-cut and verified (min=1, typical=2, max=5 dots) in check_gallery.sh; G15 verify_creative asserts callback len(item_frames) == earlier token count >= 1; recompiled both creative E2E jobs to 4 dots verified in stills; falsified by restoring [15, 27] (vitest red) and callback_item_count=0 (G15 red).
@@ -443,6 +536,12 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 - I7 — Creative presentations get license check, overlays, and honest degradation — git log --grep "(i7)" — G1–G10, G14 green bare, 380 fast passed (+5 tests); presentation tree plans director on creative style with fallback logging director: degraded to literal after <n> attempts: <err> and style_degraded=True; slide passage adapter passed to run_license_checks removing ungrounded metaphors and asides into director.json license_dropped; point scenes run compute_scene_overlays in deck order stored in TreeNode.overlays and propagated to timeline.scenes; R1 second half replaces point title_card with alternate; G8 schema sync verified; live runs history_great_stink (creative, strong) and story_overdue_book (creative, mild) produce director.json, license_calls=4, license_dropped=0, style_degraded=False, >=1 metaphor node, and overlays (7 and 9); falsified bare by skipping license call (assert 0 == 4 red) and empty overlays (assert False red).
 - I8 — G16 states its bars in its exit code — git log --grep "(i8)" — G16 exits 3 when follower bars miss while mechanics pass; presentation_sim.sh removes reuse scan, generates jobs in artifacts/presentation_sim/<timestamp>/jobs/, and validates 5 mechanics rules (artefacts exist, step 10 all 0 + word density <= 1.0, oracle §8 bars pass, no point title_card, creative style_degraded=False with >= 1 metaphor, >= 1 overlay, license_calls match); evaluate_presentation_bars in score.py unifies follower and oracle bar checks; scripts/battery.sh refuses to run G16 when PRESENTATION_REUSE_JOBS is set and reports G16 exit code directly; 3 falsifications verified on every run: (a) oracle passes all bars, (b) shuffled heard.json misses accuracy bars, (c) mechanics check on copy without oracle.mp4 fails.
 - I9 — Re-measure; close-out of Wave I — git log --grep "(i9)" — full battery G1–G16 bare verified (G1–G15 exit 0, G16 exits 3 as specified); 3 cold budgets measured with 0 cache hits and 0 asset execution errors (primary: 200.52 s / 189.37 s / 389.89 s; long literal: 56.80 / 78.22 / 135.01 s/min; long creative: 76.17 / 79.54 / 155.71 s/min with style_degraded=False and 9 images); cold planner eval 6/6 valid with names_before_narration=0 on all 6; verified visual stills for callback dots, top-left aside + motif token, clean overdue s001 location, 7 former spoiler scenes, and creative metaphor node; Wave I closed out.
+
+**Wave J — delivered through J3; independently verified October 9, 2026.** Verdicts:
+- J1 ✓. The harness reproduces every corpus job's `bm25` score exactly (0 difference over 52 rows), and the corpus is frozen by hashes. One flaw: its compute-time percentiles are taken over commits only, including the 0 ms initial commit, not over every decision as §6.6.3 says.
+- J2 ✓ to spec. The anticipated sentences are good: natural speech, no invented facts, 0 empty nodes.
+- J3 ✓ to spec. Its resolved line says "prior slide titles"; the code correctly lists every earlier point.
+- **The bake-off's verdict is not valid evidence about the contestants.** The designer's §6.6 gave both a candidate set from which a lost follower can never return (Issue 9, rewritten).
 
 **Wave J:**
 
@@ -659,3 +758,18 @@ Wave C (C1–C7) specced. Issue 6 filed for the user.
   - a "perfect hearing" diagnostic separating matcher error from ASR error;
   - harness falsification in both directions;
   - a no-tuning rule.
+
+**October 9, 2026: verification of Waves I and J (designer).**
+- **Gates:** G1–G15 exit 0; G16 exits 3 as designed. All 12 items match their specs, and every Wave I target is fixed on fresh output (§1).
+- **Issue 9 rewritten:**
+  - **The cause:** the bake-off's failure comes mainly from the designer's §6.6, whose candidate sets made a lost follower permanently lost (lesson 2.17), plus a section-step defect.
+  - **Measured by replay** (the agent's own matcher code with targeted swaps, scratch only):
+    - every node a candidate → A2 slide 0.61–0.83;
+    - plus the section step → 0.63–0.86;
+    - plus the "side story" prompt → 0.66–0.86, with false switches of 0.50–1.25 per minute; lag still 4.1–6.9 s median.
+  - **Four options** for the user.
+- **Issue 10 filed:** the long-story render bar (80 s/min) sits inside the ±1.1 s/min spread of four runs (78.22–80.47).
+- **Wave K (K1–K4) specced,** with no decision needed: the budget exit code, onset lag as §8 defines it, and compute time per decision.
+- **Contracts:** `design_presentation_simulation.md` §6.6.5 (Round 1 result) and §8 (onset lag); `design_testing_and_validation.md` §2 (three rows) and §5 (exit codes); `design_data_contracts.md` §10 (`compute_ms` on holds); master plan.
+- **Lesson 2.17 added.**
+

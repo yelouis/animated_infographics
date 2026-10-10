@@ -127,5 +127,14 @@ Two followers are built from deck-only knowledge with the existing models:
 
 Contract: `design_presentation_simulation.md` §6.6.
 
-## After Wave J (deferred; each needs a user selection)
+**Outcome (October 9, 2026):** neither contestant was adopted. Verification traced most of the miss to a defect in the follower spec, which offered no way back once the follower was lost. Replays with it corrected roughly double the LLM follower's accuracy, but lag still misses. The next round is the user's choice (Issue 9).
+
+## Wave K: measurement fixes (specced October 9, 2026)
+- The budget script's exit code states its bars.
+- Onset lag is measured as §8 defines it: a point already on screen counts 0, and missing never beats being late.
+- Compute time is recorded per decision.
+
+None needs a user decision, and each must land before any next follower round is judged. **Open for the user:** Issue 9 (the follower) and Issue 10 (the long-story render bar).
+
+## After Wave K (deferred; each needs a user selection)
 Video input with picture-in-picture · 16:9 output · **live mode** (streaming ASR → incremental planning → the same templates on a live clock, webcam in a corner) · multi-voice narration · Reddit URL fetch · public-domain photos · historical borders · a web review editor. See `ongoing_general_errors.md` §4.
