@@ -1,4 +1,4 @@
-# Agent Execution Guide — Active Build: Wave M (memory guards, 2 items), then K4 and Wave L (follower Round 2) — October 10, 2026
+# Agent Execution Guide — Queue Complete — waiting on Issue 11 — October 10, 2026
 
 **You are an engineering agent with no memory of this project.** Waves A–J are built, committed and pushed (head `main`).
 - **The verification.** Waves I and J were independently verified by the designer on October 9, 2026. **All 12 items do what their specs say,** and every Wave I target is fixed on fresh output (`ongoing_general_errors.md` §1, §3).
@@ -6,11 +6,12 @@
 - **The user's decisions (October 10, 2026):** *"For issue 9 select Option A, for issue 10 select Option A. Update the agent_execution_guide to reflect these choices"*.
   - **Issue 9 → A:** Round 2 of the bake-off. The corrected LLM follower is judged against the unchanged bars on fresh held-out talks. That is **Wave L**.
   - **Issue 10 → A:** long-story budgets are judged on the total time per narration minute only. That is part of **K1**.
-- **Wave K's K1–K3 are delivered** (`5c224a5`, `879b978`, `7da35ef`; not yet independently verified).
+- **Wave K's K1–K3 are delivered** (`5c224a5`, `879b978`, `7da35ef`; verified in K4).
 - **K4's re-measure was interrupted when the machine ran out of memory** (October 9, 19:50–19:52). Four heavy runs, a cold budget, the offline gate, the E2E and a second budget, ran **at the same time**. Two 27 GB image generations met Ollama's 10.5 GB and the user's own programs on a 64 GB Mac.
-- **The user's direction (October 10, 2026):** *"Write guards so that we don't run out of memory. Assume that other program can start and stop which will take from the available memory."* That is **Wave M**, and it comes **before** K4, whose battery and budgets are heavy.
+- **The user's direction (October 10, 2026):** *"Write guards so that we don't run out of memory. Assume that other program can start and stop which will take from the available memory."* That was built as **Wave M** (M1–M2), and verified in K4.
+- **Wave L delivered**: L1 built the frozen 8-job Round 2 corpus with diagnostics; L2 revised `ClassifierMatcher` per §6.6.6 and completed the cold bake-off; L3 filed Issue 11 awaiting user decision.
 
-**Status:** **Active Build: Wave M** (M1–M2), then **K4**, then **Wave L** (L1–L3), in the §2 order. No user decision is pending. L2 may end in a filed **Issue 11**, whose `Your selection:` line will belong to the user.
+**Status:** **Queue Complete — waiting on Issue 11** (Wave M, Wave K, and Wave L completed; Issue 11 filed awaiting user decision).
 
 **Every number and literal string in this guide and the design docs is a decision, not a suggestion.**
 
@@ -80,7 +81,7 @@ An offline **presentation simulation** derives a deck from a script, builds an a
 | # | Gate | Result |
 |---|---|---|
 | G1–G3 | ruff / format / mypy | exit 0 |
-| G4 | `uv run pytest -q -m "not slow"` | exit 0 · **436 passed** |
+| G4 | `uv run pytest -q -m "not slow"` | exit 0 · **440 passed** |
 | G5–G7 | renderer typecheck / lint / vitest | exit 0 · 21 vitest |
 | G8 | schema sync | exit 0 |
 | G9 | renderer purity | exit 0 |
@@ -574,6 +575,6 @@ Their specs are in the design docs (`design_testing_and_validation.md` §2 and �
 **Wave L**
 - [x] L1: every decision records `candidate_ids`; the harness reports "unreachable share" and "stuck on current"; `corpus_r2` (seed 7 copied, 4 new seed-13 jobs) is frozen with hashes; the `bm25` baseline is written.
 - [x] L2: `ClassifierMatcher` matches §6.6.6 verbatim. Round 2 is run cold on all 8 jobs, with "unreachable share" 0.0, the cross-check against Issue 9's replay within 0.05, and the decision written out with the rule.
-- [ ] L3: `llm` is the default and G16 on fresh jobs exits **0**; or Issue 11 is filed and G16 stays at 3.
-- [ ] §1.3 re-measured bare (G1–G16).
-- [ ] This guide rewritten to **Queue Complete** (or **Queue Complete — waiting on Issue 11**). **Then stop. Do not invent work.**
+- [x] L3: `llm` is the default and G16 on fresh jobs exits **0**; or Issue 11 is filed and G16 stays at 3.
+- [x] §1.3 re-measured bare (G1–G16).
+- [x] This guide rewritten to **Queue Complete** (or **Queue Complete — waiting on Issue 11**). **Then stop. Do not invent work.**

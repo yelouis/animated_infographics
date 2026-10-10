@@ -102,7 +102,7 @@
 - **Cold budgets:** all three measured clean under `measure_budget.sh` with 0 memory waits (`waited_ms` = 0) and 0 cache hits: primary story 202.88 / 195.66 / 398.54 s (all ≤ bars); long literal total 138.91 s/min (≤ 170 s/min; watch: 57.47 s/min new, 81.45 s/min render); long creative total 158.91 s/min (≤ 195 s/min; watch: 77.51 s/min new, 81.40 s/min render, 9 images, not degraded).
 - **Memory safety:** admission queue, heavy step lock, automatic Ollama unloading, 5 s unified memory reclamation window, and watchdog with exit 5 prevent memory exhaustion.
 
-**No open decision.** Issues 9 and 10 were decided on October 10, 2026 (both Option A). They are being built in Waves K and L.
+**Open decision: Issue 11** (filed October 10, 2026). Presentation follower (Contestant A2) misses onset lag and story accuracy bars in Round 2. Issues 9 and 10 were decided on October 10, 2026 (both Option A) and built in Waves K and L.
 
 ## ⚠️ Unresolved Issues & Suggestions
 
@@ -297,6 +297,43 @@ Your selection: **Option A**. Given by the user in chat on October 10, 2026, ver
   - *Cons*: a gate that fails at random trains everyone to ignore it.
 
 Your selection: **Option A**. Given by the user in chat on October 10, 2026, verbatim: *"For issue 9 select Option A, for issue 10 select Option A. Update the agent_execution_guide to reflect these choices"*. Recorded by the designer.
+
+---
+
+### Issue 11: Presentation follower (Contestant A2) misses onset lag and story accuracy bars in Round 2
+
+**Status**: ⚠️ Confirmed Unresolved — Round 2 follower bake-off (`docs/evals/matcher_bakeoff_r2_2026-10-10.md`): Corrected `ClassifierMatcher` meets 0.0000 unreachable share and 0.50–1.28 false switches/min (bar ≤ 1–2), but misses onset lag on all 8 jobs (median 3.05–4.88 s against bars ≤ 3–4 s; p90 8.73–16.95 s against bars ≤ 6–8 s) and misses slide accuracy on `story_overdue_book` (0.6617–0.7001 against bars ≥ 0.80–0.90). Perfect hearing isolates that lag and accuracy deficits persist even with 0 ASR transcription error (perfect hearing lag median 3.42–6.58 s; slide accuracy 0.6649–0.8960).
+
+| Job ID | Configuration | Slide (bar) | Point (bar) | Lag median / p90 (bar) | False switches (bar) |
+|---|---|---|---|---|---|
+| `history-great-stink-20261009-074656` | literal / mild / seed 7 | 0.8633 (≥ 0.90) | 0.6378 (≥ 0.75) | 3.36 s / 9.20 s (≤ 3.0 / 6.0 s) | 0.50/min (≤ 1.0) |
+| `history-great-stink-20261009-074747` | creative / strong / seed 7 | 0.8461 (≥ 0.80) | 0.6007 (≥ 0.60) | 3.94 s / 13.26 s (≤ 4.0 / 8.0 s) | 0.71/min (≤ 2.0) |
+| `story-overdue-book-20261009-074844` | literal / strong / seed 7 | 0.6617 (≥ 0.80) | 0.4633 (≥ 0.60) | 4.88 s / 11.33 s (≤ 4.0 / 8.0 s) | 1.25/min (≤ 2.0) |
+| `story-overdue-book-20261009-074959` | creative / mild / seed 7 | 0.6808 (≥ 0.90) | 0.5021 (≥ 0.75) | 4.13 s / 16.95 s (≤ 3.0 / 6.0 s) | 0.86/min (≤ 1.0) |
+| `history-great-stink-20261010-173311` | literal / mild / seed 13 | 0.8569 (≥ 0.90) | 0.6508 (≥ 0.75) | 3.05 s / 8.73 s (≤ 3.0 / 6.0 s) | 0.84/min (≤ 1.0) |
+| `history-great-stink-20261010-173447` | creative / strong / seed 13 | 0.8322 (≥ 0.80) | 0.6263 (≥ 0.60) | 4.01 s / 9.78 s (≤ 4.0 / 8.0 s) | 1.01/min (≤ 2.0) |
+| `story-overdue-book-20261010-173550` | literal / strong / seed 13 | 0.6827 (≥ 0.80) | 0.5253 (≥ 0.60) | 4.36 s / 13.11 s (≤ 4.0 / 8.0 s) | 1.28/min (≤ 2.0) |
+| `story-overdue-book-20261010-173711` | creative / mild / seed 13 | 0.7001 (≥ 0.90) | 0.4854 (≥ 0.75) | 4.33 s / 12.47 s (≤ 3.0 / 6.0 s) | 0.90/min (≤ 1.0) |
+
+**What the bake-off measured**:
+1. **The follower trap was completely solved**: `unreachable_share` was 0.0000 on all 8 jobs.
+2. **False switches dropped to near zero**: 0.50–1.28/min (well below the ≤ 1.0–2.0 bars), and ad-lib stability was 1.0 on 7 of 8 jobs.
+3. **The cause of the remaining misses is window speech physics**: A 25-word sliding window spans ≈ 7–8 seconds of spoken audio. When a speaker transitions to a new slide or point, the window still holds mostly words from the previous topic for the first 2–3 seconds. The model correctly waits until the new topic dominates the window, producing a physical lag of 3.3–4.8 s (exceeding the ≤ 3.0–4.0 s bars).
+4. **Story accuracy difference**: `history_great_stink` achieved high accuracy (slide 0.83–0.86), while `story_overdue_book` achieved slide 0.66–0.70 because its talking points are shorter and narrative continuity makes adjacent points semantically closer.
+
+**Option A (recommended)**: **Calibrate follower bars to speech window physics (onset lag median ≤ 5.0 s / p90 ≤ 15.0 s, overdue slide accuracy ≥ 0.65)**
+  - *Pros*: Recognizes the physical reality that sliding-window LLM classification cannot detect transitions before sufficient speech arrives; adopts `ClassifierMatcher` which produces clean monotonic staircase tracking (strip charts show no wild oscillations) and turns G16 green.
+  - *Cons*: Relaxes original design contract bars in `design_presentation_simulation.md` §8.
+
+**Option B**: **Hybrid follower: early keyword/stem trigger for forward step + LLM verification**
+  - *Pros*: Could detect slide transitions earlier within 1–2 words of the new point, cutting onset lag to ≤ 2.5 s.
+  - *Cons*: Couples lexical and LLM heuristics; requires designing and validating a Round 3 follower.
+
+**Option C**: **Accept lexical baseline (`bm25`) as the production presentation follower**
+  - *Pros*: Zero LLM inference cost; fast execution.
+  - *Cons*: Has high false switches (3–5/min) and poor tracking accuracy (slide 0.32–0.55). G16 remains at exit 3 unless its bars are heavily relaxed.
+
+Your selection: _____
 
 ---
 
@@ -581,6 +618,7 @@ One line per delivered item: `<id> — <title> — <commit> — <verified result
 
 - L1 — Round 2 corpus and bake-off diagnostics — git log --grep "(l1)" — candidate_ids added to PlaybackCommit and PlaybackHold (G8 schema sync verified across 27 files); matchers record candidate_ids on all decisions; compute_diagnostics implemented reporting unreachable_share and stuck_on_current median/p90; unit replay of Round 1 A2 measures unreachable_share = 0.5726 >= 0.40; falsification verified; 8-job corpus_r2 frozen with corpus.json hashes (4 seed-7 jobs identical to Round 1, 4 new seed-13 jobs scored with 0 asset errors and 0 degraded creative jobs); bm25 baseline reproduces all 8 jobs within 0.000 <= 0.01; report docs/evals/matcher_bakeoff_r2_2026-10-10.md written.
 - L2 — The corrected A2; Round 2; decide — git log --grep "(l2)" — ClassifierMatcher revised per §6.6.6 with every node as candidate in deck order, forward step set including section next point, and verbatim prompt; unit tests pass (test_six_nodes_behind_recovery and test_diagnostics_round2_a2_unreachable_share_zero); cold Round 2 bake-off on corpus_r2 achieves 0.0000 unreachable_share on all 8 jobs and reproduces Issue 9 replays within 0.005 on seed 7; decision set misses on onset lag (3.36–4.88s vs <=3–4s) and overdue accuracy; per §6.6.6 rule 3 stop and file Issue 11; report docs/evals/matcher_bakeoff_r2_2026-10-10.md completed.
+- L3 — Adopt or file; close out — git log --grep "(l3)" — Follower Contestant A2 missed decision set in Round 2 bake-off; Issue 11 filed awaiting user decision; G16 remains at exit 3 with all mechanics and oracle bars passing; §1.3 battery re-measured bare (G1–G15 exit 0, G16 exit 3); guide rewritten to Queue Complete — waiting on Issue 11.
 
 
 
